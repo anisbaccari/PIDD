@@ -1,69 +1,26 @@
-const fastify = require('fastify')({ logger: true });
-const pool = require('./db');
-const bcrypt = require('bcrypt');
+import Fastify from 'fastify';
+import dotenv from 'dotenv';
+import cors from '@fastify/cors';
+import authRoutes from './routes/authRoutes.js';
 
+dotenv.config();
 
-fastify.register(require('@fastify/cors'), {
-    origin: '*', // allow all origins (for development)
-    methods: ['GET', 'POST', 'OPTIONS']
-  });
+const fastify = Fastify({ logger: true });
 
-  
-fastify.register(require('@fastify/formbody')); // parse POST forms
-
-// --- Register route ---
-fastify.post('/register', async (request, reply) => {
-    const { username, password } = request.body;
-
-    if (!username || !password) {
-        return reply.status(400).send({ error: 'Username and password required' });
-    }
-
-    try {
-        const hashed = await bcrypt.hash(password, 10);
-        const [result] = await pool.query(
-            'INSERT INTO users (username, password) VALUES (?, ?)',
-            [username, hashed]
-        );
-        reply.send({ success: true, userId: result.insertId });
-    } catch (err) {
-        reply.status(500).send({ error: err.message });
-    }
+// Enable CORS
+await fastify.register(cors, {
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 });
 
-// --- Login route ---
-fastify.post('/login', async (request, reply) => {
-    const { username, password } = request.body;
-
-    if (!username || !password) {
-        return reply.status(400).send({ error: 'Username and password required' });
-    }
-
-    try {
-        const [rows] = await pool.query(
-            'SELECT * FROM users WHERE username = ?',
-            [username]
-        );
-
-        if (rows.length === 0) {
-            return reply.status(401).send({ error: 'Invalid credentials' });
-        }
-
-        const user = rows[0];
-        const match = await bcrypt.compare(password, user.password);
-
-        if (!match) {
-            return reply.status(401).send({ error: 'Invalid credentials' });
-        }
-
-        reply.send({ success: true, message: 'Logged in!' });
-    } catch (err) {
-        reply.status(500).send({ error: err.message });
-    }
-});
+// Register routes
+await fastify.register(authRoutes, { prefix: '/auth' });
 
 // Start server
-fastify.listen({ port: process.env.PORT || 3000 }, (err, address) => {
-    if (err) throw err;
-    console.log(`Server running at ${address}`);
-});
+try {
+  await fastify.listen({ port: process.env.PORT || 3000 });
+  console.log('Server running at http://localhost:3000');
+} catch (err) {
+  fastify.log.error(err);
+  process.exit(1);
+}

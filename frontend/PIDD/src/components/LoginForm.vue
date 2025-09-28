@@ -24,7 +24,7 @@
     methods: {
       async login() {
         try {
-          const res = await api.post('/login', {
+          const res = await api.post('/auth/login', {
             username: this.username,
             password: this.password
           });

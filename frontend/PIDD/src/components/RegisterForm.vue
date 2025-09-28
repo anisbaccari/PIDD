@@ -24,7 +24,7 @@
     methods: {
       async register() {
         try {
-          const res = await api.post('/register', {
+          const res = await api.post('/auth/register', {
             username: this.username,
             password: this.password
           });
