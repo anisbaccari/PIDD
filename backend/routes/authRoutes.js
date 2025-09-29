@@ -54,7 +54,8 @@ export default async function authRoutes(fastify, opts) {
 
       // Generate JWT
       const token = generateToken({ id: user.id, username: user.username });
-
+      // log the generated token
+      console.log('Generated JWT:', token);
       reply.send({ success: true, token });
     } catch (err) {
       reply.status(500).send({ error: err.message });

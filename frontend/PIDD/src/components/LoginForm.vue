@@ -17,7 +17,7 @@
     data() {
       return {
         username: '',
-        password: '',
+        password: '', 
         message: ''
       };
     },
@@ -28,6 +28,9 @@
             username: this.username,
             password: this.password
           });
+          // Store the token in localStorage
+          console.log('Login successful, token:', res.data.token);
+          localStorage.setItem('token', res.data.token);
           this.message = res.data.message;
         } catch (err) {
           this.message = err.response?.data?.error || 'Login failed';

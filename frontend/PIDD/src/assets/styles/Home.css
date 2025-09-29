@@ -1,0 +1,12 @@
+#home {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 80vh; /* 80% of viewport height */
+  background-color: #ecf0f1;
+}
+
+#home h1 {
+  font-size: 2rem;
+  color: #333;
+}
