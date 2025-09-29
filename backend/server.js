@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import dotenv from 'dotenv';
 import cors from '@fastify/cors';
 import authRoutes from './routes/authRoutes.js';
+import profileRoutes from './routes/profileRoutes.js';
 
 dotenv.config();
 
@@ -15,6 +16,7 @@ await fastify.register(cors, {
 
 // Register routes
 await fastify.register(authRoutes, { prefix: '/auth' });
+await fastify.register(profileRoutes, { prefix: '/profil' });
 
 // Start server
 try {
