@@ -1,7 +1,8 @@
 export const getProfile = async (request, reply) => {
+  console.log("====== [getPRofile] : user : ",request.user);
   reply.send({
     message: 'Profile data',
-  //  user: request.user, // comes from middleware
+    user: request.user, // comes from middleware
   });
 };
 

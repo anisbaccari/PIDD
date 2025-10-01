@@ -1,22 +1,62 @@
 // controllers/authController.js
-import { generateToken } from '../middleware/authMiddleware.js';
+import { hash, compare } from 'bcrypt';
+import pool from '../database/mysql.js';
+import { generateToken } from '../security/jwt.js';
 
-export const login = async (request, reply) => {
-  const { username, password } = request.body;
+export  async function login (request, reply) {
+    const { username, password } = request.body;
 
-  // ⚡ TODO: replace with DB check
-  if (username !== 'test' || password !== '1234') {
-    return reply.code(401).send({ error: 'Invalid credentials' });
-  }
+    if (!username || !password) {
+      return reply.status(400).send({ error: 'Username and password required' });
+    }
 
-  const token = generateToken({ id: 1, username });
+    try {
+      const [rows] = await pool.query('SELECT * FROM users WHERE username = ?', [username]);
 
-  reply.send({ message: 'Login successful', token });
-};
+      if (rows.length === 0) {
+        return reply.status(401).send({ error: 'Invalid credentials' });
+      }
 
-export const register = async (request, reply) => {
-  const { username, password } = request.body;
+      const user = rows[0];
+      const match = await compare(password, user.password);
 
-  // ⚡ TODO: save user in DB
-  reply.send({ message: 'User registered', user: { username } });
-};
+      if (!match) {
+        return reply.status(401).send({ error: 'Invalid credentials' });
+      }
+
+      // Generate JWT
+      const token = generateToken({ id: user.id, username: user.username });
+      
+      // log the generated token
+      console.log('Generated JWT:', token);
+      reply.send({ success: true, token,user });
+    } catch (err) {
+      reply.status(500).send({ error: err.message });
+    }
+  };
+
+
+export async function register (request, reply)  {
+   const { username, password } = request.body;
+    console.log('Request body:', request.body); // <-- log it
+    if (!username || !password) {
+      return reply.status(400).send({ error: 'Username and password required' });
+    }
+
+    try {
+      const [existing] = await pool.query('SELECT id FROM users WHERE username = ?', [username]);
+      if (existing.length > 0) {
+        return reply.status(400).send({ error: 'User already exists' });
+      }
+
+      const hashed = await hash(password, 10);
+      const [result] = await pool.query(
+        'INSERT INTO users (username, password) VALUES (?, ?)',
+        [username, hashed]
+      );
+
+      reply.send({ success: true, userId: result.insertId });
+    } catch (err) {
+      reply.status(500).send({ error: err.message });
+    }
+  };

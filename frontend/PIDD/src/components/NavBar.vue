@@ -3,8 +3,11 @@ import RegisterForm from './RegisterForm.vue';
 import LoginForm from './LoginForm.vue';
 export default {
   components: { RegisterForm, LoginForm },
-  name:'NavBar'
+  name:'NavBar',
+  props:['user']
 };
+
+  
 
 
 </script>

@@ -1,12 +1,13 @@
 <template>
-    <div>
+
+    <div v-if="user && user.username" class="registered" ></div>
+    <div v-else>
       <h2>Register</h2>
       <form @submit.prevent="register">
-        <input v-model="username" placeholder="Username" required />
-        <input v-model="password" type="password" placeholder="Password" required />
+        <input v-model="user.username" placeholder="Username" required />
+        <input v-model="user.password" type="password" placeholder="Password" required />
         <button type="submit">Register</button>
       </form>
-      <p v-if="message">{{ message }}</p>
     </div>
   </template>
   
@@ -14,10 +15,10 @@
   import api from '../api';
   
   export default {
+    props : ['setUser'],
     data() {
       return {
-        username: '',
-        password: '',
+        user : {  username: '',password: ''},
         message: ''
       };
     },
@@ -25,8 +26,8 @@
       async register() {
         try {
           const res = await api.post('/auth/register', {
-            username: this.username,
-            password: this.password
+            username: this.user.username,
+            password: this.user.password
           });
           this.message = `User registered with ID: ${res.data.userId}`;
         } catch (err) {
