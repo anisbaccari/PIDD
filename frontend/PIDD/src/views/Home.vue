@@ -10,12 +10,13 @@
     <div v-else>
       <p>You are not logged in.</p>
     </div>
+    <Catalogue />
   </div>
 </template>
 
 <script>
 import api from '../api';
-
+import Catalogue from '../components/Catalogue.vue';
 export default {
   name: 'Home',
   data() {

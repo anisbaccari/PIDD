@@ -11,8 +11,8 @@ export default {
 
 <template>
   <div class="navbar" id="navbar">
-    <RegisterForm />
     <LoginForm />
+    <RegisterForm />
   </div> 
 </template>
 <style src="../assets/styles/NavBar.css"></style>
