@@ -49,7 +49,7 @@
       logout(){
           localStorage.removeItem('token');
           this.setUser(null);
-          console.log('[LoginForn] Log Out :');
+          console.log('[LoginForn] Log Out ');
 
       }
     }

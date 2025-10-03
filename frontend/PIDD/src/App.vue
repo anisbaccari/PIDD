@@ -59,7 +59,7 @@ export default {
 <template>
     <div>
       <NavBar :user="user" :setUser="setUser" :getUser="getUser"/>
-      <Home :user="user"/>
+      <Home  :user="user" :setUser="setUser" :getUser="getUser"/>
     </div>
 </template>
 

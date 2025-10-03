@@ -1,8 +1,9 @@
 <script>
 import RegisterForm from './RegisterForm.vue';
 import LoginForm from './LoginForm.vue';
+import Profil from './Profil.vue';
 export default {
-  components: { RegisterForm, LoginForm },
+  components: { Profil,RegisterForm, LoginForm },
   name:'NavBar',
   props : ['user','setUser','getUser']
 
@@ -16,6 +17,7 @@ export default {
 <template>
   <div class="navbar" id="navbar">
     <LoginForm :user="user" :setUser="setUser" :getUser="getUser" />
+    <Profil :user="user" :setUser="setUser" :getUser="getUser" />
     <RegisterForm  :user="user" :setUser="setUser" :getUser="getUser" />
   </div> 
 </template>

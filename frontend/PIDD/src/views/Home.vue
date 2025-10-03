@@ -1,6 +1,6 @@
 
 <template>
-  <Index />
+  <Index  :user="user" :setUser="setUser" :getUser="getUser" />
   <Catalogue/>  
 </template>
 
@@ -11,7 +11,7 @@ import Index from '../components/index.vue'
 export default {
   components: {Catalogue,Index},
   name : "home",
-  props : ['user']
+  props : ['user','getUser','setUser']
 
 };
 </script>

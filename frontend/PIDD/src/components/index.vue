@@ -6,7 +6,7 @@
 <script>
 
 export default {
-    props : ['user'],
+    props : ['user','setUser','getUser'],
     name:'Index'
 }
 
