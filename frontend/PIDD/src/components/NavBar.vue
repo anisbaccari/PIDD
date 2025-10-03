@@ -4,7 +4,8 @@ import LoginForm from './LoginForm.vue';
 export default {
   components: { RegisterForm, LoginForm },
   name:'NavBar',
-  props:['user']
+  props : ['user','setUser','getUser']
+
 };
 
   
@@ -14,8 +15,8 @@ export default {
 
 <template>
   <div class="navbar" id="navbar">
-    <LoginForm />
-    <RegisterForm />
+    <LoginForm :user="user" :setUser="setUser" :getUser="getUser" />
+    <RegisterForm  :user="user" :setUser="setUser" :getUser="getUser" />
   </div> 
 </template>
 <style src="../assets/styles/NavBar.css"></style>

@@ -4,8 +4,8 @@
     <div v-else>
       <h2>Register</h2>
       <form @submit.prevent="register">
-        <input v-model="user.username" placeholder="Username" required />
-        <input v-model="user.password" type="password" placeholder="Password" required />
+        <input v-model="DataUser.username" placeholder="Username" required />
+        <input v-model="DataUser.password" type="password" placeholder="Password" required />
         <button type="submit">Register</button>
       </form>
     </div>
@@ -15,10 +15,10 @@
   import api from '../api';
   
   export default {
-    props : ['setUser'],
+    props : ['user','getUser','setUser'],
     data() {
       return {
-        user : {  username: '',password: ''},
+        DataUser : this?.getUser() ||  {  username: '',password: ''},
         message: ''
       };
     },

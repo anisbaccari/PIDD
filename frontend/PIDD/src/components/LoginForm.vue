@@ -1,13 +1,16 @@
 <template>
     
     <div  v-if="user && user.username" class="Logged" id ="logged">
-      <p> You are logged</p>
+      <p> You are logged  {{ user.username }}</p>
+      <div class="logOut">
+        <button @click="logout">log out</button>
+      </div>
     </div>
     <div v-else>
       <h2>Login</h2>
       <form @submit.prevent="login">
-        <input v-model="user.username" placeholder="Username" required />
-        <input v-model="user.password" type="password" placeholder="Password" required />
+        <input v-model="DataUser.username" placeholder="Username" required />
+        <input v-model="DataUser.password" type="password" placeholder="Password" required />
         <button type="submit">Login</button>
       </form>
     </div>
@@ -17,19 +20,21 @@
   import api from '../api';
   
   export default {
-    props : ['setUser'],
+    props : ['user','setUser','getUser'],
     data() {
+      console.log("[LoginForn data  ] getUser : ",this?.getUser())
       return {
-        user : {username :'',password: ''},
+        DataUser : this?.getUser() || {username: "",password: ""},
         message :''
       };
     },
     methods: {
       async login() {
         try {
+          console.log("[auth/Login] > user : ",this.DataUser.username)
           const res = await api.post('/auth/login', {
-            username: this.user.username,
-            password: this.user.password
+            username: this.DataUser.username,
+            password: this.DataUser.password
           });
           // Store the token in localStorage
           console.log('Login successful, token:', res.data.token);
@@ -40,6 +45,12 @@
         } catch (err) {
           this.message = err.response?.data?.error || 'Login failed';
         }
+      },
+      logout(){
+          localStorage.removeItem('token');
+          this.setUser(null);
+          console.log('[LoginForn] Log Out :');
+
       }
     }
   };
