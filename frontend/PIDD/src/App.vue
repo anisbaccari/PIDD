@@ -5,6 +5,7 @@ import Home from './views/Home.vue';
 import NavBar from './components/NavBar.vue';
 import api from './api';
 
+
 export default {
   
   components: { NavBar,Home },
@@ -59,7 +60,18 @@ export default {
 <template>
     <div>
       <NavBar :user="user" :setUser="setUser" :getUser="getUser"/>
-      <Home  :user="user" :setUser="setUser" :getUser="getUser"/>
+      <router-view v-slot="{ Component }" 
+      :user="user"
+      :getUser="getUser"
+      :setUser="setUser"
+      >
+      <component :is="Component"
+      :user="user"
+      :getUser="getUser"
+      :setUser="setUser"
+      />
+
+      </router-view>
     </div>
 </template>
 

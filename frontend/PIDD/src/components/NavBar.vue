@@ -13,7 +13,6 @@ export default {
 
 
 </script>
-
 <template>
   <div class="navbar" id="navbar">
     <LoginForm :user="user" :setUser="setUser" :getUser="getUser" />
