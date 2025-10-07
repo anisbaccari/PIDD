@@ -72,10 +72,22 @@ export default {
       />
 
       </router-view>
+      <div>
+    <header class="p-4 text-center bg-gray-800 text-white">
+      <h1>🧢 Boutique T-Shirts</h1>
+    </header>
+
+    <main class="p-6">
+      <router-view />
+    </main>
+  </div>
     </div>
 </template>
 
 
 <style scoped>
-
+body {
+  margin: 0;
+  font-family: "Inter", sans-serif;
+}
 </style>
