@@ -1,6 +1,6 @@
 // controllers/authController.js
 import { hash, compare } from 'bcrypt';
-import pool from '../database/mysql.js';
+import {sequelize} from '../database/mysql.js';
 import { generateToken } from '../security/jwt.js';
 
 export  async function login (request, reply) {
@@ -11,7 +11,7 @@ export  async function login (request, reply) {
     }
 
     try {
-      const [rows] = await pool.query('SELECT * FROM users WHERE username = ?', [username]);
+      const [rows] = await sequelize.query('SELECT * FROM users WHERE username = ?', [username]);
 
       if (rows.length === 0) {
         return reply.status(401).send({ error: 'Invalid credentials' });
@@ -44,7 +44,7 @@ export async function register (request, reply)  {
     }
 
     try {
-      const [existing] = await pool.query('SELECT id FROM users WHERE username = ?', [username]);
+      const [existing] = await sequelize.query('SELECT id FROM users WHERE username = ?', [username]);
       if (existing.length > 0) {
         return reply.status(400).send({ error: 'User already exists' });
       }

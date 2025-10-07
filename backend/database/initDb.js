@@ -9,12 +9,13 @@ export async function ensureDatabase(){
 }
 
 const connection = await mysql.createConnection({
-  host: DB_HOST || 'localhost',
-  port : DB_PORT || '3306',
-  user : DB_USER || 'root',
-  password : DB_PASS || '',
+  host:  process.env.DB_HOST || 'localhost',
+  port :  process.env.DB_PORT || '3306',
+  user :  process.env.DB_USER || 'root',
+  password :  process.env.DB_PASS || '',
 });
 
-await connection.query(` CREATE DATABASE IF NOT EXIST \`${DB_NAME}`);
+
+await connection.query(`CREATE DATABASE IF NOT EXISTS \`${process.env.DB_NAME}\`;`);
 await connection.end();
-console.log(' DATABASE created : ',DB_NAME);
+console.log(' DATABASE created : ',process.env.DB_NAME);
