@@ -56,13 +56,20 @@
 </template>
 
 <script>
-// Import des images
+// Import des images des catégories
 import hommeImg from '../assets/homme.png'
 import femmeImg from '../assets/femme.png'
 import enfantImg from '../assets/enfant.png'
+
+// Import des images des produits
 import noirImg from '../assets/noir.png'
 import blancImg from '../assets/blanc.png'
-import roseImg from '../assets/rose.png'
+import rosefemmeImg from '../assets/rosefemme.png'
+import blancfemmeImg from '../assets/blancfemme.png'
+import noirfemmeImg from '../assets/noirfemme.png'
+import enfantbleuImg from '../assets/enfantbleu.png'
+import enfantrougeImg from '../assets/enfantrouge.png'
+import grisImg from '../assets/gris.png'
 
 export default {
   name: 'HomePage',
@@ -74,10 +81,19 @@ export default {
         { id: 3, name: "T-shirts Enfants", image: enfantImg }
       ],
       popularProducts: [
+        // Produits Homme
         { id: 101, name: "T-shirt Noir Classique", price: 20, image: noirImg },
         { id: 102, name: "T-shirt Blanc Sport", price: 25, image: blancImg },
-        { id: 201, name: "T-shirt Rose Élégant", price: 22, image: roseImg },
-        { id: 103, name: "T-shirt Gris Urban", price: 23, image: noirImg }
+        { id: 103, name: "T-shirt Gris Urban", price: 23, image: grisImg },
+        
+        // Produits Femme
+        { id: 201, name: "T-shirt Rose Élégant", price: 22, image: rosefemmeImg },
+        { id: 202, name: "T-shirt Blanc Femme", price: 24, image: blancfemmeImg },
+        { id: 203, name: "T-shirt Noir Femme", price: 21, image: noirfemmeImg },
+        
+        // Produits Enfants
+        { id: 301, name: "T-shirt Bleu Enfant", price: 15, image: enfantbleuImg },
+        { id: 302, name: "T-shirt Rouge Enfant", price: 16, image: enfantrougeImg }
       ]
     }
   }

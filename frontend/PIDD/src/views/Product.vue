@@ -65,9 +65,15 @@
 </template>
 
 <script>
+// Import des images CORRIGÉ - utilisation des fichiers existants
 import noir from '../assets/noir.png'
 import blanc from '../assets/blanc.png'
-import rose from '../assets/rose.png'
+import rosefemme from '../assets/rosefemme.png'
+import blancfemme from '../assets/blancfemme.png'
+import noirfemme from '../assets/noirfemme.png'
+import enfantbleu from '../assets/enfantbleu.png'
+import enfantrouge from '../assets/enfantrouge.png'
+import gris from '../assets/gris.png'
 
 export default {
   name: 'ProductPage',
@@ -102,6 +108,7 @@ export default {
     loadProduct() {
       const productId = parseInt(this.$route.params.id)
       const allProducts = [
+        // Produits Homme
         { 
           id: 101, 
           name: "T-shirt Noir Classique", 
@@ -119,43 +126,55 @@ export default {
           description: "T-shirt technique en matière respirante, parfait pour le sport et les activités extérieures."
         },
         { 
-          id: 201, 
-          name: "T-shirt Rose Élégant", 
-          brand: "Zara", 
-          price: 18, 
-          image: rose,
-          description: "T-shirt féminin en coton stretch, coupe ajustée, couleur rose pastel tendance."
-        },
-        { 
           id: 103, 
           name: "T-shirt Gris Urban", 
           brand: "Puma", 
-          price: 22, 
-          image: noir,
+          price: 23, 
+          image: gris,
           description: "T-shirt streetwear en coton premium, design urbain et moderne."
+        },
+        
+        // Produits Femme
+        { 
+          id: 201, 
+          name: "T-shirt Rose Élégant", 
+          brand: "Zara", 
+          price: 22, 
+          image: rosefemme,
+          description: "T-shirt féminin en coton stretch, coupe ajustée, couleur rose pastel tendance."
         },
         { 
           id: 202, 
-          name: "T-shirt Blanc Basique", 
+          name: "T-shirt Blanc Femme", 
           brand: "H&M", 
-          price: 15, 
-          image: blanc,
+          price: 18, 
+          image: blancfemme,
           description: "T-shirt basique femme, coupe standard, matière douce et agréable à porter."
         },
+        { 
+          id: 203, 
+          name: "T-shirt Noir Femme", 
+          brand: "Mango", 
+          price: 21, 
+          image: noirfemme,
+          description: "T-shirt femme en coton bio, coupe ajustée, idéal pour toutes les occasions."
+        },
+        
+        // Produits Enfants
         { 
           id: 301, 
           name: "T-shirt Bleu Enfant", 
           brand: "Disney", 
-          price: 12, 
-          image: noir,
+          price: 15, 
+          image: enfantbleu,
           description: "T-shirt pour enfant avec motif Disney, coton doux, lavage facile."
         },
         { 
           id: 302, 
           name: "T-shirt Rouge Super-héros", 
           brand: "Marvel", 
-          price: 14, 
-          image: rose,
+          price: 16, 
+          image: enfantrouge,
           description: "T-shirt enfant avec impression Marvel, parfait pour les fans de super-héros."
         }
       ]
@@ -364,7 +383,7 @@ export default {
   background: #2563eb;
 }
 
-/* Navigation (identique aux autres pages) */
+/* Navigation */
 .navigation {
   display: flex;
   justify-content: space-between;

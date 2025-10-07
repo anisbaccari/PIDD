@@ -47,9 +47,15 @@
 </template>
 
 <script>
+// Import des images CORRIGÉ - utilisation des fichiers existants
 import noir from '../assets/noir.png'
 import blanc from '../assets/blanc.png'
-import rose from '../assets/rose.png'
+import rosefemme from '../assets/rosefemme.png'
+import blancfemme from '../assets/blancfemme.png'
+import noirfemme from '../assets/noirfemme.png'
+import enfantbleu from '../assets/enfantbleu.png'
+import enfantrouge from '../assets/enfantrouge.png'
+import gris from '../assets/gris.png'
 
 export default {
   name: 'CategoryPage',
@@ -76,21 +82,22 @@ export default {
       if (categoryId == 1) {
         this.categoryName = "T-shirts Homme"
         this.products = [
-          { id: 101, name: "T-shirt Noir", brand: "Nike", price: 20, image: noir },
-          { id: 102, name: "T-shirt Blanc", brand: "Adidas", price: 25, image: blanc },
-          { id: 103, name: "T-shirt Gris", brand: "Puma", price: 22, image: noir }
+          { id: 101, name: "T-shirt Noir Classique", brand: "Nike", price: 20, image: noir },
+          { id: 102, name: "T-shirt Blanc Sport", brand: "Adidas", price: 25, image: blanc },
+          { id: 103, name: "T-shirt Gris Urban", brand: "Puma", price: 23, image: gris }
         ]
       } else if (categoryId == 2) {
         this.categoryName = "T-shirts Femme"
         this.products = [
-          { id: 201, name: "T-shirt Rose", brand: "Zara", price: 18, image: rose },
-          { id: 202, name: "T-shirt Blanc", brand: "H&M", price: 15, image: blanc }
+          { id: 201, name: "T-shirt Rose Élégant", brand: "Zara", price: 22, image: rosefemme },
+          { id: 202, name: "T-shirt Blanc Femme", brand: "H&M", price: 18, image: blancfemme },
+          { id: 203, name: "T-shirt Noir Femme", brand: "Mango", price: 21, image: noirfemme }
         ]
       } else if (categoryId == 3) {
         this.categoryName = "T-shirts Enfants"
         this.products = [
-          { id: 301, name: "T-shirt Bleu", brand: "Disney", price: 12, image: noir },
-          { id: 302, name: "T-shirt Rouge", brand: "Marvel", price: 14, image: rose }
+          { id: 301, name: "T-shirt Bleu Enfant", brand: "Disney", price: 15, image: enfantbleu },
+          { id: 302, name: "T-shirt Rouge Super-héros", brand: "Marvel", price: 16, image: enfantrouge }
         ]
       } else {
         this.categoryName = "Catégorie inconnue"
