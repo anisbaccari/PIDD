@@ -3,82 +3,78 @@ import RegisterForm from './components/RegisterForm.vue';
 import LoginForm from './components/LoginForm.vue';
 import Home from './views/Home.vue';
 import NavBar from './components/NavBar.vue';
+import AppFooter from './components/AppFooter.vue'
 import api from './api';
 
-
 export default {
+  components: { NavBar, Home,AppFooter },
   
-  components: { NavBar,Home },
   data() {
-    return { user: null };
+    return { 
+      user: null 
+    };
   },
   methods: {
     setUser(user) {
       this.user = user;
     },
-    getUser(){
+    getUser() {
       return this.user;
     }
   },
-     async mounted() {
-        const token = localStorage.getItem("token");
-        if(!token)
-        {
-        console.log("[navBar] : no token found");
-        return;
-        }
-        console.log("[init] token found :",token)
-    
-        try {
-
-          if(this.user)
-          {
-            const res = await api.get('http://localhost:3000/profil',
-            {
-              headers: { Authorization: `Bearer ${token}` }
-            });
-
-            // axios puts parsed JSON on res.data
-            this.user = res.data.user;
-            console.log('profile', res.data);
-          }
-          else{
-            console.log("[init] not user found")
-          }
-  } catch (err) {
-    console.error('profile error', err.response?.data || err.message);
-    console.error('[USER + TOKEN]', this?.user,token);
-
-  }
-    
-    
+  async mounted() {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.log("[navBar] : no token found");
+      return;
     }
-    
+    console.log("[init] token found :", token)
+
+    try {
+      // Correction : toujours essayer de récupérer le profil si token existe
+      const res = await api.get('http://localhost:3000/profil', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // axios puts parsed JSON on res.data
+      this.user = res.data.user;
+      console.log('profile', res.data);
+      
+    } catch (err) {
+      console.error('profile error', err.response?.data || err.message);
+      console.error('[USER + TOKEN]', this?.user, token);
+      // Optionnel : déconnecter si token invalide
+      localStorage.removeItem("token");
+      this.user = null;
+    }
+  }
 };
 </script>
 
 <template>
-    <div>
-      <NavBar :user="user" :setUser="setUser" :getUser="getUser"/>
-
-      
-
-      <router-view v-slot="{ Component }" 
+  <div id="app">
+    <!-- Navigation -->
+    <NavBar :user="user" :setUser="setUser" :getUser="getUser"/>
+    
+    <!-- Contenu principal - UNIQUEMENT le router-view -->
+    <router-view 
       :user="user"
       :getUser="getUser"
       :setUser="setUser"
-      >
-      <component :is="Component"
-      :user="user"
-      :getUser="getUser"
-      :setUser="setUser"
-      />
-
-      </router-view>
-    </div>
+    />
+    <AppFooter />
+  </div>
 </template>
 
+<style>
+/* Styles globaux */
+body {
+  margin: 0;
+  font-family: "Inter", sans-serif;
+  background-color: #f8fafc;
+}
 
-<style scoped>
-
+#app {
+  min-height: 100vh;
+}
 </style>
