@@ -5,7 +5,7 @@ import ProductDetails from '../views/ProductDetails.vue'
 
 const routes = [
   { path: '/', name: 'Home', component: Home },
-  { path: '/category/:id', name: 'Category', component: Category },
+ /* { path: '/category/:id', name: 'Category', component: Category } */,
   { path: '/product/:id', name: 'ProductDetails', component: ProductDetails }
 ]
 

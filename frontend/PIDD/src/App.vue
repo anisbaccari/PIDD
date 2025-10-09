@@ -60,6 +60,9 @@ export default {
 <template>
     <div>
       <NavBar :user="user" :setUser="setUser" :getUser="getUser"/>
+
+      
+
       <router-view v-slot="{ Component }" 
       :user="user"
       :getUser="getUser"
