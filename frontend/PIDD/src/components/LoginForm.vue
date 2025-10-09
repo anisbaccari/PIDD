@@ -22,7 +22,7 @@
   export default {
     props : ['user','setUser','getUser'],
     data() {
-      console.log("[LoginForn data  ] getUser : ",this?.getUser())
+     // console.log("[LoginForn data  ] getUser : ",this?.getUser())
       return {
         DataUser : this?.getUser() || {username: "",password: ""},
         message :''
