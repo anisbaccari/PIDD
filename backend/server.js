@@ -3,9 +3,11 @@ import dotenv from 'dotenv';
 import cors from '@fastify/cors';
 import authRoutes from './routes/authRoutes.js';
 import profileRoutes from './routes/profileRoutes.js';
+import productRoutes from './routes/productRoutes.js';
+
 import homeRoute from './routes/homeRoute.js';
 
-import {ensureDatabase} from './database/initDb.js';
+import {initDatabase} from './database/initDb.js';
 import { sequelize } from './database/mysql.js';
 // import models (to register them & associations)
  //Doing this execute the file as each ifle import been executeed
@@ -39,13 +41,19 @@ await fastify.register(cors, {
 await fastify.register(homeRoute);
 await fastify.register(authRoutes, { prefix: '/auth' });
 await fastify.register(profileRoutes, { prefix: '/profil' });
+await fastify.register(productRoutes, { prefix: '/product' });
+
+
+
+
 
 // Start server
 
 const start = async () =>{
   try {
 
-    await ensureDatabase();
+    await initDatabase();
+ 
 
     await sequelize.authenticate();
     // sync all models (create or alter tables to match models)
