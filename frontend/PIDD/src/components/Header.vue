@@ -25,10 +25,11 @@
 
     <!-- Bouton connexion à droite -->
     <b-navbar-nav class="ms-auto">
-      <b-button variant="outline-light" class="d-flex align-items-center">
+      <router-link to="/login" class="btn btn-outline-light d-flex align-items-center">
+
         <i class="bi bi-person-circle me-2"></i>
         Se connecter
-      </b-button>
+      </router-link>
     </b-navbar-nav>
   </b-navbar>
 </template>
