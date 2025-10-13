@@ -1,5 +1,6 @@
 <template>
   <div class="home" id="home">
+    
     <h1>Welcome to the Home </h1>
 
     <div v-if="user">
@@ -18,6 +19,7 @@
 
 import api from '../api';
 import Footer from '../components/Footer.vue';
+
 
 export default {
   name: 'Home',
