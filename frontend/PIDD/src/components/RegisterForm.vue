@@ -8,6 +8,7 @@
         <input v-model="DataUser.password" type="password" placeholder="Password" required />
         <button type="submit">Register</button>
       </form>
+      <p v-if="message"> {{ message }}</p>
     </div>
   </template>
   
@@ -29,7 +30,6 @@
             username: this.user.username,
             password: this.user.password
           });
-          this.message = `User registered with ID: ${res.data.userId}`;
         } catch (err) {
           this.message = err.response?.data?.error || 'Registration failed';
         }

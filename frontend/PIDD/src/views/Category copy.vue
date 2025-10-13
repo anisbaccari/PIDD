@@ -28,9 +28,8 @@
           :to="`/product/${p.id}`"
           class="product-card"
         >
-          <img  :src="this.imageMap[p.img]" :alt="p.name" class="product-img" />
+          <img :src="p.image" :alt="p.name" class="product-img" />
           <div class="product-info">
-            <p> {{ p.img }}</p>
             <p class="product-name">{{ p.name }}</p>
             <p class="product-brand">{{ p.brand }}</p>
             <p class="product-price">{{ p.price }} €</p>
@@ -57,54 +56,52 @@ import noirfemme from '../assets/noirfemme.png'
 import enfantbleu from '../assets/enfantbleu.png'
 import enfantrouge from '../assets/enfantrouge.png'
 import gris from '../assets/gris.png'
-import api from '../api';
 
 export default {
   name: 'CategoryPage',
   data() {
     return {
       products: [],
-      categoryName: "",
-       // We need this as to retrieve the path from th Db when the img is in frotend
-      imageMap: {
-        'noir.png': noir,
-        'blanc.png': blanc,
-        'rosefemme.png': rosefemme,
-        'gris.png': gris,
-        'blancfemme.png' : blancfemme,
-        'noirfemme.png' : noirfemme,
-        'enfantbleu.png' : enfantbleu,
-        'enfantrouge.png' : enfantrouge
-      },
+      categoryName: ""
     }
   },
   mounted() {
-    this.getAllCategorie()
+    this.loadCategoryData()
   },
   watch: {
     '$route.params.id': {
       handler() {
-        this.getAllCategorie()
+        this.loadCategoryData()
       },
       immediate: true
     }
   },
   methods: {
-      async getAllCategorie(){
-      try {
-        let opt = 'Homme';
-        const rows = await api.get("/categories");
-        const product = rows.data;
-        if(product.length == 0)
-        {
-        console.log("[getAllCategories] : no rows found");
-
-        }
-        console.log("[getAllCategories] : ",rows.data[0].img);
-        this.products = product;
-      } catch (error) {
-        console.log("[getAllCategories] : ", error);
-        
+    loadCategoryData() {
+      const categoryId = this.$route.params.id
+      if (categoryId == 1) {
+        this.categoryName = "T-shirts Homme"
+        this.products = [
+          { id: 101, name: "T-shirt Noir Classique", brand: "Nike", price: 20, image: noir },
+          { id: 102, name: "T-shirt Blanc Sport", brand: "Adidas", price: 25, image: blanc },
+          { id: 103, name: "T-shirt Gris Urban", brand: "Puma", price: 23, image: gris }
+        ]
+      } else if (categoryId == 2) {
+        this.categoryName = "T-shirts Femme"
+        this.products = [
+          { id: 201, name: "T-shirt Rose Élégant", brand: "Zara", price: 22, image: rosefemme },
+          { id: 202, name: "T-shirt Blanc Femme", brand: "H&M", price: 18, image: blancfemme },
+          { id: 203, name: "T-shirt Noir Femme", brand: "Mango", price: 21, image: noirfemme }
+        ]
+      } else if (categoryId == 3) {
+        this.categoryName = "T-shirts Enfants"
+        this.products = [
+          { id: 301, name: "T-shirt Bleu Enfant", brand: "Disney", price: 15, image: enfantbleu },
+          { id: 302, name: "T-shirt Rouge Super-héros", brand: "Marvel", price: 16, image: enfantrouge }
+        ]
+      } else {
+        this.categoryName = "Catégorie inconnue"
+        this.products = []
       }
     }
   }

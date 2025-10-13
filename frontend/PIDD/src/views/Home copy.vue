@@ -23,6 +23,7 @@
     <!-- Catégories en vedette -->
     <section class="featured-categories">
       <h2 class="section-title">Catégories populaires</h2>
+      
       <div class="categories-grid">
         <router-link 
           v-for="category in categories" 
@@ -56,9 +57,6 @@
 </template>
 
 <script>
-
-import api from '../api';
-
 // Import des images des catégories
 import hommeImg from '../assets/homme.png'
 import femmeImg from '../assets/femme.png'
@@ -78,10 +76,11 @@ export default {
   name: 'HomePage',
   data() {
     return {
-      categories: [{id:1, name :"Homme"},
-                  {id : 2, name : "Femme"},
-                  {id: 3,name : "Enfant"}],
-   
+      categories: [
+        { id: 1, name: "T-shirts Homme", image: hommeImg },
+        { id: 2, name: "T-shirts Femme", image: femmeImg },
+        { id: 3, name: "T-shirts Enfants", image: enfantImg }
+      ],
       popularProducts: [
         // Produits Homme
         { id: 101, name: "T-shirt Noir Classique", price: 20, image: noirImg },
@@ -96,8 +95,7 @@ export default {
         // Produits Enfants
         { id: 301, name: "T-shirt Bleu Enfant", price: 15, image: enfantbleuImg },
         { id: 302, name: "T-shirt Rouge Enfant", price: 16, image: enfantrougeImg }
-      ],
-      opt: ''
+      ]
     }
   }
 }

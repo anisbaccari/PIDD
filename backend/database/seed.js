@@ -1,5 +1,5 @@
 // seed.js
-import { ensureDatabase } from './initDb.js';
+/* import { ensureDatabase } from './initDb.js';
 import { sequelize } from './mysql.js';
 import '../models/User.js';
 import '../models/Admin.js';
@@ -31,3 +31,4 @@ const run = async () => {
 };
 
 run().catch(err => { console.error(err); process.exit(1); });
+ */

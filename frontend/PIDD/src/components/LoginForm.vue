@@ -13,7 +13,10 @@
         <input v-model="DataUser.password" type="password" placeholder="Password" required />
         <button type="submit">Login</button>
       </form>
-    </div>
+
+     <!-- 🟢 Add this line to display feedback messages -->
+    <p v-if="message" class="login-message">{{ message }}</p>
+  </div>
   </template>
   
   <script>
@@ -36,6 +39,7 @@
             username: this.DataUser.username,
             password: this.DataUser.password
           });
+          console.log("[ res ok ]  ? : ",res.ok);
           // Store the token in localStorage
           console.log('Login successful, token:', res.data.token);
           localStorage.setItem('token', res.data.token);
@@ -43,6 +47,7 @@
           console.log('user successful :', res.data.user);
           this.setUser(res.data.user);
         } catch (err) {
+          console.log("[auth/log] : Error :",err);
           this.message = err.response?.data?.error || 'Login failed';
         }
       },

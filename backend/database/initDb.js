@@ -11,6 +11,18 @@ import { Product } from '../models/Product.js';
 dotenv.config();
 
 
+/* PATH TO IMG  */
+const noirImg = 'noir.png'
+const blancImg = 'blanc.png'
+const rosefemmeImg = 'rosefemme.png'
+const blancfemmeImg = 'blancfemme.png'
+const noirfemmeImg = 'noirfemme.png'
+const enfantbleuImg = 'enfantbleu.png'
+const enfantrougeImg = 'enfantrouge.png'
+const grisImg = 'gris.png'
+
+/* ==== */
+
 export async function ensureDatabase(){
   const { DB_HOST,DB_PORT,DB_NAME,DB_USER,DB_PASS} = process.env;
 }
@@ -37,11 +49,25 @@ const adminList = [
   // Add more admins as needed
 ];
 
+
+
+// categories  => Homme  = 1  | Femme = 2 | Enfant = 3
 const productList = [
-  { name: 'Classic T-Shirt', category: 'Homme', price: 19.99, quantity: 50, description: 'Cotton classic tee' },
-  { name: 'kid T-Shirt', category: 'Enfant', price: 9.99, quantity: 50, description: 'cool kid ' },
-  { name: 'Premium Hoodie', category: 'Femme', price: 39.99, quantity: 30, description: ' brand new' },
-  // Add more products as needed
+
+    // Produits Homme
+        { name: "T-shirt Noir Classique",category: 1, price: 20,quantity: 30, description: 'Cotton classic tee' ,img : noirImg },
+        { name: "T-shirt Blanc Sport",category: 1, price: 25,quantity: 50, description: 'Cotton classic tee' ,img : blancImg},
+        { name: "T-shirt Gris Urban",category: 1, price: 23,quantity: 50, description: 'Cotton classic tee' ,img : grisImg},
+        
+        // Produits Femme
+        { name: "T-shirt Rose Élégant", category: 2,price: 22, description: 'Cotton classic tee' ,img : rosefemmeImg},
+        { name: "T-shirt Blanc Femme", category: 2,price: 24, description: 'Cotton classic tee' ,img : blancfemmeImg},
+        { name: "T-shirt Noir Femme", category: 2,price: 21, description: 'Cotton classic tee' ,img : noirfemmeImg},
+        
+        // Produits Enfants
+        { name: "T-shirt Bleu Enfant", category: 3, price: 15, description: 'Cool kid' ,img : enfantbleuImg },
+        { name: "T-shirt Rouge Enfant", category: 3, price: 16, description: 'Cool kid' ,img : enfantrougeImg}
+      
 ];
 
 export const initDatabase = async () => {

@@ -4,6 +4,7 @@ import cors from '@fastify/cors';
 import authRoutes from './routes/authRoutes.js';
 import profileRoutes from './routes/profileRoutes.js';
 import productRoutes from './routes/productRoutes.js';
+import categorieRoutes from './routes/categorieRoutes.js';
 
 import homeRoute from './routes/homeRoute.js';
 
@@ -41,6 +42,7 @@ await fastify.register(cors, {
 await fastify.register(homeRoute);
 await fastify.register(authRoutes, { prefix: '/auth' });
 await fastify.register(profileRoutes, { prefix: '/profil' });
+await fastify.register(categorieRoutes, { prefix: '/categories' });
 await fastify.register(productRoutes, { prefix: '/product' });
 
 
