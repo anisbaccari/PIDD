@@ -1,6 +1,6 @@
 <template>
 
-    <div v-if="user && user.username" class="registered" ></div>
+    <div v-if="user" class="registered" ></div>
     <div v-else>
       <h2>Register</h2>
       <form @submit.prevent="register">
@@ -26,11 +26,20 @@
     methods: {
       async register() {
         try {
-          const res = await api.post('/auth/register', {
-            username: this.user.username,
-            password: this.user.password
-          });
+              console.log("[register] : ", this.DataUser.password);
+
+              const res = await api.post('/auth/register', {
+                username: this.DataUser.username,
+                password: this.DataUser.password
+              });
+
+              console.log("[register] res : ",res.data);
+              let user = { username : this.DataUser.username};
+              this.setUser(user);
+
         } catch (err) {
+              console.log("[register] err : ", err);
+
           this.message = err.response?.data?.error || 'Registration failed';
         }
       }

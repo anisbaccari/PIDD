@@ -51,13 +51,18 @@ export  async function login (request, reply) {
 
 
 export async function register (request, reply)  {
-   const { username, password } = request.body;
-    console.log('Request body:', request.body); // <-- log it
-    if (!username || !password) {
-      return reply.status(400).send({ error: 'Username and password required' });
-    }
+ try {
 
-    try {
+      console.log("[register] =====");
+
+
+      const { username, password } = request.body;
+      console.log('Request body:', request.body); // <-- log it
+      if (!username || !password) {
+        return reply.status(400).send({ error: 'Username and password required' });
+      }
+
+   
       const existing =  await sequelize.query(
           'SELECT * FROM users WHERE username = :username',
           {
@@ -66,20 +71,24 @@ export async function register (request, reply)  {
           }
         );
       if (existing.length > 0) {
+        console.log("[register] : User already existe");
         return reply.status(400).send({ error: 'User already exists' });
       }
 
       const hashed = await hash(password, 10);
-      const result = await sequelize.query(
+      const [insertId] = await sequelize.query(
         'INSERT INTO users (username, passwordHash) VALUES (:username, :hashed)',
          {
           replacements :{username, hashed},
           type: sequelize.QueryTypes.INSERT
         }
-    );
+      );
+      
+      console.log("[register] : User Created : ", insertId);
+      reply.send({ success: true, userId: insertId });
 
-      reply.send({ success: true, userId: result.insertId });
     } catch (err) {
+      console.log("[register] : err ", err);
       reply.status(500).send({ error: err.message });
     }
   };
