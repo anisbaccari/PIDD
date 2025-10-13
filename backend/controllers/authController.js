@@ -7,7 +7,7 @@ export  async function login (request, reply) {
     const { username, password } = request.body;
 
       console.log('================================================');
-      console.log('[PROFIL] receive request : ', request.body);
+      console.log('[Login] receive request : ', request.body);
       console.log('================================================');
 
 
@@ -25,14 +25,17 @@ export  async function login (request, reply) {
         );
 
       if (rows.length === 0) {
-        return reply.status(401).send({ error: 'Invalid credentials' });
+        console.log("[Login] no rows found");
+
+        return reply.status(401).send("[Login] : no rows found ");
       }
 
       const user = rows[0];
       const match = await compare(password, user.passwordHash);
 
       if (!match) {
-        return reply.status(401).send({ error: 'Invalid credentials' });
+        console.log("[Login] pass error");
+        return reply.status(402).send({ error: 'Invalid credentials' });
       }
 
       // Generate JWT

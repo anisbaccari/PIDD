@@ -7,6 +7,8 @@ import '../models/User.js';
 import '../models/Admin.js';
 import '../models/Product.js';
 import { Admin } from '../models/Admin.js';
+import { User } from '../models/User.js';
+
 import { Product } from '../models/Product.js';
 dotenv.config();
 
@@ -83,7 +85,7 @@ export const initDatabase = async () => {
 
   
   // Bulk create admins
-  await Admin.bulkCreate(adminList, { ignoreDuplicates: true });
+  await User.bulkCreate(adminList, { ignoreDuplicates: true });
 
   // Bulk create products
   await Product.bulkCreate(productList, { ignoreDuplicates: true });
