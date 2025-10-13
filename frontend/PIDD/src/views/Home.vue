@@ -1,6 +1,6 @@
 <template>
   <div class="home" id="home">
-    <h1>Welcome to the Home Page</h1>
+    <h1>Welcome to the Home </h1>
 
     <div v-if="user">
       <p>Logged in as: {{ user.username }}</p>
@@ -10,14 +10,18 @@
     <div v-else>
       <p>You are not logged in.</p>
     </div>
+    <footer />
   </div>
 </template>
 
 <script>
+
 import api from '../api';
+import Footer from '../components/Footer.vue';
 
 export default {
   name: 'Home',
+  components: { Footer },
   data() {
     return {
       user: null,
@@ -35,4 +39,16 @@ export default {
 };
 </script>
 
-<style src="../assets/styles/Home.css" scoped></style>
+<style src="../assets/styles/Home.css" scoped>
+html, body {
+  height: 100%;
+}
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+main {
+  flex: 1;
+}
+</style>

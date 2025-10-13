@@ -32,6 +32,7 @@
           console.log('Login successful, token:', res.data.token);
           localStorage.setItem('token', res.data.token);
           this.message = res.data.message;
+          this.message = 'Login réussi !';
         } catch (err) {
           this.message = err.response?.data?.error || 'Login failed';
         }

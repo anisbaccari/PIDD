@@ -1,6 +1,6 @@
 <script>
-import RegisterForm from './RegisterForm.vue';
 import LoginForm from './LoginForm.vue';
+import RegisterForm from './RegisterForm.vue';
 export default {
   components: { RegisterForm, LoginForm },
   name:'NavBar'
@@ -14,5 +14,6 @@ export default {
     <RegisterForm />
     <LoginForm />
   </div> 
+  <footer />
 </template>
 <style src="../assets/styles/NavBar.css"></style>

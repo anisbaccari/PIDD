@@ -8,6 +8,7 @@
       </form>
       <p v-if="message">{{ message }}</p>
     </div>
+  
   </template>
   
   <script>
