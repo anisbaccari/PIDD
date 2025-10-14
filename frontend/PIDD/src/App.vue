@@ -1,13 +1,10 @@
 <script>
-import RegisterForm from './components/RegisterForm.vue';
-import LoginForm from './components/LoginForm.vue';
-import Home from './views/Home.vue';
-import NavBar from './components/NavBar.vue';
-import AppFooter from './components/AppFooter.vue'
 import api from './api';
+import AppFooter from './components/AppFooter.vue';
+import Home from './views/Home.vue';
 
 export default {
-  components: { NavBar, Home,AppFooter },
+  components: { Home,AppFooter },
   
   data() {
     return { 
