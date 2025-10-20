@@ -9,6 +9,9 @@
         <router-link to="/category/2" class="nav-link">Femme</router-link>
         <router-link to="/category/3" class="nav-link">Enfants</router-link>
       </div>
+      <div class="nav-login">
+        <router-link to="/login" class="login-button nav-link">Se connecter</router-link>
+      </div>
     </nav>
 
     <!-- Hero Section -->
@@ -56,32 +59,30 @@
 </template>
 
 <script>
-
-import api from '../api';
-
 // Import des images des catégories
-import hommeImg from '../assets/homme.png'
-import femmeImg from '../assets/femme.png'
 import enfantImg from '../assets/enfant.png'
+import femmeImg from '../assets/femme.png'
+import hommeImg from '../assets/homme.png'
 
 // Import des images des produits
-import noirImg from '../assets/noir.png'
 import blancImg from '../assets/blanc.png'
-import rosefemmeImg from '../assets/rosefemme.png'
 import blancfemmeImg from '../assets/blancfemme.png'
-import noirfemmeImg from '../assets/noirfemme.png'
 import enfantbleuImg from '../assets/enfantbleu.png'
 import enfantrougeImg from '../assets/enfantrouge.png'
 import grisImg from '../assets/gris.png'
+import noirImg from '../assets/noir.png'
+import noirfemmeImg from '../assets/noirfemme.png'
+import rosefemmeImg from '../assets/rosefemme.png'
 
 export default {
   name: 'HomePage',
   data() {
     return {
-      categories: [{id:1, name :"Homme"},
-                  {id : 2, name : "Femme"},
-                  {id: 3,name : "Enfant"}],
-   
+      categories: [
+        { id: 1, name: "T-shirts Homme", image: hommeImg },
+        { id: 2, name: "T-shirts Femme", image: femmeImg },
+        { id: 3, name: "T-shirts Enfants", image: enfantImg }
+      ],
       popularProducts: [
         // Produits Homme
         { id: 101, name: "T-shirt Noir Classique", price: 20, image: noirImg },
@@ -96,8 +97,7 @@ export default {
         // Produits Enfants
         { id: 301, name: "T-shirt Bleu Enfant", price: 15, image: enfantbleuImg },
         { id: 302, name: "T-shirt Rouge Enfant", price: 16, image: enfantrougeImg }
-      ],
-      opt: ''
+      ]
     }
   }
 }

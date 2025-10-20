@@ -54,7 +54,6 @@ export default {
 <template>
   <div id="app">
     <!-- Navigation -->
-    <NavBar :user="user" :setUser="setUser" :getUser="getUser"/>
     
     <!-- Contenu principal - UNIQUEMENT le router-view -->
     <router-view 
