@@ -1,7 +1,7 @@
 <script>
 import RegisterForm from './RegisterForm.vue';
 import LoginForm from './LoginForm.vue';
-import Profil from './Profil.vue';
+import Profil from './ProfilBtn.vue';
 export default {
   components: { Profil,RegisterForm, LoginForm },
   name:'NavBar',

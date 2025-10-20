@@ -6,6 +6,7 @@
       <form @submit.prevent="register">
         <input v-model="DataUser.username" placeholder="Username" required />
         <input v-model="DataUser.password" type="password" placeholder="Password" required />
+
         <button type="submit">Register</button>
       </form>
       <p v-if="message"> {{ message }}</p>

@@ -9,7 +9,7 @@ import Profilview from '../views/Profilview.vue'
 // Import des composants de formulaire (si affichés comme pages indépendantes)
 import LoginForm from '../components/LoginForm.vue'
 import RegisterForm from '../components/RegisterForm.vue'
-import Profil from '../components/Profil.vue'
+import Profil from '../components/ProfilBtn.vue'
 
 const routes = [
   { path: '/', name: 'Home', component: Home },
