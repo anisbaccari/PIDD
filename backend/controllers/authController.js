@@ -4,22 +4,22 @@ import { sequelize} from '../database/mysql.js';
 import { generateToken } from '../security/jwt.js';
 
 export  async function login (request, reply) {
-    const { username, password } = request.body;
+    const { email, password } = request.body;
 
       console.log('================================================');
       console.log('[Login] receive request : ', request.body);
       console.log('================================================');
 
 
-    if (!username || !password) {
-      return reply.status(400).send({ error: 'Username and password required' });
+    if (!email || !password) {
+      return reply.status(400).send({ error: 'email and password required' });
     }
 
     try {
     const rows = await sequelize.query(
-          'SELECT * FROM users WHERE username = :username',
+          'SELECT * FROM users WHERE email = :email',
           {
-            replacements: { username },
+            replacements: { email },
             type: sequelize.QueryTypes.SELECT,
           }
         );
@@ -39,7 +39,7 @@ export  async function login (request, reply) {
       }
 
       // Generate JWT
-      const token = generateToken({ id: user.id, username: user.username });
+      const token = generateToken({ id: user.id, email: user.email });
       
       // log the generated token
       console.log('Generated JWT:', token);
@@ -56,10 +56,10 @@ export async function register (request, reply)  {
       console.log("[register] =====");
 
 
-      const { username, password } = request.body;
+      const { username, password, email,nom ,prenom } = request.body;
       console.log('Request body:', request.body); // <-- log it
-      if (!username || !password) {
-        return reply.status(400).send({ error: 'Username and password required' });
+      if (!username || !password || !email  || !nom  || !prenom) {
+        return reply.status(400).send({ error: 'Username, email and password required' });
       }
 
    
@@ -70,16 +70,34 @@ export async function register (request, reply)  {
             type: sequelize.QueryTypes.SELECT,
           }
         );
+
       if (existing.length > 0) {
         console.log("[register] : User already existe");
         return reply.status(400).send({ error: 'User already exists' });
       }
 
+
+      const emailRow  = await sequelize.query('SELECT * FROM users WHERE email = :email',
+        {
+          replacements:{ email},
+          type: sequelize.QueryTypes.SELECT,
+        }
+      )
+
+      if(emailRow.length > 0)
+      {
+        console.log(" email already exist ",email); 
+        return reply.status(400).send({error : 'Email already existe'});
+
+      }
+
+      console.log(" =======[REGISTER]  user - pass - email :",username,password,email);
+
       const hashed = await hash(password, 10);
       const [insertId] = await sequelize.query(
-        'INSERT INTO users (username, passwordHash) VALUES (:username, :hashed)',
+        'INSERT INTO users (username, passwordHash,email, name, lastName) VALUES (:username, :hashed, :email, :nom,:prenom)',
          {
-          replacements :{username, hashed},
+          replacements :{username, hashed,email,nom,prenom},
           type: sequelize.QueryTypes.INSERT
         }
       );

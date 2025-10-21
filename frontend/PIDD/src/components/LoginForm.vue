@@ -1,9 +1,8 @@
 <template>
   <div class="login-container">
     <!-- Si l'utilisateur est connecté -->
-    <div v-if="user && user.username" class="logged">
-      <p>Bienvenue, <strong>{{ user.username }}</strong> 👋</p>
-      <button class="logout-btn" @click="logout">Se déconnecter</button>
+    <div v-if="user && user.email" class="logged">
+     
     </div>
 
     <!-- Si l'utilisateur n'est PAS connecté -->
@@ -11,11 +10,11 @@
       <h2>Connexion</h2>
       <form @submit.prevent="login" class="login-form">
         <div class="form-group">
-          <label for="username">Nom d'utilisateur</label>
+          <label for="email">email</label>
           <input
-            id="username"
-            v-model="DataUser.username"
-            placeholder="Entrez votre nom d'utilisateur"
+            id="email"
+            v-model="DataUser.email"
+            placeholder="Entrez votre email"
             required
           />
         </div>
@@ -39,6 +38,7 @@
         Pas encore de compte ?
         <router-link to="/register" class="register-link">Créer un compte</router-link>
       </p>
+       <btn-home/>
 
       <p v-if="message" class="error-message">{{ message }}</p>
     </div>
@@ -46,13 +46,19 @@
 </template>
 
 <script>
+
+import { watch} from 'vue';
+import {useRouter} from 'vue-router';
+import {ref} from 'vue';
 import api from '../api';
+import btnHome from './btnHome.vue';
 
 export default {
+  components: {btnHome},
   props: ['user', 'setUser', 'getUser'],
   data() {
     return {
-      DataUser: this?.getUser() || { username: '', password: '' },
+      DataUser:  { username: '',email:'', password: '' },
       message: ''
     }
   },
@@ -60,7 +66,7 @@ export default {
     async login() {
       try {
         const res = await api.post('/auth/login', {
-          username: this.DataUser.username,
+          email: this.DataUser.email,
           password: this.DataUser.password
         })
         localStorage.setItem('token', res.data.token)

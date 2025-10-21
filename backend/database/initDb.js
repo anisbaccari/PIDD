@@ -44,9 +44,9 @@ console.log(' DATABASE created : ',process.env.DB_NAME);
 
 
 const adminList = [
-  { username: 'Anis', email: 'Anis@example.com', password: 'Anis' },
-  { username: 'Hermann', email: 'Hermann@example.com', password: 'Hermann' },
-  { username: 'Franklin', email: 'Franklin@example.com', password: 'Franklin' },
+  { username: 'Anis',name: 'Anis',lastName: 'b', email: 'Anis@example.com', password: 'Anis' },
+  { username: 'Hermann',name: 'Hermann',lastName: 's', email: 'Hermann@example.com', password: 'Hermann' },
+  { username: 'Franklin',name: 'Franklin',lastName: 'x', email: 'Franklin@example.com', password: 'Franklin' },
 
   // Add more admins as needed
 ];

@@ -5,7 +5,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'supersecret'; // fallback if not i
 // 🔹 Generate a JWT token for a user
 export function generateToken(user) {
   return jwt.sign(
-    { id: user.id, username: user.username }, // payload
+    { id: user.id, email: user.email}, // payload
     JWT_SECRET,
     { expiresIn: '1h' } // token validity
   );
@@ -16,7 +16,8 @@ export function verifyToken(token) {
   try {
     return jwt.verify(token, JWT_SECRET);
   } catch (err) {
-    return null; // invalid or expired token
+    return reply.code(401).send({ error: 'Unauthorized: ' + err.message });
+// invalid or expired token
   }
 }
 
@@ -38,7 +39,7 @@ export async function authenticate(request, reply) {
     const decoded = jwt.verify(token, JWT_SECRET);
 
     // 🔹 attach user to request for later use
-    request.user = { id: decoded.id, username: decoded.username };
+    request.user = { id: decoded.id, email: decoded.email };
 
     console.log('Authenticated user:', decoded);
   } catch (err) {

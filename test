@@ -1,0 +1,82 @@
+👨‍💻 Développeur 1 – Gestion du panier (Frontend & logique utilisateur)
+🎯 Objectif : Gérer l’affichage et la modification du panier côté client
+
+User Stories concernées : US8, US9
+
+Tâches :
+
+Créer le composant Vue.js Panier.vue
+
+Afficher la liste des produits ajoutés au panier
+
+Montrer le prix total et le nombre d’articles
+
+Gérer le cas du panier vide
+
+Ajouter les fonctionnalités de modification du panier
+
+Boutons “+” et “–” pour ajuster la quantité
+
+Suppression d’un produit du panier
+
+Calcul automatique du total
+
+Intégrer les appels à l’API (simulée ou réelle)
+
+Consommer /cart et PUT /cart/:id
+
+Gérer les erreurs (produit non trouvé, quantité invalide)
+
+👩‍💻 Développeur 2 – Gestion des produits (Backend / API & interface d’administration)
+🎯 Objectif : Permettre la mise à jour et la gestion des produits par le gestionnaire
+
+User Story concernée : US12
+
+Tâches :
+
+Créer la page d’administration des produits (AdminProducts.vue)
+
+Liste des produits avec bouton “Modifier”
+
+Design clair et ergonomique
+
+Développer la route API PUT /products/:id
+
+Mise à jour du nom, de la marque, du prix et de l’image
+
+Validation des champs (prix positif, nom obligatoire, etc.)
+
+Tester la mise à jour complète du produit
+
+Vérifier que les modifications s’affichent immédiatement dans la liste
+
+Gérer les messages de succès/erreur
+
+👨‍💻 Développeur 3 – Optimisation et partage (SEO & Réseaux sociaux)
+🎯 Objectif : Améliorer la visibilité du site et permettre le partage des produits
+
+User Stories concernées : US15, US16
+
+Tâches :
+
+Optimiser le référencement (SEO)
+
+Ajouter les balises <title>, <meta> et mots-clés dynamiques selon le produit
+
+Vérifier la cohérence avec Google Lighthouse
+
+Configurer les métadonnées Open Graph
+
+Pour un meilleur aperçu lors du partage (titre, image, prix)
+
+Ajouter les boutons de partage sur les réseaux sociaux
+
+Facebook, Instagram, X (Twitter)
+
+Vérifier que le lien partagé affiche correctement le produit
+
+🧩 Récapitulatif synthétique
+Développeur	User Stories	Fonctionnalité principale	Tâches clés
+1. Frontend – Panier	US8, US9	Gestion et modification du panier	Affichage, quantités, total
+2. Backend – Produits	US12	Mise à jour des produits	CRUD, validation, tests
+3. SEO & Réseaux sociaux	US15, US16	Référencement et partage	Meta tags, Open Graph, boutons sociaux
