@@ -10,6 +10,8 @@ import { Admin } from '../models/Admin.js';
 import { User } from '../models/User.js';
 
 import { Product } from '../models/Product.js';
+import { Order } from '../models/Order.js';
+import { OrderItem } from '../models/OrderItem.js';
 dotenv.config();
 
 
@@ -72,6 +74,27 @@ const productList = [
       
 ];
 
+
+// OrderItems => un produit commande => plusieur produits coammande = une Comamnde 
+
+const orderItemList = [
+  {
+    orderId : 1,quantity : 1,unitPrice : 32,
+    orderId : 2,quantity : 1,unitPrice : 32,
+    orderId : 3,quantity : 1,unitPrice : 32
+  }
+]
+
+
+// Order => Commande => Panier = toutes les commandes 
+const orderList = [
+  {
+    userId : 1, totalPrice : 32 , status : "paid",
+    userId : 2, totalPrice : 32 , status : "paid",
+    userId : 2, totalPrice : 32 , status : ""
+  }
+]
+
 export const initDatabase = async () => {
   await ensureDatabase();
   await sequelize.authenticate();
@@ -89,6 +112,12 @@ export const initDatabase = async () => {
 
   // Bulk create products
   await Product.bulkCreate(productList, { ignoreDuplicates: true });
+
+  // Bulk create Order/Commande
+  await Order.bulkCreate(orderList, { ignoreDuplicates: true });
+  
+  // Bulk create OrderItem/Produit commandee
+  await OrderItem.bulkCreate(orderItemList, { ignoreDuplicates: true });
 
   console.log('======================DATABASE======================');
 

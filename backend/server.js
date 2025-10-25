@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import cors from '@fastify/cors';
 import authRoutes from './routes/authRoutes.js';
 import profileRoutes from './routes/profileRoutes.js';
+import panierRoutes from './routes/panierRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import categorieRoutes from './routes/categorieRoutes.js';
 
@@ -44,6 +45,8 @@ await fastify.register(authRoutes, { prefix: '/auth' });
 await fastify.register(profileRoutes, { prefix: '/profil' });
 await fastify.register(categorieRoutes, { prefix: '/categories' });
 await fastify.register(productRoutes, { prefix: '/product' });
+await fastify.register(panierRoutes, { prefix: '/panier' });
+
 
 
 
