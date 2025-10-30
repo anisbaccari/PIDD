@@ -1,6 +1,6 @@
 // controllers/authController.js
-import { hash, compare } from 'bcrypt';
-import { sequelize} from '../database/mysql.js';
+import { compare, hash } from 'bcrypt';
+import { sequelize } from '../database/mysql.js';
 import { generateToken } from '../security/jwt.js';
 
 export  async function login (request, reply) {
@@ -47,36 +47,42 @@ export  async function login (request, reply) {
   };
 
 
-export async function register (request, reply)  {
-   const { username, password } = request.body;
-    console.log('Request body:', request.body); // <-- log it
-    if (!username || !password) {
-      return reply.status(400).send({ error: 'Username and password required' });
-    }
+export async function register(request, reply) {
+  const { nom, prenom, username, password } = request.body;
 
-    try {
-      const existing =  await sequelize.query(
-          'SELECT * FROM users WHERE username = :username',
-          {
-            replacements: { username },
-            type: sequelize.QueryTypes.SELECT,
-          }
-        );
-      if (existing.length > 0) {
-        return reply.status(400).send({ error: 'User already exists' });
-      }
+  if (!username || !password) {
+    return reply.status(400).send({ error: 'Username and password required' });
+  }
 
-      const hashed = await hash(password, 10);
-      const result = await sequelize.query(
-        'INSERT INTO users (username, passwordHash) VALUES (:username, :hashed)',
-         {
-          replacements :{username, hashed},
-          type: sequelize.QueryTypes.INSERT
-        }
+  try {
+    const existing = await sequelize.query(
+      'SELECT * FROM users WHERE username = :username',
+      { replacements: { username }, type: sequelize.QueryTypes.SELECT }
     );
 
-      reply.send({ success: true, userId: result.insertId });
-    } catch (err) {
-      reply.status(500).send({ error: err.message });
+    if (existing.length > 0) {
+      return reply.status(400).send({ error: 'User already exists' });
     }
-  };
+
+    const hashed = await hash(password, 10);
+    const result = await sequelize.query(
+      `INSERT INTO users (nom, prenom, username, passwordHash) 
+       VALUES (:nom, :prenom, :username, :hashed)`,
+      {
+        replacements: { nom, prenom, username, hashed },
+        type: sequelize.QueryTypes.INSERT
+      }
+    );
+
+    // ✅ Réponse plus complète
+    reply.send({
+      success: true,
+      message: 'User created successfully',
+      user: { nom, prenom, username },
+      userId: result[0]
+    });
+  } catch (err) {
+    console.error('Erreur lors de l’inscription :', err);
+    reply.status(500).send({ error: err.message });
+  }
+}
