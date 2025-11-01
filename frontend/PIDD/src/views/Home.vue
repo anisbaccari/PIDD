@@ -1,18 +1,7 @@
 <template>
   <div class="home-page">
     <!-- Navigation -->
-    <nav class="navigation">
-      <router-link to="/" class="nav-logo">MonShop</router-link>
-      <div class="nav-links">
-        <router-link to="/" class="nav-link">Accueil</router-link>
-        <router-link to="/category/1" class="nav-link">Homme</router-link>
-        <router-link to="/category/2" class="nav-link">Femme</router-link>
-        <router-link to="/category/3" class="nav-link">Enfants</router-link>
-      </div>
-      <div class="nav-login">
-        <router-link to="/login" class="login-button nav-link">Se connecter</router-link>
-      </div>
-    </nav>
+    
 
     <!-- Hero Section -->
     <section class="hero">
@@ -75,6 +64,7 @@ import noirfemmeImg from '../assets/noirfemme.png'
 import rosefemmeImg from '../assets/rosefemme.png'
 
 export default {
+
   name: 'HomePage',
   data() {
     return {

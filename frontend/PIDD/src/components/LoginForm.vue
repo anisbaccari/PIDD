@@ -1,13 +1,13 @@
 <template>
   <div class="login-container">
-    <!-- Si l'utilisateur est connecté -->
-    <div v-if="user && user.username" class="logged">
-      <p>Bienvenue, <strong>{{ user.username }}</strong> 👋</p>
-      <button class="logout-btn" @click="logout">Se déconnecter</button>
-    </div>
-
+      <!-- Si l'utilisateur est connecté 
+      <div v-if="user && user.username" class="logged">
+        <p>Bienvenue, <strong>{{ user.username }}</strong> 👋</p>
+        <button class="logout-btn" @click="logout">Se déconnecter</button>
+      </div>
+    -->
     <!-- Si l'utilisateur n'est PAS connecté -->
-    <div v-else class="login-card">
+    <div class="login-card">
       <h2>Connexion</h2>
       <form @submit.prevent="login" class="login-form">
         <div class="form-group">
@@ -66,6 +66,8 @@ export default {
         localStorage.setItem('token', res.data.token)
         this.setUser(res.data.user)
         this.message = ''
+        this.$router.push('/')
+
       } catch (err) {
         this.message = err.response?.data?.error || 'Échec de la connexion'
       }

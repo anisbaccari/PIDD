@@ -1,15 +1,7 @@
 <template>
   <div class="product-page">
     <!-- Navigation -->
-    <nav class="navigation">
-      <router-link to="/" class="nav-logo">MonShop</router-link>
-      <div class="nav-links">
-        <router-link to="/" class="nav-link">Accueil</router-link>
-        <router-link to="/category/1" class="nav-link">Homme</router-link>
-        <router-link to="/category/2" class="nav-link">Femme</router-link>
-        <router-link to="/category/3" class="nav-link">Enfants</router-link>
-      </div>
-    </nav>
+
 
     <div class="product-content">
       <!-- Fil d'Ariane -->
@@ -66,14 +58,14 @@
 
 <script>
 // Import des images CORRIGÉ - utilisation des fichiers existants
-import noir from '../assets/noir.png'
 import blanc from '../assets/blanc.png'
-import rosefemme from '../assets/rosefemme.png'
 import blancfemme from '../assets/blancfemme.png'
-import noirfemme from '../assets/noirfemme.png'
 import enfantbleu from '../assets/enfantbleu.png'
 import enfantrouge from '../assets/enfantrouge.png'
 import gris from '../assets/gris.png'
+import noir from '../assets/noir.png'
+import noirfemme from '../assets/noirfemme.png'
+import rosefemme from '../assets/rosefemme.png'
 
 export default {
   name: 'ProductPage',
