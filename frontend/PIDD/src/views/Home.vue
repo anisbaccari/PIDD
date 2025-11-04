@@ -1,27 +1,7 @@
 <template>
   <div class="home-page">
     <!-- Navigation -->
-    <nav class="navigation">
-      <router-link to="/" class="nav-logo">MonShop</router-link>
-      <div class="nav-links">
-        <router-link to="/" class="nav-link">Accueil</router-link>
-        <router-link to="/categories" class="nav-link">Collections</router-link>
-        <router-link to="/category/1" class="nav-link">Homme</router-link>
-        <router-link to="/category/2" class="nav-link">Femme</router-link>
-        <router-link to="/category/3" class="nav-link">Enfants</router-link>
-        <router-link to="/cart" class="nav-link">Panier</router-link>
-      </div>
-      <div class="nav-login">
-        <!-- Afficher "Bienvenue + Déconnexion" si connecté, sinon bouton connexion -->
-        <div v-if="user" class="user-menu">
-          <span class="welcome-message">Bienvenue, {{ user.prenom }}!</span>
-          <button @click="logout" class="logout-button">Déconnexion</button>
-        </div>
-        <router-link v-else to="/login" class="login-button">
-          Se connecter
-        </router-link>
-      </div>
-    </nav>
+    
 
     <!-- Hero Section -->
     <section class="hero">
@@ -93,6 +73,7 @@ import noirfemmeImg from '../assets/noirfemme.png'
 import rosefemmeImg from '../assets/rosefemme.png'
 
 export default {
+
   name: 'HomePage',
   // ✅ CORRECTION : Ajouter toutes les props nécessaires
   props: ['user', 'setUser', 'addToCartGlobal'],

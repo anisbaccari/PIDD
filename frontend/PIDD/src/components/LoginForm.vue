@@ -1,20 +1,21 @@
 <template>
   <div class="login-container">
-    <!-- Si l'utilisateur est connecté -->
-    <div v-if="user && user.email" class="logged">
-     
-    </div>
-
+      <!-- Si l'utilisateur est connecté 
+      <div v-if="user && user.username" class="logged">
+        <p>Bienvenue, <strong>{{ user.username }}</strong> 👋</p>
+        <button class="logout-btn" @click="logout">Se déconnecter</button>
+      </div>
+    -->
     <!-- Si l'utilisateur n'est PAS connecté -->
-    <div v-else class="login-card">
+    <div class="login-card">
       <h2>Connexion</h2>
       <form @submit.prevent="login" class="login-form">
         <div class="form-group">
-          <label for="email">email</label>
+          <label for="username">Nom d'utilisateur</label>
           <input
-            id="email"
-            v-model="DataUser.email"
-            placeholder="Entrez votre email"
+            id="username"
+            v-model="DataUser.username"
+            placeholder="Entrez votre nom d'utilisateur"
             required
           />
         </div>
@@ -38,7 +39,6 @@
         Pas encore de compte ?
         <router-link to="/register" class="register-link">Créer un compte</router-link>
       </p>
-       <btn-home/>
 
       <p v-if="message" class="error-message">{{ message }}</p>
     </div>
@@ -46,19 +46,13 @@
 </template>
 
 <script>
-
-import { watch} from 'vue';
-import {useRouter} from 'vue-router';
-import {ref} from 'vue';
 import api from '../api';
-import btnHome from './btnHome.vue';
 
 export default {
-  components: {btnHome},
   props: ['user', 'setUser', 'getUser'],
   data() {
     return {
-      DataUser:  { username: '',email:'', password: '' },
+      DataUser: this?.getUser() || { username: '', password: '' },
       message: ''
     }
   },
@@ -66,13 +60,14 @@ export default {
     async login() {
       try {
         const res = await api.post('/auth/login', {
-          email: this.DataUser.email,
+          username: this.DataUser.username,
           password: this.DataUser.password
         })
         localStorage.setItem('token', res.data.token)
         this.setUser(res.data.user)
         this.message = ''
-         this.$router.push('/');
+        this.$router.push('/')
+
       } catch (err) {
         this.message = err.response?.data?.error || 'Échec de la connexion'
       }
