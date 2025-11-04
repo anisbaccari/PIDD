@@ -72,6 +72,7 @@ export default {
         localStorage.setItem('token', res.data.token)
         this.setUser(res.data.user)
         this.message = ''
+         this.$router.push('/');
       } catch (err) {
         this.message = err.response?.data?.error || 'Échec de la connexion'
       }
