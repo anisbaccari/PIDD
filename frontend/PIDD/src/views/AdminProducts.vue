@@ -1,6 +1,6 @@
 <template>
   <div class="admin-page">
-    <!-- Navigation Admin -->
+    <!-- Navigation Admin
     <nav class="navigation">
       <router-link to="/" class="nav-logo">MonShop Admin</router-link>
       <div class="nav-links">
@@ -15,6 +15,7 @@
         </div>
       </div>
     </nav>
+    -->
 
     <div class="admin-content">
       <h1 class="title">Gestion des Produits</h1>

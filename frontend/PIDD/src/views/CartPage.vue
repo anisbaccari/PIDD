@@ -1,6 +1,6 @@
 <template>
   <div class="cart-page">
-    <!-- Navigation -->
+    <!-- Navigation 
     <nav class="navigation">
       <router-link to="/" class="nav-logo">MonShop</router-link>
       <div class="nav-links">
@@ -18,6 +18,7 @@
         </router-link>
       </div>
     </nav>
+    -->
 
     <div class="cart-content">
       <!-- Fil d'Ariane -->
