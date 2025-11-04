@@ -26,11 +26,6 @@
         </div>
 
         <div class="form-group">
-          <label for="email">e-mail </label>
-          <input id="email" v-model="DataUser.email" placeholder="email" required />
-        </div>
-
-        <div class="form-group">
           <label for="password">Mot de passe</label>
           <input id="password" v-model="DataUser.password" type="password" placeholder="Entrez un mot de passe" required />
         </div>
@@ -42,27 +37,20 @@
         Déjà inscrit ?
         <router-link to="/login" class="login-link">Se connecter</router-link>
       </p>
-      <btn-home/>
 
-      <p v-if="message" class="response-message">
-        {{ message }}
-
-      </p>
+      <p v-if="message" class="response-message">{{ message }}</p>
     </div>
   </div>
 </template>
 
 <script>
 import api from '../api';
-import btnHome from './btnHome.vue';
-
 
 export default {
-  components:{btnHome},
   props: ['user', 'getUser', 'setUser'],
   data() {
     return {
-      DataUser: this?.getUser() || { nom: '', prenom: '', username: '', password: '',email: '' },
+      DataUser: this?.getUser() || { nom: '', prenom: '', username: '', password: '' },
       message: ''
     }
   },
@@ -73,9 +61,7 @@ export default {
           nom: this.DataUser.nom,
           prenom: this.DataUser.prenom,
           username: this.DataUser.username,
-          password: this.DataUser.password,
-          email: this.DataUser.email
-
+          password: this.DataUser.password
         })
         this.message = `✅ Compte créé avec succès ! Bienvenue, ${this.DataUser.prenom} ${this.DataUser.nom}`
         if (res.data.token) {

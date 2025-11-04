@@ -1,45 +1,42 @@
 // controllers/authController.js
-import { hash, compare } from 'bcrypt';
-import { sequelize} from '../database/mysql.js';
+import { compare, hash } from 'bcrypt';
+import { sequelize } from '../database/mysql.js';
 import { generateToken } from '../security/jwt.js';
 
 export  async function login (request, reply) {
-    const { email, password } = request.body;
+    const { username, password } = request.body;
 
       console.log('================================================');
-      console.log('[Login] receive request : ', request.body);
+      console.log('[PROFIL] receive request : ', request.body);
       console.log('================================================');
 
 
-    if (!email || !password) {
-      return reply.status(400).send({ error: 'email and password required' });
+    if (!username || !password) {
+      return reply.status(400).send({ error: 'Username and password required' });
     }
 
     try {
     const rows = await sequelize.query(
-          'SELECT * FROM users WHERE email = :email',
+          'SELECT * FROM users WHERE username = :username',
           {
-            replacements: { email },
+            replacements: { username },
             type: sequelize.QueryTypes.SELECT,
           }
         );
 
       if (rows.length === 0) {
-        console.log("[Login] no rows found");
-
-        return reply.status(401).send("[Login] : no rows found ");
+        return reply.status(401).send({ error: 'Invalid credentials' });
       }
 
       const user = rows[0];
       const match = await compare(password, user.passwordHash);
 
       if (!match) {
-        console.log("[Login] pass error");
-        return reply.status(402).send({ error: 'Invalid credentials' });
+        return reply.status(401).send({ error: 'Invalid credentials' });
       }
 
       // Generate JWT
-      const token = generateToken({ id: user.id, email: user.email });
+      const token = generateToken({ id: user.id, username: user.username });
       
       // log the generated token
       console.log('Generated JWT:', token);
@@ -50,63 +47,42 @@ export  async function login (request, reply) {
   };
 
 
-export async function register (request, reply)  {
- try {
+export async function register(request, reply) {
+  const { nom, prenom, username, password } = request.body;
 
-      console.log("[register] =====");
+  if (!username || !password) {
+    return reply.status(400).send({ error: 'Username and password required' });
+  }
 
+  try {
+    const existing = await sequelize.query(
+      'SELECT * FROM users WHERE username = :username',
+      { replacements: { username }, type: sequelize.QueryTypes.SELECT }
+    );
 
-      const { username, password, email,nom ,prenom } = request.body;
-      console.log('Request body:', request.body); // <-- log it
-      if (!username || !password || !email  || !nom  || !prenom) {
-        return reply.status(400).send({ error: 'Username, email and password required' });
-      }
-
-   
-      const existing =  await sequelize.query(
-          'SELECT * FROM users WHERE username = :username',
-          {
-            replacements: { username },
-            type: sequelize.QueryTypes.SELECT,
-          }
-        );
-
-      if (existing.length > 0) {
-        console.log("[register] : User already existe");
-        return reply.status(400).send({ error: 'User already exists' });
-      }
-
-
-      const emailRow  = await sequelize.query('SELECT * FROM users WHERE email = :email',
-        {
-          replacements:{ email},
-          type: sequelize.QueryTypes.SELECT,
-        }
-      )
-
-      if(emailRow.length > 0)
-      {
-        console.log(" email already exist ",email); 
-        return reply.status(400).send({error : 'Email already existe'});
-
-      }
-
-      console.log(" =======[REGISTER]  user - pass - email :",username,password,email);
-
-      const hashed = await hash(password, 10);
-      const [insertId] = await sequelize.query(
-        'INSERT INTO users (username, passwordHash,email, name, lastName) VALUES (:username, :hashed, :email, :nom,:prenom)',
-         {
-          replacements :{username, hashed,email,nom,prenom},
-          type: sequelize.QueryTypes.INSERT
-        }
-      );
-      
-      console.log("[register] : User Created : ", insertId);
-      reply.send({ success: true, userId: insertId });
-
-    } catch (err) {
-      console.log("[register] : err ", err);
-      reply.status(500).send({ error: err.message });
+    if (existing.length > 0) {
+      return reply.status(400).send({ error: 'User already exists' });
     }
-  };
+
+    const hashed = await hash(password, 10);
+    const result = await sequelize.query(
+      `INSERT INTO users (nom, prenom, username, passwordHash) 
+       VALUES (:nom, :prenom, :username, :hashed)`,
+      {
+        replacements: { nom, prenom, username, hashed },
+        type: sequelize.QueryTypes.INSERT
+      }
+    );
+
+    // ✅ Réponse plus complète
+    reply.send({
+      success: true,
+      message: 'User created successfully',
+      user: { nom, prenom, username },
+      userId: result[0]
+    });
+  } catch (err) {
+    console.error('Erreur lors de l’inscription :', err);
+    reply.status(500).send({ error: err.message });
+  }
+}
