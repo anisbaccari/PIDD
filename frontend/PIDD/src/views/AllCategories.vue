@@ -1,6 +1,6 @@
 <template>
   <div class="all-categories-page">
-    <!-- Navigation -->
+    <!-- Navigation 
     <nav class="navigation">
       <router-link to="/" class="nav-logo">MonShop</router-link>
       <div class="nav-links">
@@ -20,6 +20,7 @@
         </router-link>
       </div>
     </nav>
+    -->
 
     <div class="categories-content">
       <!-- Fil d'Ariane -->
