@@ -52,7 +52,7 @@ export default {
   props: ['user', 'setUser', 'getUser'],
   data() {
     return {
-      DataUser: this?.getUser() || { username: '', password: '' },
+      DataUser: this?.getUser() || { id:'', username: '', password: '' },
       message: ''
     }
   },
@@ -65,6 +65,7 @@ export default {
         })
         localStorage.setItem('token', res.data.token)
         this.setUser(res.data.user)
+        console.log("user data: ",this.DataUser);
         this.message = ''
         this.$router.push('/')
 
