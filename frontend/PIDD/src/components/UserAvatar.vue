@@ -5,7 +5,7 @@
     </div>
 
     <div v-if="showMenu" class="menu">
-      <router-link to="/profile" class="menu-item">👤 Mon Profil</router-link>
+      <router-link to="/profilview" class="menu-item">👤 Mon Profil</router-link>
       <button class="menu-item logout" @click="logout">🚪 Déconnexion</button>
     </div>
   </div>
