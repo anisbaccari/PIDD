@@ -44,7 +44,7 @@
           <!-- Liste des articles -->
           <div class="cart-items-section">
             <div class="section-header">
-              <h2>Articles ({{ getTotalItems() }})</h2>
+              <!-- <h2>Articles ({{ getTotalItems() }})</h2> -->
               <button @click="clearCart" class="clear-cart-btn" v-if="cartItems.length > 0">
                 Vider le panier
               </button>
@@ -63,7 +63,7 @@
                 <div class="item-details">
                   <h3 class="product-name">{{ item.name }}</h3>
                   <p class="product-brand">{{ item.brand }}</p>
-                  <p class="product-price-unit">{{ formatPrice(item.price) }} l'unité</p>
+                <!--   <p class="product-price-unit">{{ formatPrice(item.price) }} l'unité</p> -->
                 </div>
                 
                 <div class="quantity-controls">
@@ -74,26 +74,27 @@
                   >
                     −
                   </button>
-                  <span class="quantity">{{ item.quantity }}</span>
-                  <button 
+               <!--    <span class="quantity">{{ item.quantity }}</span> -->
+                <!--   <button 
                     @click="updateQuantity(item.id, item.quantity + 1)"
                     class="quantity-btn"
                   >
-                    +
-                  </button>
+                  +
+                </button>
+                -->
                 </div>
                 
-                <div class="item-total">
+<!--                 <div class="item-total">
                   {{ formatPrice(item.price * item.quantity) }}
-                </div>
+                </div> -->
                 
-                <button 
+<!--                 <button 
                   @click="removeItem(item.id)"
                   class="remove-btn"
                   title="Supprimer"
                 >
                   ×
-                </button>
+                </button> -->
               </div>
             </div>
           </div>
@@ -104,8 +105,8 @@
               <h3>Résumé de la commande</h3>
               
               <div class="summary-line">
-                <span>Sous-total ({{ getTotalItems() }} articles)</span>
-                <span>{{ formatPrice(getCartTotal()) }}</span>
+<!--                 <span>Sous-total ({{ getTotalItems() }} articles)</span>
+                <span>{{ formatPrice(getCartTotal()) }}</span> -->
               </div>
               
               <div class="summary-line">
@@ -117,7 +118,7 @@
               
               <div class="summary-total">
                 <span>Total</span>
-                <span class="total-price">{{ formatPrice(getCartTotal()) }}</span>
+               <!--  <span class="total-price">{{ formatPrice(getCartTotal()) }}</span> -->
               </div>
               
               <button class="checkout-btn" @click="proceedToCheckout">
@@ -171,7 +172,8 @@ export default {
         'noirfemme.png': noirfemme,
         'enfantbleu.png': enfantbleu,
         'enfantrouge.png': enfantrouge
-      }
+      },
+      cartItems : []
     }
   },
   computed: {
