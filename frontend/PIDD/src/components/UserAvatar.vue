@@ -5,7 +5,7 @@
     </div>
 
     <div v-if="showMenu" class="menu">
-      <router-link to="/profile" class="menu-item">👤 Mon Profil</router-link>
+      <router-link to="/profilview" class="menu-item" :user="user" :getUser="getUser" :setUser="setUser" >👤 Mon Profil</router-link>
       <button class="menu-item logout" @click="logout">🚪 Déconnexion</button>
     </div>
   </div>
@@ -21,7 +21,7 @@ export default {
     document.removeEventListener('click', this.handleClickOutside)
     },
 
-  props: ['user'],
+  props: ['user','getUser','setUser'],
   data() {
     return { showMenu: false }
   },
