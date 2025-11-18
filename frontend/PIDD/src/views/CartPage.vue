@@ -151,14 +151,17 @@ export default {
   name: 'CartPage',
   props: [
     'user', 
-    'setUser', 
-    'addToCartGlobal', 
+    'setUser',
+    'getUser',
+    'setPanier',
+    'getPanier'
+/*     'addToCartGlobal', 
     'updateCartQuantity', 
     'removeFromCart', 
     'clearCart',
     'cartItems', 
     'getCartTotal', 
-    'getTotalItems'
+    'getTotalItems' */
   ],
   data() {
     return {
@@ -175,6 +178,10 @@ export default {
       },
       cartItems : []
     }
+  },
+  mounted(){
+    this.cartItems = this.getPanier()
+    console.log(" cartiem :",this.getPanier())
   },
   computed: {
     // ✅ SUPPRIMEZ ces computed properties redondantes

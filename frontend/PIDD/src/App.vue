@@ -9,7 +9,7 @@ export default {
   
   data() {
     return { 
-      user: {id:'', username:'', password:''} 
+      user: {id:'', username:'', password:'',panier: ['s','d','s']} 
     };
   },
   methods: {
@@ -18,7 +18,13 @@ export default {
     },
     getUser() {
       return this.user;
-    }
+    },
+    setPanier(panier) {
+      this.user.panier = panier;
+    },
+    getPanier() {
+      return this.user.panier;
+    },
   },
   async mounted() {
     const token = localStorage.getItem("token");
@@ -59,6 +65,7 @@ export default {
         <router-link to="/category/1" class="nav-link">Homme</router-link>
         <router-link to="/category/2" class="nav-link">Femme</router-link>
         <router-link to="/category/3" class="nav-link">Enfants</router-link>
+        <router-link to="/cart" class="nav-link">Panier</router-link>
       </div>
       <div class="nav-login">
         <router-link v-if="!user" to="/login" class="login-button nav-link">Se connecter</router-link>
@@ -70,7 +77,9 @@ export default {
     <router-view 
       :user="user"
       :getUser="getUser"
-      :setUser="setUser"
+      :setUser="setUser" 
+      :getPanier="getPanier" 
+      :setPanier="setPanier"
     />
     <AppFooter />
   </div>
