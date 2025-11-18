@@ -9,7 +9,7 @@ export default {
   
   data() {
     return { 
-      user: null 
+      user: {id:'', username:'', password:''} 
     };
   },
   methods: {
@@ -30,7 +30,7 @@ export default {
 
     try {
       // Correction : toujours essayer de récupérer le profil si token existe
-      const res = await api.get('http://localhost:3000/profil', {
+      const res = await api.get('http://localhost:3000/profil/:id', {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -59,11 +59,10 @@ export default {
         <router-link to="/category/1" class="nav-link">Homme</router-link>
         <router-link to="/category/2" class="nav-link">Femme</router-link>
         <router-link to="/category/3" class="nav-link">Enfants</router-link>
-        <router-link to="/cart" class="nav-link">Panier </router-link>
       </div>
       <div class="nav-login">
         <router-link v-if="!user" to="/login" class="login-button nav-link">Se connecter</router-link>
-        <UserAvatar v-else :user="user" />
+        <UserAvatar v-else :user="user" :getUser="getUser" :setUser="setUser"/>
       </div>
     </nav>
     
