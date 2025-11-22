@@ -9,7 +9,7 @@ export default {
   
   data() {
     return { 
-      user: {id:'', username:'', password:''} 
+      user: {id:'', username:'', password:'',panier: ['s','d','s']} 
     };
   },
   methods: {
@@ -18,25 +18,34 @@ export default {
     },
     getUser() {
       return this.user;
-    }
+    },
+    setPanier(panier) {
+      this.user.panier = panier;
+    },
+    getPanier() {
+      return this.user.panier;
+    },
   },
   async mounted() {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      console.log("[navBar] : no token found");
-      return;
-    }
-    console.log("[init] token found :", token)
+
 
     try {
-      // Correction : toujours essayer de récupérer le profil si token existe
-      const res = await api.get('http://localhost:3000/profil/:id', {
+          const token = localStorage.getItem("token");
+          if (!token) {
+            console.log("[navBar] : no token found");
+            return;
+          }
+
+        console.log("[init] token found :", token)
+        console.log("[APP] user found :", this.user)
+
+        const res = await api.get(`http://localhost:3000/profil`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       // axios puts parsed JSON on res.data
       this.user = res.data.user;
-      console.log('profile', res.data);
+      console.log('[App]  profile', res.data);
       
     } catch (err) {
       console.error('profile error', err.response?.data || err.message);
@@ -59,8 +68,9 @@ export default {
         <router-link to="/category/1" class="nav-link">Homme</router-link>
         <router-link to="/category/2" class="nav-link">Femme</router-link>
         <router-link to="/category/3" class="nav-link">Enfants</router-link>
+        <router-link to="/cart" class="nav-link">Panier</router-link>
       </div>
-      <div class="nav-login">
+       <div class="nav-login">
         <router-link v-if="!user" to="/login" class="login-button nav-link">Se connecter</router-link>
         <UserAvatar v-else :user="user" :getUser="getUser" :setUser="setUser"/>
       </div>
@@ -70,7 +80,9 @@ export default {
     <router-view 
       :user="user"
       :getUser="getUser"
-      :setUser="setUser"
+      :setUser="setUser" 
+      :getPanier="getPanier" 
+      :setPanier="setPanier"
     />
     <AppFooter />
   </div>

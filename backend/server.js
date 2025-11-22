@@ -6,6 +6,7 @@ import profileRoutes from './routes/profileRoutes.js';
 import panierRoutes from './routes/panierRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import categorieRoutes from './routes/categorieRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 
 import homeRoute from './routes/homeRoute.js';
 

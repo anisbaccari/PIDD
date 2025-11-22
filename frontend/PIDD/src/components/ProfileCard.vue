@@ -37,8 +37,8 @@ export default {
                 console.log("[Profil] : Data id : ",this.DataUser.id);
 
                 const res =   await api.get(`/profil/:${this.DataUser.id}`);
-                console.log("[Profil] response  : ", res);
-               // this.DataUser.username = res.data.user.username;
+                this.DataUser = res.data.user;
+                console.log("[Profil] response  : ", this.DataUser);
 
             } catch (error) {
                 console.error("[Profil] Error : ",error);

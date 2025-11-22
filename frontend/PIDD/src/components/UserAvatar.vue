@@ -5,8 +5,13 @@
     </div>
 
     <div v-if="showMenu" class="menu">
-      <router-link to="/profilview" class="menu-item" :user="user" :getUser="getUser" :setUser="setUser" >👤 Mon Profil</router-link>
-      <button class="menu-item logout" @click="logout">🚪 Déconnexion</button>
+      <div  v-if="user.id">
+
+        <router-link   to="/profilview" class="menu-item" :user="user" :getUser="getUser" :setUser="setUser" >👤 Mon Profil</router-link>
+        <button class="menu-item logout" @click="logout">🚪 Déconnexion</button>
+      </div>
+     
+      <router-link v-else  to="/login" class="menu-item" :user="user" :getUser="getUser" :setUser="setUser" >👤 Login</router-link>
     </div>
   </div>
 </template>
@@ -23,11 +28,14 @@ export default {
 
   props: ['user','getUser','setUser'],
   data() {
-    return { showMenu: false }
+    return { 
+      dataUser : this.getUser() ||  {id :"", username: "", password: ""},
+      showMenu: false }
   },
   computed: {
     initials() {
-      if (!this.user) return ''
+      if (!this.user.id) return ''
+      console.log("[UseAvater] : user : ",this.user)
       const n = this.user.nom?.[0] || ''
       const p = this.user.prenom?.[0] || ''
       return (n + p).toUpperCase()

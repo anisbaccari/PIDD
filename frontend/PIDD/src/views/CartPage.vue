@@ -1,24 +1,8 @@
+<!-- ======= PANIER PAGE ===== -->
+
 <template>
   <div class="cart-page">
-    <!-- Navigation 
-    <nav class="navigation">
-      <router-link to="/" class="nav-logo">MonShop</router-link>
-      <div class="nav-links">
-        <router-link to="/" class="nav-link">Accueil</router-link>
-        <router-link to="/categories" class="nav-link">Collections</router-link>
-        <router-link to="/cart" class="nav-link">Panier ({{ getTotalItems() }})</router-link>
-      </div>
-      <div class="nav-login">
-        <div v-if="user" class="user-menu">
-          <span class="welcome-message">Bienvenue, {{ user.prenom }}!</span>
-          <button @click="logout" class="logout-button">Déconnexion</button>
-        </div>
-        <router-link v-else to="/login" class="login-button">
-          Se connecter
-        </router-link>
-      </div>
-    </nav>
-    -->
+
 
     <div class="cart-content">
       <!-- Fil d'Ariane -->
@@ -152,6 +136,7 @@ export default {
   props: [
     'user', 
     'setUser', 
+    'getUser', 
     'addToCartGlobal', 
     'updateCartQuantity', 
     'removeFromCart', 
@@ -162,6 +147,7 @@ export default {
   ],
   data() {
     return {
+      dataUser: this.getUser() || { id:"", username: "", passwprd : ""},
       deliveryPrice: 0, // Livraison gratuite
       imageMap: {
         'noir.png': noir,
