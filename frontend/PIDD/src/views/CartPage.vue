@@ -4,18 +4,12 @@
   <div class="cart-page">
 
 
-    <div class="cart-content">
-      <!-- Fil d'Ariane -->
-      <nav class="breadcrumb">
-        <router-link to="/" class="breadcrumb-link">Accueil</router-link>
-        <span class="breadcrumb-separator">/</span>
-        <span class="breadcrumb-current">Mon Panier</span>
-      </nav>
+
 
       <h1 class="title">Mon Panier</h1>
 
       <!-- Panier vide -->
-      <div v-if="cartItems.length === 0" class="empty-cart">
+      <div v-if="this.cartItems.length === 0" class="empty-cart">
         <div class="empty-icon">🛒</div>
         <h2>Votre panier est vide</h2>
         <p>Découvrez nos produits et ajoutez-les à votre panier</p>
@@ -29,14 +23,14 @@
           <div class="cart-items-section">
             <div class="section-header">
               <!-- <h2>Articles ({{ getTotalItems() }})</h2> -->
-              <button @click="clearCart" class="clear-cart-btn" v-if="cartItems.length > 0">
+              <button @click="clearCart" class="clear-cart-btn" v-if="this.cartItems.length > 0">
                 Vider le panier
               </button>
             </div>
             
             <div class="cart-items">
               <div 
-                v-for="item in cartItems" 
+                v-for="item in this.cartItems" 
                 :key="item.id" 
                 class="cart-item"
               >
@@ -117,7 +111,6 @@
         </div>
       </div>
     </div>
-  </div>
 </template>
 
 <script>
@@ -130,6 +123,7 @@ import noirfemme from '../assets/noirfemme.png'
 import enfantbleu from '../assets/enfantbleu.png'
 import enfantrouge from '../assets/enfantrouge.png'
 import gris from '../assets/gris.png'
+import api from '../api';
 
 export default {
   name: 'CartPage',
@@ -140,8 +134,6 @@ export default {
     'addToCartGlobal', 
     'updateCartQuantity', 
     'removeFromCart', 
-    'clearCart',
-    'cartItems', 
     'getCartTotal', 
     'getTotalItems'
   ],
@@ -162,11 +154,47 @@ export default {
       cartItems : []
     }
   },
+ async mounted(){
+    this.getPanier();
+
+  },
   computed: {
     // ✅ SUPPRIMEZ ces computed properties redondantes
     // totalItems() et subtotal() sont déjà dans App.vue
   },
   methods: {
+      async  getPanier(){
+          try {
+          
+                    const token = localStorage.getItem("token");
+                    if (token == '') {
+                      console.log("[getPanier] : no token found");
+                      return;
+                    }
+
+                  console.log("[getPanier] token found :", token)
+                // console.log("[APP] user found :", this.user)
+
+                  const res = await api.get(`http://localhost:3000/panier`, {
+                  headers: { Authorization: `Bearer ${token}` }
+                  });
+
+
+                this.setCart(res.data);
+                console.log("[Panier] this.panier : ",JSON.stringify(this.cartItems))
+          
+          
+              } catch (error) {
+                console.log("[Panier] error : ",error)
+            
+          }
+      },
+
+    setCart(panier){
+        this.cartItems = panier;
+    },
+
+    /* =================== */
     updateQuantity(productId, newQuantity) {
       if (this.updateCartQuantity) {
         this.updateCartQuantity(productId, newQuantity);
@@ -207,14 +235,7 @@ export default {
       }).format(price);
     },
     
-    logout() {
-      if (this.setUser) {
-        this.setUser(null);
-      }
-      localStorage.removeItem('token');
-      this.$router.push('/');
-    },
-    
+
     showSuccess(message) {
       alert(`✅ ${message}`);
     },

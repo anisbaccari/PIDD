@@ -75,28 +75,12 @@ const productList = [
 ];
 
 
-// OrderItems => un produit commande => plusieur produits coammande = une Comamnde 
 
-const orderItemList = [
-  {
-    orderId : 1,quantity : 1,unitPrice : 32,
-    orderId : 2,quantity : 1,unitPrice : 32,
-    orderId : 3,quantity : 1,unitPrice : 32
-  }
-]
-
-
-// Order => Commande => Panier = toutes les commandes 
-const orderList = [
-  {
-    userId : 1, totalPrice : 32 , status : "paid",
-    userId : 2, totalPrice : 32 , status : "paid",
-    userId : 2, totalPrice : 32 , status : ""
-  }
-]
 
 export const initDatabase = async () => {
-  await ensureDatabase();
+ 
+  try {
+     await ensureDatabase();
   await sequelize.authenticate();
   await sequelize.sync({ alter: true });
 
@@ -108,19 +92,40 @@ export const initDatabase = async () => {
 
   
   // Bulk create admins
-  await User.bulkCreate(adminList, { ignoreDuplicates: true });
-
+  const users = await User.bulkCreate(adminList, { ignoreDuplicates: true });
+ 
   // Bulk create products
-  await Product.bulkCreate(productList, { ignoreDuplicates: true });
-
-  // Bulk create Order/Commande
-  await Order.bulkCreate(orderList, { ignoreDuplicates: true });
+  const prodRepsonse =  await Product.bulkCreate(productList, { ignoreDuplicates: true });
   
+  // Order => Commande => Panier = toutes les commandes
+  const orderList = [
+    { userId:users[0].id, totalPrice: 32, status: 'paid' },
+    { userId: users[0].id, totalPrice: 32, status: 'pending' },
+    { userId: users[1].id, totalPrice: 32, status: 'pending' }
+  ];
+  // Bulk create Order/Commande
+  const orderResponse = await Order.bulkCreate(orderList, { ignoreDuplicates: true });
+
+  // OrderItems => un produit commandee => plusieurs produits commandés = une Commande
+  const orderItemList = [
+    { orderId: orderResponse[0].id, quantity: 1, unitPrice: 32 ,productId : prodRepsonse[0].id},
+    { orderId:  orderResponse[0].id, quantity: 1, unitPrice: 32 ,productId : prodRepsonse[1].id},
+    { orderId: orderResponse[1].id, quantity: 1, unitPrice: 32 ,productId : prodRepsonse[2].id}
+  ];
+
   // Bulk create OrderItem/Produit commandee
-  await OrderItem.bulkCreate(orderItemList, { ignoreDuplicates: true });
+  const orderItemResponse = await OrderItem.bulkCreate(orderItemList, { ignoreDuplicates: true });
+
+  console.log('[INITDB] orderResponse (orders plain):', orderResponse.map(o => o.get({ plain: true })));
+  console.log('[INITDB] orderItemResponse (order items plain):', orderItemResponse.map(o => o.get({ plain: true })));
+
 
   console.log('======================DATABASE======================');
 
   console.log('Seed done',adminList);
+  } catch (error) {
+  console.log('[INITDB] ERROR ',error);
+    
+  }
 
 };

@@ -47,7 +47,8 @@ export default {
     },
     logout() {
       localStorage.removeItem('token')
-      this.$router.push('/login')
+      this.setUser(null);
+      this.$router.push('/')
     },
     handleClickOutside(event) {
      if (this.$refs.avatarWrapper && !this.$refs.avatarWrapper.contains(event.target)) {

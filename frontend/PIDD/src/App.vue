@@ -31,13 +31,13 @@ export default {
 
     try {
           const token = localStorage.getItem("token");
-          if (!token) {
-            console.log("[navBar] : no token found");
+          if (token == '') {
+            console.log("[App] : no token found");
             return;
           }
 
         console.log("[init] token found :", token)
-        console.log("[APP] user found :", this.user)
+       // console.log("[APP] user found :", this.user)
 
         const res = await api.get(`http://localhost:3000/profil`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -49,9 +49,8 @@ export default {
       
     } catch (err) {
       console.error('profile error', err.response?.data || err.message);
-      console.error('[USER + TOKEN]', this?.user, token);
       // Optionnel : déconnecter si token invalide
-      localStorage.removeItem("token");
+      //localStorage.removeItem("token");
       this.user = null;
     }
   }
