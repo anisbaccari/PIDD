@@ -64,13 +64,13 @@ const productList = [
         { name: "T-shirt Gris Urban",category: 1, price: 23,quantity: 50, description: 'Cotton classic tee' ,img : grisImg},
         
         // Produits Femme
-        { name: "T-shirt Rose Élégant", category: 2,price: 22, description: 'Cotton classic tee' ,img : rosefemmeImg},
-        { name: "T-shirt Blanc Femme", category: 2,price: 24, description: 'Cotton classic tee' ,img : blancfemmeImg},
-        { name: "T-shirt Noir Femme", category: 2,price: 21, description: 'Cotton classic tee' ,img : noirfemmeImg},
+        { name: "T-shirt Rose Élégant", category: 2,price: 22,quantity: 30, description: 'Cotton classic tee' ,img : rosefemmeImg},
+        { name: "T-shirt Blanc Femme", category: 2,price: 24, quantity: 30,description: 'Cotton classic tee' ,img : blancfemmeImg},
+        { name: "T-shirt Noir Femme", category: 2,price: 21, quantity: 30,description: 'Cotton classic tee' ,img : noirfemmeImg},
         
         // Produits Enfants
-        { name: "T-shirt Bleu Enfant", category: 3, price: 15, description: 'Cool kid' ,img : enfantbleuImg },
-        { name: "T-shirt Rouge Enfant", category: 3, price: 16, description: 'Cool kid' ,img : enfantrougeImg}
+        { name: "T-shirt Bleu Enfant", category: 3, price: 15,quantity: 30, description: 'Cool kid' ,img : enfantbleuImg },
+        { name: "T-shirt Rouge Enfant", category: 3, price: 16,quantity: 30, description: 'Cool kid' ,img : enfantrougeImg}
       
 ];
 
@@ -110,6 +110,7 @@ export const initDatabase = async () => {
   const orderItemList = [
     { orderId: orderResponse[0].id, quantity: 1, unitPrice: 32 ,productId : prodRepsonse[0].id},
     { orderId:  orderResponse[0].id, quantity: 1, unitPrice: 32 ,productId : prodRepsonse[1].id},
+        { orderId:  orderResponse[0].id, quantity: 1, unitPrice: 32 ,productId : prodRepsonse[5].id},
     { orderId: orderResponse[1].id, quantity: 1, unitPrice: 32 ,productId : prodRepsonse[2].id}
   ];
 

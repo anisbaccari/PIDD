@@ -32,7 +32,7 @@
             </router-link>
             <!-- ✅ BOUTON AJOUTER AU PANIER -->
             <button @click="addToCart(p)" class="add-to-cart-quick-btn" title="Ajouter au panier">
-              🛒
+              🛒 {{ p.id }}
             </button>
           </div>
         </div>
@@ -60,7 +60,7 @@ import api from '../api.js'
 export default {
   name: 'CategoryPage',
   // ✅ AJOUT: Props pour la méthode globale d'ajout au panier
-  props: ['user', 'setUser', 'addToCartGlobal'],
+  props: ['user', 'setUser', 'addToCartGlobal','id'],
   data() {
     return {
       products: [],
@@ -92,8 +92,11 @@ export default {
   },
   methods: {
       async initProduct(){
-      const productList =  await api.get(`http://localhost:3000/product/all`)
-      const products = JSON.stringify(productList.data)
+      console.log("my id ",this.id)
+      const productList =  await api.get(`http://localhost:3000/product/all`,
+        {params:{id:this.id}}
+      )
+      const products = JSON.stringify(productList)
       this.setProduct(productList.data)
       console.log('productList : ',this.products);
     },
@@ -104,6 +107,23 @@ export default {
       if (!imgName) return '';
       return this.imageMap[imgName] || '';
     },
+    async addToCart(product) {
+     try {
+         console.log("my id ",this.id)
+          console.log("product : ",JSON.stringify(product.id));
+        // const prodData = JSON.stringify(product);
+          const res = await api.post("http://localhost:3000/product/add", {
+                userId: this.id,
+                productId: product.id,   // no need JSON.stringify
+                quantity: 1
+              });
+
+     } catch (error) {
+      console.log('[addToCart] error : ',error);
+      
+     }
+     }
+
 /*    
  loadCategoryProducts() {
       const categoryId = parseInt(this.$route.params.id);

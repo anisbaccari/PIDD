@@ -66,16 +66,17 @@
                   >
                     −
                   </button>
-                    </br>
-                    </div>   
-                </div>
-                <button 
+                           <button 
                   @click="removeItem(itemList.product.id)"
                   class="remove-btn"
                   title="Supprimer"
                 >
                   ×
                 </button>
+                    </br>
+                    </div>   
+                </div>
+       
               </div>
             </div>
           </div>
@@ -209,9 +210,22 @@ export default {
       }
     },
     
-    removeItem(productId) {
-      if (this.removeFromCart) {
-        this.removeFromCart(productId);
+   async removeItem(productId) {
+      try {
+            console.log("[removeItem] productId : ",productId)
+            console.log("[removeItem] this.user.id : ",this.user.id)
+
+              if (productId) {
+            await api.delete("http://localhost:3000/product/remove", {
+                    data: {
+                      userId: this.user.id,
+                      productId: productId
+                    }
+                });
+              }
+      } catch (error) {
+            console.log("[removeItem] error : ",error)
+        
       }
     },
     

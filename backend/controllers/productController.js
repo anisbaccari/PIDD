@@ -1,19 +1,24 @@
-// controllers/profileController.js
+import { sequelize } from '../database/mysql.js';
+import { User } from '../models/User.js';
 import { Product } from '../models/Product.js';
-
+import { Order } from '../models/Order.js';
+import { OrderItem } from '../models/OrderItem.js';
 export async function getAllProducts(request, reply) {
   try {
-    const products = await Product.findAll();
-    if (!products) {
-    console.log(" [getAllProducts] product empty :");
+        console.log("========================  [getAllProducts] ========================");
+         const  id  =request.query?.id
+        console.log(" id by req ",id);
 
-      return reply.status(404).send({ error: 'Product not found' });
-    }
-    const reponse = getDataProduct(products)
-    console.log("========================  [getAllProducts] ========================");
-    console.log("  [getAllProducts] reponse :  ",reponse);
+        const products = await getProductByCategory(id)
 
-    reply.send(reponse);
+        if (!products) {
+        console.log(" [getAllProducts] product empty :");
+
+          return reply.status(404).send({ error: 'Product not found' });
+        }
+          console.log("[getAllProducts] product : ",products)
+
+        reply.send(products);
   } catch (err) {
     console.log(" [getAllProducts] err :",err);
 
@@ -32,9 +37,31 @@ export async function getProductById(request, reply) {
     reply.send(product);
   } catch (err) {
     console.log(" [getDataOrder] err :",err);
-
     reply.status(500).send({ error: err.message });
   }
+}
+
+
+async function getProductByCategory(id)
+{
+    try {
+          // id = 1 home, id = 2 femme , id = 3 kid
+          console.log("========================  [getProductByCategory] ========================");
+          console.log("  [getProductByCategory] id ",id);
+          const products = await Product.findAll({ where: { category : id } });
+          
+          if (!products) {
+              console.log(" [getProductByCategory] empty ");
+              return reply.status(404).send({ error: 'Product not found' });
+            }
+          const productList = products.map(o => o.get({ plain: true }));
+          return productList
+
+    } catch (error) {
+         console.log(" [getProductByCategory] err :",err);
+    reply.status(500).send({ error: err.message });
+
+    }
 }
 
 function getDataProduct(order)
@@ -65,3 +92,176 @@ function getDataProduct(order)
     }
 
 }
+
+/* ============= MODIF DE PRODUCT ================ */
+
+
+
+export async function addProductToOrder(request, reply) {
+          console.log("========================  [addProductToOrder] ========================");
+
+  const { userId, productId, quantity = 1 } = request.body;
+
+  if (!userId || !productId) {
+    return reply.status(400).send({ error: 'userId and productId are required' });
+  }
+  console.log(" [addProductToOrder]  userId, productId, quantity :", userId, productId, quantity);
+
+  const qty = Number(quantity);
+  if (!Number.isInteger(qty) || qty <= 0) {
+    return reply.status(400).send({ error: 'quantity must be a positive integer' });
+  }
+
+  try {
+    // Validate existence of user and product (outside transaction is OK for simple cases)
+    const user = await User.findByPk(userId);
+    if (!user) return reply.status(404).send({ error: 'User not found' });
+
+    const product = await Product.findByPk(productId);
+    if (!product) return reply.status(404).send({ error: 'Product not found' });
+
+    // simple stock check
+    if (product.quantity < qty) {
+      return reply.status(400).send({ error: 'Not enough product stock' });
+    }
+
+    // Managed transaction
+    const result = await sequelize.transaction(async (t) => {
+      // find or create a pending order for this user
+      let order = await Order.findOne({
+        where: { userId: userId, status: 'pending' },
+        transaction: t,
+      });
+
+      if (!order) {
+        order = await Order.create(
+          { userId: userId, totalPrice: 0.00, status: 'pending' },
+          { transaction: t }
+        );
+      }
+
+      // create the order item using product price snapshot
+      const unitPrice = product.price; // DECIMAL stored as string usually, keep it as-is
+      const orderItem = await OrderItem.create(
+        {
+          orderId: order.id,
+          productId: product.id,
+          quantity: qty,
+          unitPrice: unitPrice,
+        },
+        { transaction: t }
+      );
+
+      // decrement product stock (simple)
+      product.quantity = product.quantity - qty;
+      await product.save({ transaction: t });
+
+      // update order totalPrice (add qty * unitPrice)
+      // convert to number for arithmetic, then format as string/decimal if desired
+      const currentTotal = parseFloat(order.totalPrice || 0);
+      const add = parseFloat(unitPrice) * qty;
+      const newTotal = (currentTotal + add).toFixed(2);
+      await order.update({ totalPrice: newTotal }, { transaction: t });
+      
+      // return the fresh order id or the created item
+      return { orderId: order.id, orderItemId: orderItem.id };
+    });
+
+    // load the up-to-date order with items and product info (no txn)
+    const populatedOrder = await Order.findByPk(result.orderId, {
+      include: [
+        {
+          model: OrderItem,
+          as: 'items',
+          include: [{ model: Product, as: 'product' }],
+        },
+      ],
+    });
+      console.log(" [getDataOrder] populatedOrder : ",populatedOrder);
+
+    return reply.status(201).send({ order: populatedOrder });
+  } catch (err) {
+    console.log(" [getDataOrder] err : ",err);
+    request.log.error(err);
+    return reply.status(500).send({ error: 'Internal server error' });
+  }
+}
+
+export async function deleteFromCart(request, reply) {
+  try {
+
+          console.log("========================  [deleteFromCart] ========================");
+       
+    const { userId, productId } = request.body;
+      console.log("[removeItem userId, productId ",userId, productId)
+
+    if (!userId || !productId) {
+      console.log("[removeItem]Missing userId or productId ")
+
+      return reply.code(400).send({ error: "Missing userId or productId" });
+    }
+
+    // Find the pending order of this user
+    const order = await Order.findOne({
+      where: { userId, status: "pending" }
+    });
+
+    if (!order) {
+      console.log("[removeItem] No active order found for user ")
+
+      return reply.code(404).send({ error: "No active order found for user" });
+    }
+      console.log("[removeItem]order ",order)
+
+    // Find the matching order item
+    const item = await OrderItem.findOne({
+      where: {
+        orderId: order.id,
+        productId
+      }
+    });
+
+    if (!item) {
+      console.log("[removeItem]Product not found in cart")
+      
+      return reply.code(404).send({ error: "Product not found in cart" });
+    }
+
+    // Delete the order item
+    await item.destroy();
+
+    // Check if order is now empty
+    const remaining = await OrderItem.count({
+      where: { orderId: order.id }
+    });
+      console.log("[removeItem] order.id : ",order.id)
+
+    // If no items left, remove the order too
+    if (remaining === 0) {
+      await order.destroy();
+      return reply.send({
+        success: true,
+        message: "Product removed and empty order deleted"
+      });
+    }
+
+    // Otherwise update order price
+    order.totalPrice = await OrderItem.sum("unitPrice", {
+      where: { orderId: order.id }
+    });
+
+    await order.save();
+    console.log("======================== END  [deleteFromCart] ========================");
+
+    reply.send({ success: true, message: "Product removed from cart" });
+
+  } catch (err) {
+    console.log(err);
+    reply.code(500).send({ error: "Server error" });
+  }
+}
+
+// Example Fastify route registration (e.g., in routes.js)
+/* export default async function (fastify) {
+  fastify.post('/orders/add-item', addProductToOrder);
+} */
