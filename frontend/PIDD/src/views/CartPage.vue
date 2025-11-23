@@ -30,49 +30,52 @@
             
             <div class="cart-items">
               <div 
-                v-for="item in this.cartItems" 
-                :key="item.id" 
+                v-for="order in this.cartItems" 
+                :key="order.id" 
                 class="cart-item"
               >
-                <div class="item-image">
-                  <img :src="getProductImage(item.img)" :alt="item.name" />
-                </div>
-                
-                <div class="item-details">
-                  <h3 class="product-name">{{ item.name }}</h3>
-                  <p class="product-brand">{{ item.brand }}</p>
+
+   
+              <!-- PAR PANIER  -->
+                  <div class="cart-orderItem">
+                    <p>Commande </p>
+                      <!-- PAR PRODUITS COMMANDEES  -->
+                    <div class="itemList"
+                      v-for = "itemList in order.orderItem"
+                      :key=" order.orderItem.id" 
+                    >
+                      <div class="item-details">
+                  <h3 class="product-name">{{ itemList.product.name }}</h3>
+                  <p class="product-brand">{{ itemList.product.brand }}</p>
                 <!--   <p class="product-price-unit">{{ formatPrice(item.price) }} l'unité</p> -->
-                </div>
-                
-                <div class="quantity-controls">
-                  <button 
-                    @click="updateQuantity(item.id, item.quantity - 1)"
-                    :disabled="item.quantity <= 1"
+                      </div>
+
+                      <p> quantity  {{ itemList.quantity }}  </p>
+
+                      <div class="item-total">
+                         {{ formatPrice(itemList.unitPrice * itemList.quantity) }}
+                     </div> 
+                         <div class="item-image">
+                           <img :src="getProductImage( itemList.product.img)" 
+                           :alt=" itemList.product.name" />
+                          </div>
+                    <button 
+                    @click="updateQuantity( itemList.id,  itemList.product.quantity - 1)"
+                    :disabled="itemList.product.quantity <= 1"
                     class="quantity-btn"
                   >
                     −
                   </button>
-               <!--    <span class="quantity">{{ item.quantity }}</span> -->
-                <!--   <button 
-                    @click="updateQuantity(item.id, item.quantity + 1)"
-                    class="quantity-btn"
-                  >
-                  +
-                </button>
-                -->
+                    </br>
+                    </div>   
                 </div>
-                
-<!--                 <div class="item-total">
-                  {{ formatPrice(item.price * item.quantity) }}
-                </div> -->
-                
-<!--                 <button 
-                  @click="removeItem(item.id)"
+                <button 
+                  @click="removeItem(itemList.product.id)"
                   class="remove-btn"
                   title="Supprimer"
                 >
                   ×
-                </button> -->
+                </button>
               </div>
             </div>
           </div>
@@ -151,7 +154,7 @@ export default {
         'enfantbleu.png': enfantbleu,
         'enfantrouge.png': enfantrouge
       },
-      cartItems : []
+      cartItems : {}
     }
   },
  async mounted(){
@@ -179,10 +182,10 @@ export default {
                   headers: { Authorization: `Bearer ${token}` }
                   });
 
-
-                this.setCart(res.data);
-                console.log("[Panier] this.panier : ",JSON.stringify(this.cartItems))
-          
+                const order =res.data;  
+                console.log("[Panier] order : ",JSON.stringify(order))
+                this.setCart(order);
+                  
           
               } catch (error) {
                 console.log("[Panier] error : ",error)
@@ -190,8 +193,13 @@ export default {
           }
       },
 
-    setCart(panier){
-        this.cartItems = panier;
+    setCart(order){
+        this.cartItems = order;
+      
+         console.log("[Panier] (setCart) panier : ",JSON.stringify(this.cartItems ))
+    },
+    getData(){
+
     },
 
     /* =================== */
@@ -249,440 +257,151 @@ export default {
 
 <style scoped>
 .cart-page {
-  min-height: 100vh;
-  background: #f8fafc;
-}
-
-.cart-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
-}
-
-/* Breadcrumb */
-.breadcrumb {
+  width: 100%;
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 2rem;
-  font-size: 0.9rem;
+  justify-content: center;
+  padding: 40px 20px;
+  box-sizing: border-box;
 }
 
-.breadcrumb-link {
-  color: #3b82f6;
-  text-decoration: none;
+.cart-with-items {
+  width: 100%;
+  max-width: 1200px;
 }
 
-.breadcrumb-link:hover {
-  text-decoration: underline;
-}
-
-.breadcrumb-separator {
-  color: #9ca3af;
-}
-
-.breadcrumb-current {
-  color: #6b7280;
-  font-weight: 500;
-}
-
-.title {
-  font-size: 2.5rem;
-  font-weight: 700;
-  text-align: center;
-  margin-bottom: 3rem;
-  color: #1f2937;
-}
-
-/* Panier vide */
-.empty-cart {
-  text-align: center;
-  padding: 4rem 2rem;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-}
-
-.empty-icon {
-  font-size: 4rem;
-  margin-bottom: 1.5rem;
-}
-
-.empty-cart h2 {
-  color: #1f2937;
-  margin-bottom: 1rem;
-}
-
-.empty-cart p {
-  color: #6b7280;
-  margin-bottom: 2rem;
-}
-
-.cta-button {
-  display: inline-block;
-  padding: 1rem 2rem;
-  background: #3b82f6;
-  color: white;
-  text-decoration: none;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: background 0.3s ease;
-}
-
-.cta-button:hover {
-  background: #2563eb;
-}
-
-/* Layout panier avec articles */
 .cart-layout {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 2rem;
-  align-items: start;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 30px;
 }
 
-/* Section articles */
+/* LEFT SIDE – ITEMS */
 .cart-items-section {
-  background: white;
-  border-radius: 16px;
-  padding: 2rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  flex: 3;
+  background: #fff;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
-.section-header {
-  border-bottom: 1px solid #e5e7eb;
-  padding-bottom: 1rem;
-  margin-bottom: 1.5rem;
+.cart-items {
+  margin-top: 20px;
 }
 
-.section-header h2 {
-  color: #1f2937;
-  margin: 0;
-}
-
-/* Articles individuels */
 .cart-item {
-  display: grid;
-  grid-template-columns: 80px 1fr auto auto auto;
-  gap: 1.5rem;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  padding: 1.5rem 0;
-  border-bottom: 1px solid #f3f4f6;
+  padding: 15px;
+  border-bottom: 1px solid #eee;
 }
 
-.cart-item:last-child {
-  border-bottom: none;
+.item-details {
+  flex: 2;
+}
+
+.product-name {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.product-brand {
+  color: #666;
 }
 
 .item-image img {
   width: 80px;
   height: 80px;
-  object-fit: contain;
-  border-radius: 8px;
-  background: #f9fafb;
+  object-fit: cover;
+  border-radius: 10px;
 }
 
-.item-details {
-  text-align: left;
-}
-
-.product-name {
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0 0 0.25rem 0;
-}
-
-.product-brand {
-  color: #6b7280;
-  font-size: 0.9rem;
-  margin: 0 0 0.5rem 0;
-}
-
-.product-price-unit {
-  color: #3b82f6;
-  font-weight: 600;
-  margin: 0;
-}
-
-/* Contrôles quantité */
-.quantity-controls {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: #f8fafc;
-  border-radius: 8px;
-  padding: 0.25rem;
-}
-
+/* Quantity & Remove */
 .quantity-btn {
-  width: 32px;
-  height: 32px;
+  padding: 6px 12px;
+  background: #ddd;
   border: none;
-  background: white;
-  border-radius: 6px;
-  font-size: 1.2rem;
-  font-weight: 600;
+  border-radius: 5px;
   cursor: pointer;
-  transition: background 0.2s ease;
 }
 
-.quantity-btn:hover:not(:disabled) {
-  background: #e5e7eb;
-}
-
-.quantity-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.quantity {
-  font-weight: 600;
-  min-width: 30px;
-  text-align: center;
-}
-
-/* Prix total par article */
-.item-total {
-  font-weight: 700;
-  font-size: 1.1rem;
-  color: #1f2937;
-  min-width: 80px;
-  text-align: right;
-}
-
-/* Bouton suppression */
 .remove-btn {
-  width: 32px;
-  height: 32px;
   border: none;
-  background: #fef2f2;
-  color: #dc2626;
-  border-radius: 6px;
-  font-size: 1.2rem;
-  font-weight: 600;
+  background: transparent;
+  font-size: 24px;
+  color: #c00;
   cursor: pointer;
-  transition: all 0.2s ease;
 }
 
-.remove-btn:hover {
-  background: #dc2626;
-  color: white;
-}
+/* RIGHT SIDE – SUMMARY */
 
-/* Résumé commande */
 .order-summary {
-  position: sticky;
-  top: 2rem;
+  flex: 1.2;
 }
 
 .summary-card {
-  background: white;
-  border-radius: 16px;
-  padding: 2rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  background: #fff;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  position: sticky;
+  top: 20px; /* Stay fixed while scrolling */
 }
 
 .summary-card h3 {
-  margin: 0 0 1.5rem 0;
-  color: #1f2937;
-  font-size: 1.25rem;
+  margin-bottom: 15px;
+  font-size: 22px;
 }
 
-.summary-line {
+.summary-line,
+.summary-total {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 1rem;
-  color: #6b7280;
+  padding: 8px 0;
 }
 
 .summary-divider {
   height: 1px;
-  background: #e5e7eb;
-  margin: 1.5rem 0;
-}
-
-.summary-total {
-  display: flex;
-  justify-content: space-between;
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #1f2937;
+  background: #ddd;
+  margin: 10px 0;
 }
 
 .total-price {
-  color: #3b82f6;
+  font-size: 20px;
+  font-weight: bold;
 }
 
+/* Checkout button */
 .checkout-btn {
   width: 100%;
-  padding: 1rem;
-  background: #10b981;
-  color: white;
+  background: #000;
+  color: #fff;
+  padding: 12px;
+  font-size: 16px;
   border: none;
   border-radius: 8px;
-  font-weight: 600;
-  font-size: 1.1rem;
   cursor: pointer;
-  transition: background 0.3s ease;
-  margin: 1.5rem 0 1rem 0;
-}
-
-.checkout-btn:hover {
-  background: #059669;
+  margin-top: 15px;
 }
 
 .continue-shopping {
   display: block;
+  margin-top: 10px;
   text-align: center;
-  color: #3b82f6;
-  text-decoration: none;
-  font-weight: 500;
-}
-
-.continue-shopping:hover {
-  text-decoration: underline;
-}
-
-/* Navigation (identique aux autres pages) */
-.navigation {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 2rem;
-  background: white;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.nav-logo {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #3b82f6;
+  color: #555;
   text-decoration: none;
 }
 
-.nav-links {
-  display: flex;
-  gap: 2rem;
-}
-
-.nav-link {
-  text-decoration: none;
-  color: #374151;
-  font-weight: 500;
-  transition: color 0.3s ease;
-}
-
-.nav-link:hover,
-.nav-link.router-link-active {
-  color: #3b82f6;
-}
-
-.nav-login {
-  display: flex;
-  align-items: center;
-}
-
-.user-menu {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.welcome-message {
-  color: #3b82f6;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.login-button {
-  padding: 0.5rem 1rem;
-  background: #3b82f6;
-  color: white !important;
-  border-radius: 8px;
-  text-decoration: none;
-  transition: all 0.3s ease;
-}
-
-.login-button:hover {
-  background: #2563eb;
-  transform: translateY(-1px);
-}
-
-.logout-button {
-  padding: 0.5rem 1rem;
-  background: #ef4444;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.logout-button:hover {
-  background: #dc2626;
-  transform: translateY(-1px);
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .cart-content {
-    padding: 1rem;
-  }
-  
+/* RESPONSIVE */
+@media (max-width: 900px) {
   .cart-layout {
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-  }
-  
-  .cart-item {
-    grid-template-columns: 60px 1fr;
-    gap: 1rem;
-    padding: 1rem 0;
-  }
-  
-  .quantity-controls,
-  .item-total,
-  .remove-btn {
-    grid-column: 1 / -1;
-    justify-self: start;
-  }
-  
-  .quantity-controls {
-    justify-self: start;
-  }
-  
-  .item-total {
-    justify-self: end;
-    margin-left: auto;
-  }
-  
-  .remove-btn {
-    position: absolute;
-    top: 1rem;
-    right: 0;
-  }
-  
-  .cart-item {
-    position: relative;
-  }
-  
-  .navigation {
     flex-direction: column;
-    gap: 1rem;
   }
   
-  .nav-links {
-    gap: 1rem;
-  }
-  
-  .user-menu {
-    flex-direction: column;
-    gap: 0.5rem;
-    text-align: center;
+  .order-summary {
+    width: 100%;
   }
 }
+
 </style>

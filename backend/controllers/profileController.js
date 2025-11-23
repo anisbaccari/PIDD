@@ -5,13 +5,13 @@ export const getProfile = async (request, reply) => {
   try {
     const { id } = request.params;
     const idByToken = request.user?.id;
-    console.log("====== [getPRofile] : params ",request.params);
-    console.log("====== [getPRofile] : idByToken ",idByToken);
-    console.log("====== [getPRofile] : Id ",id);
+   // console.log("====== [getPRofile] : params ",request.params);
+ //   console.log("====== [getPRofile] : idByToken ",idByToken);
+  //  console.log("====== [getPRofile] : Id ",id);
 
    const res = await User.findOne({where : {id:idByToken}});
 
-    console.log("====== [getPRofile] : user : ",res);
+ //   console.log("====== [getPRofile] : user : ",res);
 
 
       

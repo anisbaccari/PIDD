@@ -1,27 +1,6 @@
 <template>
   <div class="category-page">
-    <!-- Navigation
-    <nav class="navigation">
-      <router-link to="/" class="nav-logo">MonShop</router-link>
-      <div class="nav-links">
-        <router-link to="/" class="nav-link">Accueil</router-link>
-        <router-link to="/categories" class="nav-link">Collections</router-link>
-        <router-link to="/category/1" class="nav-link">Homme</router-link>
-        <router-link to="/category/2" class="nav-link">Femme</router-link>
-        <router-link to="/category/3" class="nav-link">Enfants</router-link>
-        <router-link to="/cart" class="nav-link">Panier</router-link>
-      </div>
-      <div class="nav-login">
-        <div v-if="user" class="user-menu">
-          <span class="welcome-message">Bienvenue, {{ user.prenom }}!</span>
-          <button @click="logout" class="logout-button">Déconnexion</button>
-        </div>
-        <router-link v-else to="/login" class="login-button nav-link">
-          Se connecter
-        </router-link>
-      </div>
-    </nav>
-    -->
+
 
     <div class="category-content">
       <!-- Fil d'Ariane -->
@@ -39,7 +18,8 @@
           :key="p.id"
           class="product-card"
         >
-          <img :src="p.image" :alt="p.name" class="product-img" />
+           <img :src="getProductImage(p.img)" 
+                           :alt="p.name" />
           <div class="product-info">
             <p class="product-name">{{ p.name }}</p>
             <p class="product-brand">{{ p.brand }}</p>
@@ -48,7 +28,7 @@
           
           <div class="product-card-actions">
             <router-link :to="`/product/${p.id}`" class="view-details-btn">
-              Voir détails
+              Voir détailsss
             </router-link>
             <!-- ✅ BOUTON AJOUTER AU PANIER -->
             <button @click="addToCart(p)" class="add-to-cart-quick-btn" title="Ajouter au panier">
@@ -76,7 +56,7 @@ import noirfemme from '../assets/noirfemme.png'
 import enfantbleu from '../assets/enfantbleu.png'
 import enfantrouge from '../assets/enfantrouge.png'
 import gris from '../assets/gris.png'
-
+import api from '../api.js'
 export default {
   name: 'CategoryPage',
   // ✅ AJOUT: Props pour la méthode globale d'ajout au panier
@@ -84,117 +64,52 @@ export default {
   data() {
     return {
       products: [],
+      imageMap: {
+        'noir.png': noir,
+        'blanc.png': blanc,
+        'rosefemme.png': rosefemme,
+        'gris.png': gris,
+        'blancfemme.png': blancfemme,
+        'noirfemme.png': noirfemme,
+        'enfantbleu.png': enfantbleu,
+        'enfantrouge.png': enfantrouge
+      },
       categoryName: "",
-      // ✅ AJOUT: Champ img manquant dans les produits
-      allProducts: [
-        // Produits Homme
-        { 
-          id: 101, 
-          name: "T-shirt Noir Classique", 
-          brand: "Nike", 
-          price: 20, 
-          image: noir,
-          img: 'noir.png', // ✅ AJOUT: champ img manquant
-          categoryId: 1,
-          description: "T-shirt en coton 100% biologique, coupe classique, confortable et durable."
-        },
-        { 
-          id: 102, 
-          name: "T-shirt Blanc Sport", 
-          brand: "Adidas", 
-          price: 25, 
-          image: blanc,
-          img: 'blanc.png', // ✅ AJOUT: champ img manquant
-          categoryId: 1,
-          description: "T-shirt technique en matière respirante, parfait pour le sport."
-        },
-        { 
-          id: 103, 
-          name: "T-shirt Gris Urban", 
-          brand: "Puma", 
-          price: 23, 
-          image: gris,
-          img: 'gris.png', // ✅ AJOUT: champ img manquant
-          categoryId: 1,
-          description: "T-shirt streetwear en coton premium, design urbain et moderne."
-        },
-        
-        // Produits Femme
-        { 
-          id: 201, 
-          name: "T-shirt Rose Élégant", 
-          brand: "Zara", 
-          price: 22, 
-          image: rosefemme,
-          img: 'rosefemme.png', // ✅ AJOUT: champ img manquant
-          categoryId: 2,
-          description: "T-shirt féminin en coton stretch, coupe ajustée, couleur rose pastel."
-        },
-        { 
-          id: 202, 
-          name: "T-shirt Blanc Femme", 
-          brand: "H&M", 
-          price: 18, 
-          image: blancfemme,
-          img: 'blancfemme.png', // ✅ AJOUT: champ img manquant
-          categoryId: 2,
-          description: "T-shirt basique femme, coupe standard, matière douce et agréable."
-        },
-        { 
-          id: 203, 
-          name: "T-shirt Noir Femme", 
-          brand: "Mango", 
-          price: 21, 
-          image: noirfemme,
-          img: 'noirfemme.png', // ✅ AJOUT: champ img manquant
-          categoryId: 2,
-          description: "T-shirt femme en coton bio, coupe ajustée, idéal pour toutes les occasions."
-        },
-        
-        // Produits Enfants
-        { 
-          id: 301, 
-          name: "T-shirt Bleu Enfant", 
-          brand: "Disney", 
-          price: 15, 
-          image: enfantbleu,
-          img: 'enfantbleu.png', // ✅ AJOUT: champ img manquant
-          categoryId: 3,
-          description: "T-shirt pour enfant avec motif Disney, coton doux, lavage facile."
-        },
-        { 
-          id: 302, 
-          name: "T-shirt Rouge Super-héros", 
-          brand: "Marvel", 
-          price: 16, 
-          image: enfantrouge,
-          img: 'enfantrouge.png', // ✅ AJOUT: champ img manquant
-          categoryId: 3,
-          description: "T-shirt enfant avec impression Marvel, parfait pour les fans de super-héros."
-        }
-      ]
+
     }
   },
   mounted() {
-    this.loadCategoryProducts()
+    this.initProduct();
+  //  this.loadCategoryProducts()
   },
   watch: {
     '$route.params.id': {
       handler() {
-        this.loadCategoryProducts()
+        this.initProduct()
       },
       immediate: true
     }
   },
   methods: {
-    loadCategoryProducts() {
+      async initProduct(){
+      const productList =  await api.get(`http://localhost:3000/product/all`)
+      const products = JSON.stringify(productList.data)
+      this.setProduct(productList.data)
+      console.log('productList : ',this.products);
+    },
+    setProduct(productList){
+      this.products = productList;
+    },
+    getProductImage(imgName) {
+      if (!imgName) return '';
+      return this.imageMap[imgName] || '';
+    },
+/*    
+ loadCategoryProducts() {
       const categoryId = parseInt(this.$route.params.id);
       console.log("🔄 Filtrage pour catégorie:", categoryId);
       
-      // ✅ FILTRAGE LOCAL SIMPLE
-      this.products = this.allProducts.filter(product => 
-        product.categoryId === categoryId
-      );
+
       
       // Définir le nom de la catégorie
       this.setCategoryName(categoryId);
@@ -255,6 +170,7 @@ export default {
       // Simple alert pour l'instant
       alert(message)
     }
+     */
   }
 }
 </script>

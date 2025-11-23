@@ -18,6 +18,7 @@
           :to="`/product/${p.id}`"
           class="product-card"
         >
+       
           <img :src="p.image" :alt="p.name" class="product-img" />
           <div class="product-info">
             <p class="product-name">{{ p.name }}</p>
@@ -46,16 +47,27 @@ import gris from '../assets/gris.png'
 import noir from '../assets/noir.png'
 import noirfemme from '../assets/noirfemme.png'
 import rosefemme from '../assets/rosefemme.png'
-
+import api from '../api.js'
 export default {
   name: 'CategoryPage',
   data() {
     return {
-      products: [],
+      products: [], 
+      imageMap: {
+        'noir.png': noir,
+        'blanc.png': blanc,
+        'rosefemme.png': rosefemme,
+        'gris.png': gris,
+        'blancfemme.png': blancfemme,
+        'noirfemme.png': noirfemme,
+        'enfantbleu.png': enfantbleu,
+        'enfantrouge.png': enfantrouge
+      },
       categoryName: ""
     }
   },
   mounted() {
+    this.initProduct()
     this.loadCategoryData()
   },
   watch: {
@@ -67,6 +79,16 @@ export default {
     }
   },
   methods: {
+
+    async initProduct(){
+      const productList =  await api.get(`http://localhost:3000/product/all`)
+      console.log('productList : ',productList);
+      console.log('productList : ',productList.data);
+    },
+      getProductImage(imgName) {
+      if (!imgName) return '';
+      return this.imageMap[imgName] || '';
+    },
     loadCategoryData() {
       const categoryId = this.$route.params.id
       if (categoryId == 1) {
