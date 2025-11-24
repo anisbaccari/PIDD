@@ -143,7 +143,7 @@ export default {
   ],
   data() {
     return {
-      dataUser: this.getUser() || { id:"", username: "", passwprd : ""},
+      dataUser: this.getUser() || { id:"", username: "", password : ""},
       deliveryPrice: 0, // Livraison gratuite
       imageMap: {
         'noir.png': noir,
