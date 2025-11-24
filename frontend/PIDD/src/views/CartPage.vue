@@ -9,13 +9,14 @@
       <h1 class="title">Mon Panier</h1>
 
       <!-- Panier vide -->
+      <div v-if="this.cartItems" class="maincontent">
       <div v-if="this.cartItems.length === 0" class="empty-cart">
         <div class="empty-icon">🛒</div>
         <h2>Votre panier est vide</h2>
         <p>Découvrez nos produits et ajoutez-les à votre panier</p>
         <router-link to="/categories" class="cta-button">Découvrir les collections</router-link>
       </div>
-
+      </div>
       <!-- Panier avec articles -->
       <div v-else class="cart-with-items">
         <div class="cart-layout">
@@ -136,7 +137,7 @@ export default {
     'setUser',
     'getUser',
     'setPanier',
-    'getPanier'
+    
 /*     'addToCartGlobal', 
     'updateCartQuantity', 
     'removeFromCart', 
@@ -171,7 +172,8 @@ export default {
   methods: {
       async  getPanier(){
           try {
-          
+                      console.log("[getPanier]============");
+
                     const token = localStorage.getItem("token");
                     if (token == '') {
                       console.log("[getPanier] : no token found");
