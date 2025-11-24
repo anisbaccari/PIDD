@@ -193,7 +193,7 @@ export async function deleteFromCart(request, reply) {
           console.log("========================  [deleteFromCart] ========================");
        
     const { userId, productId } = request.body;
-      console.log("[removeItem userId, productId ",userId, productId)
+      console.log("[removeItem] userId, productId ",userId, productId)
 
     if (!userId || !productId) {
       console.log("[removeItem]Missing userId or productId ")
