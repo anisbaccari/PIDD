@@ -9,12 +9,13 @@ export default {
   
   data() {
     return { 
-      user: {id:'', username:'', password:'',panier: ['s','d','s']} 
+      user: {id:'', username:'', password:'',panier: ['s','d','s'],is_admin : true} 
     };
   },
   methods: {
     setUser(user) {
       this.user = user;
+
     },
     getUser() {
       return this.user;
@@ -64,6 +65,7 @@ export default {
       <router-link to="/" class="nav-logo">MonShop</router-link>
       <div class="nav-links">
         <router-link to="/" class="nav-link">Accueil</router-link>
+        <router-link v-if="this.user && this.user.is_admin" to="/admin" class="nav-link">Admin</router-link>
         <router-link to="/category/1" class="nav-link">Homme</router-link>
         <router-link to="/category/2" class="nav-link">Femme</router-link>
         <router-link to="/category/3" class="nav-link">Enfants</router-link>

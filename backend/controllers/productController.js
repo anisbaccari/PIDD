@@ -98,7 +98,9 @@ function getDataProduct(order)
 
 
 export async function addProductToOrder(request, reply) {
-          console.log("========================  [addProductToOrder] ========================");
+  try {
+     
+  console.log("========================  [addProductToOrder] ========================");
 
   const { userId, productId, quantity = 1 } = request.body;
 
@@ -112,7 +114,6 @@ export async function addProductToOrder(request, reply) {
     return reply.status(400).send({ error: 'quantity must be a positive integer' });
   }
 
-  try {
     // Validate existence of user and product (outside transaction is OK for simple cases)
     const user = await User.findByPk(userId);
     if (!user) return reply.status(404).send({ error: 'User not found' });
@@ -154,6 +155,10 @@ export async function addProductToOrder(request, reply) {
 
       // decrement product stock (simple)
       product.quantity = product.quantity - qty;
+      console.log('\x1b[31m%s\x1b[0m', '=================');
+
+      console.log('[addProductToOrder] ADDED product : ',product);
+
       await product.save({ transaction: t });
 
       // update order totalPrice (add qty * unitPrice)
@@ -222,7 +227,7 @@ export async function deleteFromCart(request, reply) {
     });
 
     if (!item) {
-      console.log("[removeItem]Product not found in cart")
+      console.log("[removeItem]OrderItem not found in cart")
       
       return reply.code(404).send({ error: "Product not found in cart" });
     }

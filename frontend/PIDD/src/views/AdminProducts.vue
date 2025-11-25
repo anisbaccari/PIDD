@@ -1,22 +1,6 @@
 <template>
   <div class="admin-page">
-    <!-- Navigation Admin
-    <nav class="navigation">
-      <router-link to="/" class="nav-logo">MonShop Admin</router-link>
-      <div class="nav-links">
-        <router-link to="/admin" class="nav-link">Dashboard</router-link>
-        <router-link to="/admin/products" class="nav-link">Produits</router-link>
-        <router-link to="/" class="nav-link">Retour au site</router-link>
-      </div>
-      <div class="nav-login">
-        <div v-if="user" class="user-menu">
-          <span class="welcome-message">Admin: {{ user.prenom }}</span>
-          <button @click="logout" class="logout-button">Déconnexion</button>
-        </div>
-      </div>
-    </nav>
-    -->
-
+  
     <div class="admin-content">
       <h1 class="title">Gestion des Produits</h1>
 

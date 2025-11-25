@@ -15,7 +15,7 @@ export const getProfile = async (request, reply) => {
       
       reply.send({
         user : {id:res.id, username: res.username, name : res.name, 
-          lastName: res.lastName
+          lastName: res.lastName,is_admin:res.is_admin
         }
       })
   } catch (error) {

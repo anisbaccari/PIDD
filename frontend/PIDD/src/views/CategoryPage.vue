@@ -32,7 +32,7 @@
             </router-link>
             <!-- ✅ BOUTON AJOUTER AU PANIER -->
             <button @click="addToCart(p)" class="add-to-cart-quick-btn" title="Ajouter au panier">
-              🛒 {{ p.id }}
+              🛒 
             </button>
           </div>
         </div>
@@ -60,9 +60,11 @@ import api from '../api.js'
 export default {
   name: 'CategoryPage',
   // ✅ AJOUT: Props pour la méthode globale d'ajout au panier
-  props: ['user', 'setUser', 'addToCartGlobal','id'],
+  props: ['user', 'setUser','getUser', 'addToCartGlobal','id'],
   data() {
     return {
+      dataUser: this.getUser() || { id:"", username: "", password : ""},
+
       products: [],
       imageMap: {
         'noir.png': noir,
@@ -92,7 +94,7 @@ export default {
   },
   methods: {
       async initProduct(){
-      console.log("my id ",this.id)
+      console.log("my ids ",this.dataUser.id)
       const productList =  await api.get(`http://localhost:3000/product/all`,
         {params:{id:this.id}}
       )
@@ -109,11 +111,11 @@ export default {
     },
     async addToCart(product) {
      try {
-         console.log("my id ",this.id)
+         console.log("my id ",this.dataUser.id)
           console.log("product : ",JSON.stringify(product.id));
         // const prodData = JSON.stringify(product);
           const res = await api.post("http://localhost:3000/product/add", {
-                userId: this.id,
+                userId:this.dataUser.id,
                 productId: product.id,   // no need JSON.stringify
                 quantity: 1
               });

@@ -8,6 +8,6 @@ export const User = sequelize.define('User', {
   name: { type: DataTypes.STRING(100), allowNull: false, unique: true },
   lastName: { type: DataTypes.STRING(100), allowNull: false, unique: true },
   passwordHash: { type: DataTypes.STRING(200), allowNull: false },
-  isAdmin: { type: DataTypes.BOOLEAN, allowNull: false }
+  is_admin: { type: DataTypes.BOOLEAN, allowNull: false }
 }, { tableName: 'users' });
 
