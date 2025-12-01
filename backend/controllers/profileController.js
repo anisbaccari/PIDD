@@ -4,7 +4,7 @@ export const getProfile = async (request, reply) => {
   
   try {
     const idByToken = request.user?.id;
-   // console.log("====== [getPRofile] : params ",request.params);
+    console.log("====== [getPRofile] : params ",request.params);
     console.log("====== [getPRofile] : idByToken ",idByToken);
 
    const res = await User.findOne({where : {id:idByToken}});

@@ -42,13 +42,12 @@ const connection = await mysql.createConnection({
 await connection.query(`DROP DATABASE IF EXISTS \`${process.env.DB_NAME}\`;`);
 await connection.query(`CREATE DATABASE IF NOT EXISTS \`${process.env.DB_NAME}\`;`);
 await connection.end();
-console.log(' DATABASE created : ',process.env.DB_NAME);
+console.log(' ** * DATABASE created : ',process.env.DB_NAME);
 
 
 const adminList = [
+  { username: 'Anis',name: 'Anis',lastName: 's', email: 'Anis@example.com', password: 'Anis',is_admin:true },
   { username: 'Test',name: 'Test',lastName: 'b', email: 'Test@example.com', password: 'Test',is_admin:false },
-
-  { username: 'Anis',name: 'Anis',lastName: 'b', email: 'Anis@example.com', password: 'Anis',is_admin:true },
   { username: 'Hermann',name: 'Hermann',lastName: 's', email: 'Hermann@example.com', password: 'Hermann',is_admin:true },
   { username: 'Franklin',name: 'Franklin',lastName: 'x', email: 'Franklin@example.com', password: 'Franklin' ,is_admin:true},
 
@@ -94,7 +93,7 @@ export const initDatabase = async () => {
 
   
   // Bulk create admins
-  const users = await User.bulkCreate(adminList, { ignoreDuplicates: true });
+  const users = await User.bulkCreate(adminList/* , { ignoreDuplicates: true } */);
  
   // Bulk create products
   const prodRepsonse =  await Product.bulkCreate(productList, { ignoreDuplicates: true });
@@ -106,7 +105,7 @@ export const initDatabase = async () => {
     { userId: users[1].id, totalPrice: 32, status: 'pending' }
   ];
   // Bulk create Order/Commande
-  const orderResponse = await Order.bulkCreate(orderList, { ignoreDuplicates: true });
+//  const orderResponse = await Order.bulkCreate(orderList, { ignoreDuplicates: true });
 
   // OrderItems => un produit commandee => plusieurs produits commandés = une Commande
   const orderItemList = [
@@ -117,7 +116,7 @@ export const initDatabase = async () => {
   ];
 
   // Bulk create OrderItem/Produit commandee
-  const orderItemResponse = await OrderItem.bulkCreate(orderItemList, { ignoreDuplicates: true });
+  //const orderItemResponse = await OrderItem.bulkCreate(orderItemList, { ignoreDuplicates: true });
 
   console.log('[INITDB] orderResponse (orders plain):', orderResponse.map(o => o.get({ plain: true })));
   console.log('[INITDB] orderItemResponse (order items plain):', orderItemResponse.map(o => o.get({ plain: true })));

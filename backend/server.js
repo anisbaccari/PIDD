@@ -47,6 +47,8 @@ await fastify.register(profileRoutes, { prefix: '/profil' });
 await fastify.register(categorieRoutes, { prefix: '/categories' });
 await fastify.register(productRoutes, { prefix: '/product' });
 await fastify.register(panierRoutes, { prefix: '/panier' });
+await fastify.register(adminRoutes, { prefix: '/admin' });
+
 
 /*
  console.log('\x1b[31m%s\x1b[0m', 'This is red text');

@@ -31,14 +31,16 @@ export default {
 
 
     try {
+
           const token = localStorage.getItem("token");
-          if (token == '') {
+          if (token == null) {
             console.log("[App] : no token found");
             return;
           }
 
         console.log("[init] token found :", token)
        // console.log("[APP] user found :", this.user)
+        console.log("TOKEN =>", `"${token}"`);
 
         const res = await api.get(`http://localhost:3000/profil`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -50,8 +52,10 @@ export default {
       
     } catch (err) {
       console.error('profile error', err.response?.data || err.message);
+      console.error('profile error',  err.message);
+
       // Optionnel : déconnecter si token invalide
-      //localStorage.removeItem("token");
+   //   localStorage.removeItem("token");
       this.user = null;
     }
   }

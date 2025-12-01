@@ -3,22 +3,21 @@ import { User } from '../models/User.js';
 import { Product } from '../models/Product.js';
 import { Order } from '../models/Order.js';
 import { OrderItem } from '../models/OrderItem.js';
+
 export async function getAllProducts(request, reply) {
   try {
         console.log("========================  [getAllProducts] ========================");
-         const  id  =request.query?.id
-        console.log(" id by req ",id);
-
-        const products = await getProductByCategory(id)
+       
+        const products =  await Product.findAll()
 
         if (!products) {
         console.log(" [getAllProducts] product empty :");
 
           return reply.status(404).send({ error: 'Product not found' });
         }
-          console.log("[getAllProducts] product : ",products)
+        //  console.log("[getAllProducts] product : ",products)
 
-        reply.send(products);
+          return products
   } catch (err) {
     console.log(" [getAllProducts] err :",err);
 
@@ -28,25 +27,30 @@ export async function getAllProducts(request, reply) {
 
 // Example for finding one product by ID
 export async function getProductById(request, reply) {
-  const { id } = request.params;
   try {
+    const { id } = request.params;
     const product = await Product.findOne({ where: { id } });
     if (!product) {
+    console.log(" [getProductById] Product not found :");
+
       return reply.status(404).send({ error: 'Product not found' });
     }
     reply.send(product);
   } catch (err) {
-    console.log(" [getDataOrder] err :",err);
+    console.log(" [getProductById] err :",err);
     reply.status(500).send({ error: err.message });
   }
 }
 
 
-async function getProductByCategory(id)
+export async function getProductByCategory(request, reply)
 {
     try {
           // id = 1 home, id = 2 femme , id = 3 kid
           console.log("========================  [getProductByCategory] ========================");
+          console.log("  [getProductByCategory] id ",request.query?.id);
+          
+          const id  = request.query?.id
           console.log("  [getProductByCategory] id ",id);
           const products = await Product.findAll({ where: { category : id } });
           
@@ -58,8 +62,8 @@ async function getProductByCategory(id)
           return productList
 
     } catch (error) {
-         console.log(" [getProductByCategory] err :",err);
-    reply.status(500).send({ error: err.message });
+        console.log(" [getProductByCategory] err :",error);
+        reply.status(500).send({ error: err.message });
 
     }
 }
@@ -265,6 +269,26 @@ export async function deleteFromCart(request, reply) {
     reply.code(500).send({ error: "Server error" });
   }
 }
+
+export async function updateProduct(request, reply) {
+  
+  try {
+           console.log("========================  [getProductByCategory] ========================");
+          console.log("  [getProductByCategory] id ",request.query?.id);
+          const id  = request.query?.id
+          const payload  = request.query?.payload
+
+          console.log("  [getProductByCategory] id ",id);
+          console.log("  [getProductByCategory] payload ",payload);
+
+
+
+  } catch (error) {
+          console.log("  [getProductByCategory] error ",error);
+    
+  }
+}
+
 
 // Example Fastify route registration (e.g., in routes.js)
 /* export default async function (fastify) {

@@ -91,7 +91,7 @@
               />
             </div>
 
-            <div class="form-group">
+<!--             <div class="form-group">
               <label for="brand">Marque *</label>
               <input 
                 id="brand"
@@ -101,7 +101,7 @@
                 placeholder="Ex: Nike"
               />
             </div>
-
+ -->
             <div class="form-group">
               <label for="price">Prix (€) *</label>
               <input 
@@ -180,6 +180,8 @@ import noirfemme from '../assets/noirfemme.png'
 import enfantbleu from '../assets/enfantbleu.png'
 import enfantrouge from '../assets/enfantrouge.png'
 import gris from '../assets/gris.png'
+import api from '../api.js'
+
 
 export default {
   name: 'AdminProducts',
@@ -194,7 +196,7 @@ export default {
       loading: false,
       form: {
         name: '',
-        brand: '',
+        /* brand: '', */
         price: 0,
         categoryId: '',
         img: '',
@@ -223,8 +225,7 @@ export default {
       
       const query = this.searchQuery.toLowerCase();
       return this.products.filter(product => 
-        product.name.toLowerCase().includes(query) ||
-        product.brand.toLowerCase().includes(query)
+        product.name.toLowerCase().includes(query)
       );
     }
   },
@@ -234,13 +235,38 @@ export default {
   methods: {
     async loadProducts() {
       try {
-        // Pour l'instant, on utilise les données locales
-        // À remplacer par un appel API
-        this.products = this.getSampleProducts();
-        console.log('📦 Produits chargés:', this.products.length);
+            console.log("[Admin]============");
+
+            const token = localStorage.getItem("token");
+            if (token == '') {
+            console.log("[Admin] : no token found");
+            return;
+              }
+
+            console.log("[Admin] token found :", token)
+            // console.log("[APP] user found :", this.user)
+
+            const res = await api.get(`http://localhost:3000/admin`, {
+            headers: { Authorization: `Bearer ${token}` }
+            });
+
+            const product =res.data;  
+            console.log("[Admin] PRODUCT : ",JSON.stringify(product))
+            this.setProduct(product);
       } catch (error) {
         console.error('❌ Erreur chargement produits:', error);
         this.showNotification('Erreur lors du chargement des produits', 'error');
+      }
+    },
+    setProduct(product){
+      try {
+        
+            if(!product)
+              return
+            this.products = product
+    
+      } catch (error) {
+        
       }
     },
 
@@ -257,10 +283,18 @@ export default {
       ];
     },
 
-    editProduct(product) {
+    async editProduct(product) {
       this.editingProduct = product;
       this.form = { ...product };
+      console.log(" form",this.form)
       this.showModal = true;
+       try {
+          const res = await api.put(`/product/update`,{params:{payload:  this.form
+            ,id:this.id}});
+          console.log("Updated:", res.data);
+        } catch (err) {
+          console.error("Update error:", err.response?.data || err.message);
+        }
     },
 
     async saveProduct() {
@@ -338,10 +372,10 @@ export default {
         this.showNotification('Le nom du produit est obligatoire', 'error');
         return false;
       }
-      if (!this.form.brand.trim()) {
+    /*   if (!this.form.brand.trim()) {
         this.showNotification('La marque est obligatoire', 'error');
         return false;
-      }
+      } */
       if (this.form.price <= 0) {
         this.showNotification('Le prix doit être positif', 'error');
         return false;
@@ -371,7 +405,7 @@ export default {
       this.editingProduct = null;
       this.form = {
         name: '',
-        brand: '',
+       /*  brand: '', */
         price: 0,
         categoryId: '',
         img: '',

@@ -40,7 +40,7 @@
    
               <!-- PAR PANIER  -->
                   <div class="cart-orderItem">
-                    <p>Commande </p>
+                    <p>Commandes </p>
                       <!-- PAR PRODUITS COMMANDEES  -->
                     <div class="itemList"
                       v-for = "itemList in order.orderItem"
@@ -49,7 +49,7 @@
                       <div class="item-details">
                   <h3 class="product-name">{{ itemList.product.name }}</h3>
                   <p class="product-brand">{{ itemList.product.brand }}</p>
-                <!--   <p class="product-price-unit">{{ formatPrice(item.price) }} l'unité</p> -->
+             
                       </div>
 
                       <p> quantity  {{ itemList.quantity }}  </p>
@@ -63,7 +63,7 @@
                           </div>
                     <button 
                     @click="updateQuantity( itemList.id,  itemList.product.quantity - 1)"
-                    :disabled="itemList.product.quantity <= 1"
+                    v-if ="itemList.quantity > 1"
                     class="quantity-btn"
                   >
                     −
@@ -91,6 +91,7 @@
               <div class="summary-line">
 <!--                 <span>Sous-total ({{ getTotalItems() }} articles)</span>
                 <span>{{ formatPrice(getCartTotal()) }}</span> -->
+                  <span>{{ formatPrice(this.getTotal()) }}</span>
               </div>
               
               <div class="summary-line">
@@ -151,6 +152,7 @@ export default {
   data() {
     return {
       dataUser: this.getUser() || { id:"", username: "", password : ""},
+      tempCart : [],
       deliveryPrice: 0, // Livraison gratuite
       imageMap: {
         'noir.png': noir,
@@ -162,7 +164,8 @@ export default {
         'enfantbleu.png': enfantbleu,
         'enfantrouge.png': enfantrouge
       },
-      cartItems : {}
+      cartItems : {},
+      total : 0
     }
   },
   mounted(){
@@ -176,13 +179,13 @@ export default {
   methods: {
       async  getPanier(){
           try {
-                      console.log("[getPanier]============");
+                console.log("[getPanier]============");
 
-                    const token = localStorage.getItem("token");
-                    if (token == '') {
-                      console.log("[getPanier] : no token found");
-                      return;
-                    }
+                  const token = localStorage.getItem("token");
+                  if (token == '') {
+                    console.log("[getPanier] : no token found");
+                    return;
+                  }
 
                   console.log("[getPanier] token found :", token)
                 // console.log("[APP] user found :", this.user)
@@ -194,20 +197,51 @@ export default {
                 const order =res.data;  
                 console.log("[Panier] order : ",JSON.stringify(order))
                 this.setCart(order);
-                  
+                console.log("[getPanier]gettotal")
+
+                this.getTotal()                  
           
               } catch (error) {
                 console.log("[Panier] error : ",error)
             
           }
       },
+    setTotal(){
+        try {
 
+          this.total = this.getTotal()
+        
+        } catch (error) {
+            console.log("[setTotal] error : ",error)
+          
+        }
+    },
     setCart(order){
         this.cartItems = order;
       
          console.log("[Panier] (setCart) panier : ",JSON.stringify(this.cartItems ))
     },
-    getData(){
+    getTotal(){
+
+      try {
+            
+            console.log("[Panier] (getTotal) panier : ",JSON.stringify(this.cartItems ))
+
+                if(this.cartItems[0] == null)
+                  return 0;
+
+            let total =  this.cartItems.filter(order => order.status === "pending")
+            .reduce((sum, order) => sum + Number(order.totalPrice), 0);
+
+            console.log("TOTAL PENDING =", total);
+            return total;
+
+      } catch (error) {
+         console.log("[Panier] error : ",error)
+        
+      }
+
+
 
     },
 

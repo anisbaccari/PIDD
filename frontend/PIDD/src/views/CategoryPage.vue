@@ -63,6 +63,96 @@ export default {
   props: ['user', 'setUser','getUser', 'addToCartGlobal','id'],
   data() {
     return {
+        tempCart: [],
+      categoryName: "",
+      // ✅ AJOUT: Champ img manquant dans les produits
+      allProducts: [
+        // Produits Homme
+        { 
+          id: 101, 
+          name: "T-shirt Noir Classique", 
+          brand: "Nike", 
+          price: 20, 
+          image: noir,
+          img: 'noir.png', // ✅ AJOUT: champ img manquant
+          categoryId: 1,
+          description: "T-shirt en coton 100% biologique, coupe classique, confortable et durable."
+        },
+        { 
+          id: 102, 
+          name: "T-shirt Blanc Sport", 
+          brand: "Adidas", 
+          price: 25, 
+          image: blanc,
+          img: 'blanc.png', // ✅ AJOUT: champ img manquant
+          categoryId: 1,
+          description: "T-shirt technique en matière respirante, parfait pour le sport."
+        },
+        { 
+          id: 103, 
+          name: "T-shirt Gris Urban", 
+          brand: "Puma", 
+          price: 23, 
+          image: gris,
+          img: 'gris.png', // ✅ AJOUT: champ img manquant
+          categoryId: 1,
+          description: "T-shirt streetwear en coton premium, design urbain et moderne."
+        },
+        
+        // Produits Femme
+        { 
+          id: 201, 
+          name: "T-shirt Rose Élégant", 
+          brand: "Zara", 
+          price: 22, 
+          image: rosefemme,
+          img: 'rosefemme.png', // ✅ AJOUT: champ img manquant
+          categoryId: 2,
+          description: "T-shirt féminin en coton stretch, coupe ajustée, couleur rose pastel."
+        },
+        { 
+          id: 202, 
+          name: "T-shirt Blanc Femme", 
+          brand: "H&M", 
+          price: 18, 
+          image: blancfemme,
+          img: 'blancfemme.png', // ✅ AJOUT: champ img manquant
+          categoryId: 2,
+          description: "T-shirt basique femme, coupe standard, matière douce et agréable."
+        },
+        { 
+          id: 203, 
+          name: "T-shirt Noir Femme", 
+          brand: "Mango", 
+          price: 21, 
+          image: noirfemme,
+          img: 'noirfemme.png', // ✅ AJOUT: champ img manquant
+          categoryId: 2,
+          description: "T-shirt femme en coton bio, coupe ajustée, idéal pour toutes les occasions."
+        },
+        
+        // Produits Enfants
+        { 
+          id: 301, 
+          name: "T-shirt Bleu Enfant", 
+          brand: "Disney", 
+          price: 15, 
+          image: enfantbleu,
+          img: 'enfantbleu.png', // ✅ AJOUT: champ img manquant
+          categoryId: 3,
+          description: "T-shirt pour enfant avec motif Disney, coton doux, lavage facile."
+        },
+        { 
+          id: 302, 
+          name: "T-shirt Rouge Super-héros", 
+          brand: "Marvel", 
+          price: 16, 
+          image: enfantrouge,
+          img: 'enfantrouge.png', // ✅ AJOUT: champ img manquant
+          categoryId: 3,
+          description: "T-shirt enfant avec impression Marvel, parfait pour les fans de super-héros."
+        }
+      ],
       dataUser: this.getUser() || { id:"", username: "", password : ""},
 
       products: [],
@@ -125,7 +215,13 @@ export default {
       
      }
      }
-
+     ,
+     addToTmpCart(product){
+      this.tempCart.push(product);
+     },
+     getTmpCart(){
+      return this.tempCart;
+     }
 /*    
  loadCategoryProducts() {
       const categoryId = parseInt(this.$route.params.id);
