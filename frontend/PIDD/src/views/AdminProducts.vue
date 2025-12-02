@@ -251,7 +251,7 @@ export default {
             });
 
             const product =res.data;  
-            console.log("[Admin] PRODUCT : ",JSON.stringify(product))
+          //  console.log("[Admin] PRODUCT : ",JSON.stringify(product))
             this.setProduct(product);
       } catch (error) {
         console.error('❌ Erreur chargement produits:', error);
@@ -284,14 +284,17 @@ export default {
     },
 
     async editProduct(product) {
-      this.editingProduct = product;
-      this.form = { ...product };
-      console.log(" form",this.form)
-      this.showModal = true;
-       try {
-          const res = await api.put(`/product/update`,{params:{payload:  this.form
-            ,id:this.id}});
-          console.log("Updated:", res.data);
+      try {
+            console.log('[Adminproduct] editProduct : ',JSON.stringify(product) );
+            const productToSend = JSON.stringify(product)
+            this.showModal = true;
+            this.editingProduct = true;
+            this.form = { ...product };
+            console.log(" form",this.form)
+            await this.saveProduct()
+         const res = await api.put(`/product/update/${product.id}`, this.form);;
+
+         // console.log("Updated: product ", res.data);
         } catch (err) {
           console.error("Update error:", err.response?.data || err.message);
         }
@@ -306,8 +309,11 @@ export default {
       try {
         if (this.editingProduct) {
           // Mise à jour du produit
+         // await this.editProduct(this.editingProduct)
           await this.updateProduct(this.form);
           this.showNotification('Produit mis à jour avec succès', 'success');
+            this.editingProduct = false;
+
         } else {
           // Création d'un nouveau produit
           await this.createProduct(this.form);
@@ -333,8 +339,7 @@ export default {
         this.products[index] = productData;
       }
       
-      // Sauvegarder dans localStorage pour la démo
-      this.saveToLocalStorage();
+
     },
 
     async createProduct(productData) {

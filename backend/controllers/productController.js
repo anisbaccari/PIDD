@@ -273,14 +273,28 @@ export async function deleteFromCart(request, reply) {
 export async function updateProduct(request, reply) {
   
   try {
-           console.log("========================  [getProductByCategory] ========================");
-          console.log("  [getProductByCategory] id ",request.query?.id);
-          const id  = request.query?.id
-          const payload  = request.query?.payload
+          console.log("========== [updateProduct] ==========");
+          console.log("params:", request.params);
+          console.log("body:", request.body);
 
-          console.log("  [getProductByCategory] id ",id);
-          console.log("  [getProductByCategory] payload ",payload);
+          const id = request.params.id;
+          const payload = request.body;
 
+          console.log("[updateProduct] id:", id);
+          console.log("[updateProduct] payload:", payload);
+
+          const product = await Product.findByPk(id);
+
+          if (!product) {
+          console.log("========== [updateProduct]no product ");
+            
+            return reply.status(404).send({ error: "Product not found" });
+          }
+
+          const res = await product.update(payload);
+          console.log("========== [updateProduct] SUCCES VUPDATE  ",res);
+
+          reply.send({ message: "Product updated", product });
 
 
   } catch (error) {

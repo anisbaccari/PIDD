@@ -5,7 +5,7 @@ import {} from '../controllers/categorieController.js'
 export async function getAdmin  (request, reply) {
   try {
      const res = await getAllProducts(request,reply);
-     console.log("[getAdmin] res",res)
+     //console.log("[getAdmin] res",res)
      reply.send(res);
 
   } catch (error) {

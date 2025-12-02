@@ -5,5 +5,5 @@ export default async function productRoutes(fastify, opts) {
   fastify.get('/all', getProductByCategory);
   fastify.post('/add', addProductToOrder);
   fastify.delete("/remove", deleteFromCart);
-  fastify.put("/update", updateProduct);
+  fastify.put("/update/:id", updateProduct);
 }
