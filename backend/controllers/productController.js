@@ -198,6 +198,7 @@ export async function addProductToOrder(request, reply) {
 
 export async function deleteFromCart(request, reply) {
   try {
+    
 
           console.log("========================  [deleteFromCart] ========================");
        
@@ -270,6 +271,33 @@ export async function deleteFromCart(request, reply) {
   }
 }
 
+
+
+
+  export async function deleteProduct(request,reply){
+    
+      console.log("========== [updateProduct] ==========");
+      console.log("params:", request.params);
+      const { id } = request.params;
+
+      try {
+        const deleted = await Product.destroy({
+          where: { id }
+        });
+
+        if (!deleted) {
+        console.log(" [updateProduct]  Product not found");
+
+          return reply.code(404).send({ error: "Product not found" });
+        }
+      console.log(" [updateProduct]  SUCCCED");
+
+        return reply.send({ success: true, message: "Product deleted" });
+      } catch (err) {
+        console.error(err);
+        return reply.code(500).send({ error: "Internal server error" });
+      }
+  }
 export async function updateProduct(request, reply) {
   
   try {

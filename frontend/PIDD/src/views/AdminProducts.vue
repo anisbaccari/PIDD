@@ -50,7 +50,7 @@
               {{ formatPrice(product.price) }}
             </div>
             <div class="table-cell">
-              <span class="category-badge">{{ getCategoryName(product.categoryId) }}</span>
+              <span class="category-badge">{{ getCategoryName(product.category) }}</span>
             </div>
             <div class="table-cell actions-cell">
               <button @click="editProduct(product)" class="btn-edit">
@@ -195,10 +195,11 @@ export default {
       editingProduct: null,
       loading: false,
       form: {
+        id:'',
         name: '',
         /* brand: '', */
         price: 0,
-        categoryId: '',
+        category: '',
         img: '',
         description: ''
       },
@@ -290,11 +291,9 @@ export default {
             this.showModal = true;
             this.editingProduct = true;
             this.form = { ...product };
-            console.log(" form",this.form)
-            await this.saveProduct()
-         const res = await api.put(`/product/update/${product.id}`, this.form);;
 
-         // console.log("Updated: product ", res.data);
+           //await this.saveProduct()
+
         } catch (err) {
           console.error("Update error:", err.response?.data || err.message);
         }
@@ -302,6 +301,7 @@ export default {
 
     async saveProduct() {
       // Validation
+      
       if (!this.validateForm()) return;
 
       this.loading = true;
@@ -319,6 +319,8 @@ export default {
           await this.createProduct(this.form);
           this.showNotification('Produit créé avec succès', 'success');
         }
+         const res = await api.put(`/product/update/${ this.form.id}`, this.form);;
+          console.log("Updated: product ", res.data);
 
         await this.loadProducts();
         this.closeModal();
@@ -361,7 +363,8 @@ export default {
       try {
         // Simulation d'appel API - À remplacer par DELETE /api/products/:id
         console.log('🗑️ Suppression produit:', productId);
-        
+        const res = await api.delete(`/product/delete/${productId}`);
+        console.log("[DELETEPRODCT] res ",res )
         this.products = this.products.filter(p => p.id !== productId);
         this.saveToLocalStorage();
         
@@ -385,7 +388,7 @@ export default {
         this.showNotification('Le prix doit être positif', 'error');
         return false;
       }
-      if (!this.form.categoryId) {
+      if (!this.form.category) {
         this.showNotification('La catégorie est obligatoire', 'error');
         return false;
       }
