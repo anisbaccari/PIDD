@@ -363,6 +363,7 @@ export async function updateProduct(request, reply) {
           console.log("  [getProductByCategory] error ",error);
     
   }
+  
 }
 
 

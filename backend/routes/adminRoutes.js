@@ -1,27 +1,59 @@
 // backend/routes/adminRoutes.js
-import fp from 'fastify-plugin'; // 💡 Ajout pour garantir que le fichier est chargé correctement
+import fp from 'fastify-plugin';
 
 import { 
     getAdminDashboard,
     createProduct,
-    updateProduct,
-    deleteProduct 
+    decreaseProductStock,
+    // Routes commandes
+    getAllOrders,
+    createOrder,
+    updateOrderStatus,
+    deleteOrder,
+    convertToCSV
 } from '../controllers/adminController.js';
 
-// Nous enrobons la fonction de route avec fastify-plugin.
-// Cela permet d'enregistrer les routes correctement, surtout si vous utilisez des décorateurs ou hooks.
+// Importer aussi les fonctions de productController
+import { deleteProduct, updateProduct } from '../controllers/productController.js';
+
 async function adminRoutes(fastify, options) {
     
-    // Route GET pour le dashboard admin
+    // ========== ROUTES DASHBOARD ==========
     fastify.get('/admin/dashboard', getAdminDashboard);
     
-    // Routes CRUD pour les produits
+    // ========== ROUTES PRODUITS ==========
     fastify.post('/admin/products', createProduct);
     fastify.put('/admin/products/:id', updateProduct);
     fastify.delete('/admin/products/:id', deleteProduct);
     
-    // Autres routes admin...
+    // Route pour diminuer le stock d'un produit
+    fastify.patch('/admin/products/:id/decrease-stock', decreaseProductStock);
+    
+    // ========== ROUTES COMMANDES ==========
+    fastify.get('/admin/orders', getAllOrders);
+    fastify.post('/admin/orders', createOrder);
+    fastify.put('/admin/orders/:orderId/status', updateOrderStatus);
+    fastify.delete('/admin/orders/:orderId', deleteOrder); 
+    
+    // Route pour exporter les commandes en CSV
+    fastify.get('/admin/orders/export', async (request, reply) => {
+        try {
+            // Récupérer les commandes via getAllOrders
+            const { orders } = await getAllOrders(request, reply);
+            const csv = convertToCSV(orders);
+            
+            reply
+                .type('text/csv')
+                .header('Content-Disposition', 'attachment; filename=commandes.csv')
+                .send(csv);
+        } catch (error) {
+            console.error('Erreur export CSV:', error);
+            reply.status(500).send({ 
+                success: false, 
+                error: 'Erreur lors de l\'export' 
+            });
+        }
+    });
 }
 
-// Exportation de la fonction de route en tant que plugin Fastify
 export default fp(adminRoutes);

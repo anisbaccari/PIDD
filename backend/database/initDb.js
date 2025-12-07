@@ -66,7 +66,7 @@ const productList = [
         
         // Produits Femme
         { name: "T-shirt Rose Élégant", category: 2,price: 22,quantity: 30, description: 'Cotton classic tee' ,img : rosefemmeImg},
-        { name: "T-shirt Blanc Femme", category: 2,price: 24, quantity: 30,description: 'Cotton classic tee' ,img : blancfemmeImg},
+        { name: "T-shirt Blanc Femme", category: 2,price: 18, quantity: 30,description: 'Cotton classic tee' ,img : blancfemmeImg},
         { name: "T-shirt Noir Femme", category: 2,price: 21, quantity: 30,description: 'Cotton classic tee' ,img : noirfemmeImg},
         
         // Produits Enfants
