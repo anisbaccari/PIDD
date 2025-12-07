@@ -193,26 +193,26 @@ export default {
           id: 1, 
           name: "Collection Homme", 
           image: hommeImg,
-          count: 15
+          count: 3
         },
         { 
           id: 2, 
           name: "Collection Femme", 
           image: femmeImg,
-          count: 12
+          count: 3
         },
         { 
           id: 3, 
           name: "Collection Enfants", 
           image: enfantImg,
-          count: 8
+          count: 2
         }
       ],
       popularProducts: [
         { 
           id: 101, 
-          name: "T-shirt Noir Premium", 
-          price: 24.99, 
+          name: "T-shirt Noir classique", 
+          price: 20, 
           image: noirImg,
           img: 'noir.png',
           brand: "Nike",
@@ -222,7 +222,7 @@ export default {
         { 
           id: 102, 
           name: "T-shirt Sport Blanc", 
-          price: 22.50, 
+          price: 25, 
           image: blancImg,
           img: 'blanc.png',
           brand: "Adidas",
@@ -232,7 +232,7 @@ export default {
         { 
           id: 103, 
           name: "T-shirt Urban Gris", 
-          price: 19.99, 
+          price: 23, 
           image: grisImg,
           img: 'gris.png',
           brand: "Puma",
@@ -241,7 +241,7 @@ export default {
         { 
           id: 201, 
           name: "T-shirt Rose Élégant", 
-          price: 26.99, 
+          price: 22, 
           image: rosefemmeImg,
           img: 'rosefemme.png',
           brand: "Zara",
@@ -251,7 +251,7 @@ export default {
         { 
           id: 202, 
           name: "T-shirt Blanc Femme", 
-          price: 23.50, 
+          price: 18, 
           image: blancfemmeImg,
           img: 'blancfemme.png',
           brand: "H&M",
@@ -260,7 +260,7 @@ export default {
         { 
           id: 301, 
           name: "T-shirt Marvel Enfant", 
-          price: 16.99, 
+          price: 15, 
           image: enfantbleuImg,
           img: 'enfantbleu.png',
           brand: "Marvel",

@@ -719,85 +719,137 @@ export default {
     },
     
     async saveProduct() {
-      // Validation
-      if (!this.validateForm()) return;
-      
-      try {
-        this.loading = true;
-        
-        if (this.editingProduct) {
-          // Mise à jour
-          const response = await axios.put(
-            `${API_URL}/products/${this.editingProduct.id}`,
-            this.form,
-            { headers: this.getAuthHeaders() }
-          );
-          
-          const index = this.products.findIndex(p => p.id === this.editingProduct.id);
-          if (index !== -1) {
-            this.products[index] = response.data;
-          }
-          
-          this.showNotification('Produit mis à jour avec succès', 'success');
-        } else {
-          // Ajout
-          const response = await axios.post(
-            `${API_URL}/products`,
-            this.form,
-            { headers: this.getAuthHeaders() }
-          );
-          
-          this.products.push(response.data);
-          this.showNotification('Produit ajouté avec succès', 'success');
-        }
-        
-        this.showModal = false;
-      } catch (error) {
-        console.error('Erreur sauvegarde produit:', error);
-        this.showNotification('Erreur lors de la sauvegarde', 'error');
-      } finally {
-        this.loading = false;
-      }
-    },
+  // Validation
+  if (!this.validateForm()) return;
+  
+  try {
+    this.loading = true;
     
-    async deleteProduct(id) {
-      if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) return;
-      
+    if (this.editingProduct) {
+      // Mise à jour
       try {
-        await axios.delete(`${API_URL}/products/${id}`, {
-          headers: this.getAuthHeaders()
-        });
-        
-        this.products = this.products.filter(p => p.id !== id);
-        this.showNotification('Produit supprimé avec succès', 'success');
-      } catch (error) {
-        console.error('Erreur suppression produit:', error);
-        this.showNotification('Erreur lors de la suppression', 'error');
-      }
-    },
-    
-    async duplicateProduct(product) {
-      try {
-        const duplicatedProduct = {
-          ...product,
-          name: product.name + ' (Copie)',
-          id: undefined
-        };
-        
-        const response = await axios.post(
-          `${API_URL}/products`,
-          duplicatedProduct,
+        const response = await axios.put(
+          `${API_URL}/products/${this.editingProduct.id}`,
+          this.form,
           { headers: this.getAuthHeaders() }
         );
         
-        this.products.push(response.data);
-        this.showNotification('Produit dupliqué avec succès', 'success');
+        // Mise à jour locale avec les données de la réponse
+        const index = this.products.findIndex(p => p.id === this.editingProduct.id);
+        if (index !== -1) {
+          // Force la réactivité en créant un nouveau tableau
+          this.products = [
+            ...this.products.slice(0, index),
+            response.data,
+            ...this.products.slice(index + 1)
+          ];
+        }
+        
+        this.showNotification('Produit mis à jour avec succès', 'success');
       } catch (error) {
-        console.error('Erreur duplication produit:', error);
-        this.showNotification('Erreur lors de la duplication', 'error');
+        console.error('Erreur API:', error);
+        // Mode démo si API non disponible
+        const index = this.products.findIndex(p => p.id === this.editingProduct.id);
+        if (index !== -1) {
+          // Force la réactivité
+          this.products = [
+            ...this.products.slice(0, index),
+            { ...this.form, id: this.editingProduct.id },
+            ...this.products.slice(index + 1)
+          ];
+        }
+        this.showNotification('Produit mis à jour ', 'warning');
       }
-    },
+    } else {
+      // Ajout
+      try {
+        const response = await axios.post(
+          `${API_URL}/products`,
+          this.form,
+          { headers: this.getAuthHeaders() }
+        );
+        
+        // Ajout au début du tableau pour le voir immédiatement
+        this.products = [response.data, ...this.products];
+        this.showNotification('Produit ajouté avec succès', 'success');
+      } catch (error) {
+        console.error('Erreur API:', error);
+        // Mode démo si API non disponible
+        const newProduct = {
+          ...this.form,
+          id: Date.now().toString(),
+          category: this.form.category.toString(),
+          price: parseFloat(this.form.price),
+          quantity: parseInt(this.form.quantity)
+        };
+        this.products = [newProduct, ...this.products];
+        this.showNotification('Produit ajouté (mode démo)', 'warning');
+      }
+    }
     
+    this.showModal = false;
+    this.resetForm();
+  } catch (error) {
+    console.error('Erreur sauvegarde produit:', error);
+    this.showNotification('Erreur lors de la sauvegarde', 'error');
+  } finally {
+    this.loading = false;
+  }
+},
+   async deleteProduct(id) {
+  if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) return;
+  
+  try {
+    await axios.delete(`${API_URL}/products/${id}`, {
+      headers: this.getAuthHeaders()
+    });
+    
+    // Force la réactivité en créant un nouveau tableau
+    this.products = this.products.filter(p => p.id !== id);
+    this.showNotification('Produit supprimé avec succès', 'success');
+  } catch (error) {
+    console.error('Erreur suppression produit:', error);
+    
+    // Mode démo si erreur
+    this.products = this.products.filter(p => p.id !== id);
+    this.showNotification('Produit supprimé (mode démo)', 'warning');
+  }
+},
+   async duplicateProduct(product) {
+  try {
+    const duplicatedProduct = {
+      name: product.name + ' (Copie)',
+      price: product.price,
+      quantity: product.quantity,
+      category: product.category,
+      img: product.img,
+      description: product.description
+    };
+    
+    try {
+      const response = await axios.post(
+        `${API_URL}/products`,
+        duplicatedProduct,
+        { headers: this.getAuthHeaders() }
+      );
+      
+      this.products = [response.data, ...this.products];
+      this.showNotification('Produit dupliqué avec succès', 'success');
+    } catch (error) {
+      console.error('Erreur API:', error);
+      // Mode démo
+      const newProduct = {
+        ...duplicatedProduct,
+        id: Date.now().toString()
+      };
+      this.products = [newProduct, ...this.products];
+      this.showNotification('Produit dupliqué (mode démo)', 'warning');
+    }
+  } catch (error) {
+    console.error('Erreur duplication produit:', error);
+    this.showNotification('Erreur lors de la duplication', 'error');
+  }
+},
     validateForm() {
       this.formErrors = {};
       
@@ -857,96 +909,124 @@ export default {
         this.selectedProducts = [];
       }
     },
-    
-    async updateStockBulk() {
-      if (this.selectedProducts.length === 0) {
-        this.showNotification('Veuillez sélectionner au moins un produit', 'error');
-        return;
-      }
-      
-      const newStock = prompt('Entrez la nouvelle quantité pour les produits sélectionnés:');
-      if (newStock === null) return;
-      
-      const quantity = parseInt(newStock);
-      if (isNaN(quantity) || quantity < 0) {
-        this.showNotification('Veuillez entrer un nombre valide', 'error');
-        return;
-      }
+    resetForm() {
+  this.form = {
+    name: '',
+    price: 0,
+    quantity: 0,
+    category: '',
+    img: '',
+    description: ''
+  };
+  this.editingProduct = null;
+  this.formErrors = {};
+},
+  async updateStockBulk() {
+  if (this.selectedProducts.length === 0) {
+    this.showNotification('Veuillez sélectionner au moins un produit', 'error');
+    return;
+  }
+  
+  const newStock = prompt(`Mettre à jour le stock pour ${this.selectedProducts.length} produit(s).\nEntrez la nouvelle quantité:`);
+  if (newStock === null) return;
+  
+  const quantity = parseInt(newStock);
+  
+  if (isNaN(quantity) || quantity < 0) {
+    this.showNotification('Veuillez entrer un nombre valide (≥ 0)', 'error');
+    return;
+  }
+  
+  try {
+    const updatePromises = this.selectedProducts.map(async (productId) => {
+      const product = this.products.find(p => p.id === productId);
+      if (!product) return null;
       
       try {
-        const updates = this.selectedProducts.map(async (productId) => {
-          return axios.patch(
-            `${API_URL}/products/${productId}`,
-            { quantity },
-            { headers: this.getAuthHeaders() }
-          );
-        });
-        
-        await Promise.all(updates);
-        
-        // Mettre à jour localement
-        this.products.forEach(product => {
-          if (this.selectedProducts.includes(product.id)) {
-            product.quantity = quantity;
-          }
-        });
-        
-        this.showNotification('Stock mis à jour avec succès', 'success');
-        this.selectedProducts = [];
-        this.selectAll = false;
+        return await axios.put(
+          `${API_URL}/products/${productId}`,
+          {
+            ...product,
+            quantity: quantity
+          },
+          { headers: this.getAuthHeaders() }
+        );
       } catch (error) {
-        console.error('Erreur mise à jour stock:', error);
-        // Mise à jour locale si erreur réseau
-        if (error.code === 'ERR_NETWORK') {
-          this.products.forEach(product => {
-            if (this.selectedProducts.includes(product.id)) {
-              product.quantity = quantity;
-            }
-          });
-        this.showNotification('Stock mis à jour (mode démo)', 'success');
-          this.selectedProducts = [];
-          this.selectAll = false;
-        } else {
-          this.showNotification('Erreur lors de la mise à jour du stock', 'error');
-        }
+        console.error(`Erreur mise à jour produit ${productId}:`, error);
+        return null;
       }
-    },
+    });
     
+    await Promise.all(updatePromises);
+    
+    // Force la réactivité en créant un nouveau tableau
+    this.products = this.products.map(product => {
+      if (this.selectedProducts.includes(product.id)) {
+        return { ...product, quantity: quantity };
+      }
+      return product;
+    });
+    
+    this.showNotification(`Stock mis à jour pour ${this.selectedProducts.length} produit(s)`, 'success');
+    
+    // Réinitialiser la sélection
+    this.selectedProducts = [];
+    this.selectAll = false;
+    
+  } catch (error) {
+    console.error('Erreur mise à jour stock:', error);
+    
+    // Mode démo - mise à jour locale quand même
+    this.products = this.products.map(product => {
+      if (this.selectedProducts.includes(product.id)) {
+        return { ...product, quantity: quantity };
+      }
+      return product;
+    });
+    
+    this.showNotification('Stock mis à jour (mode démo)', 'warning');
+    this.selectedProducts = [];
+    this.selectAll = false;
+  }
+},
    async deleteSelected() {
-      if (this.selectedProducts.length === 0) {
-        this.showNotification('Veuillez sélectionner au moins un produit', 'error');
-        return;
-      }
-      
-      if (!confirm(`Êtes-vous sûr de vouloir supprimer ${this.selectedProducts.length} produit(s) ?`)) return;
-      
+  if (this.selectedProducts.length === 0) {
+    this.showNotification('Veuillez sélectionner au moins un produit', 'error');
+    return;
+  }
+  
+  if (!confirm(`Êtes-vous sûr de vouloir supprimer ${this.selectedProducts.length} produit(s) ?`)) return;
+  
+  try {
+    const deletions = this.selectedProducts.map(async (productId) => {
       try {
-        const deletions = this.selectedProducts.map(async (productId) => {
-          return axios.delete(`${API_URL}/products/${productId}`, {
-            headers: this.getAuthHeaders()
-          });
+        return await axios.delete(`${API_URL}/products/${productId}`, {
+          headers: this.getAuthHeaders()
         });
-        
-        await Promise.all(deletions);
-        
-        this.products = this.products.filter(p => !this.selectedProducts.includes(p.id));
-        this.showNotification('Produits supprimés avec succès', 'success');
-        this.selectedProducts = [];
-        this.selectAll = false;
       } catch (error) {
-        console.error('Erreur suppression produits:', error);
-        
-        // Suppression locale si erreur réseau
-        if (error.code === 'ERR_NETWORK') {
-          this.products = this.products.filter(p => !this.selectedProducts.includes(p.id));
-          this.showNotification('Produits supprimés (mode démo)', 'success');
-          this.selectedProducts = [];
-          this.selectAll = false;
-        } else {
-          this.showNotification('Erreur lors de la suppression', 'error');
-        }
+        console.error(`Erreur suppression produit ${productId}:`, error);
+        return null;
       }
-    },
+    });
+    
+    await Promise.all(deletions);
+    
+    // Force la réactivité en créant un nouveau tableau
+    this.products = this.products.filter(p => !this.selectedProducts.includes(p.id));
+    
+    this.showNotification('Produits supprimés avec succès', 'success');
+    this.selectedProducts = [];
+    this.selectAll = false;
+  } catch (error) {
+    console.error('Erreur suppression produits:', error);
+    
+    // Mode démo - suppression locale quand même
+    this.products = this.products.filter(p => !this.selectedProducts.includes(p.id));
+    this.showNotification('Produits supprimés (mode démo)', 'warning');
+    this.selectedProducts = [];
+    this.selectAll = false;
+  }
+},
     
     logout() {
       this.setUser(null);
@@ -1009,7 +1089,17 @@ export default {
   align-items: center;
   gap: 1rem;
 }
+.notification.success {
+  background: #10b981;
+}
 
+.notification.error {
+  background: #ef4444;
+}
+
+.notification.warning {
+  background: #f59e0b;
+}
 .profile-avatar {
   width: 48px;
   height: 48px;

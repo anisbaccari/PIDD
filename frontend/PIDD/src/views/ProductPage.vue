@@ -50,7 +50,7 @@
           </div>
           <div class="product-actions">
             <button  @click="addToCart" class="add-to-cart-btn">Ajouter au panier</button>
-            <button class="buy-now-btn">Acheter maintenant</button>
+           <!--  <button class="buy-now-btn">Acheter maintenant</button> -->
           </div>
           
           <div class="product-description">
@@ -218,20 +218,17 @@ export default {
       return categories[categoryId] || "Catégorie"
     },
     // ✅ AJOUT: Méthode pour ajouter au panier
-    addToCart() {
-      if (!this.product) return
-      
+    addToCart(product) {
       const productToAdd = {
-        ...this.product,
-        quantity: this.quantity
+        ...product,
+        quantity: 1
       }
       
-      // Utilise la méthode globale passée en prop
       if (this.addToCartGlobal) {
-        this.addToCartGlobal(productToAdd)
+        this.addToCartGlobal(productToAdd);
+        this.showSuccessNotification(`${product.name} a été ajouté au panier !`);
       } else {
-        // Fallback: gestion locale
-        this.addToCartLocal(productToAdd)
+        this.addToCartLocal(productToAdd);
       }
       
       this.showSuccess(`✅ ${this.quantity} ${this.product.name} ajouté(s) au panier !`)

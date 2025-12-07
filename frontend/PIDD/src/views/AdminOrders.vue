@@ -1,74 +1,111 @@
 <template>
   <div class="admin-orders">
-    <!-- Header -->
- <div class="bg-white shadow-sm sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-6 py-4">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-4">
-  <button 
-  @click="goToDashboard"
-  class="group flex items-center gap-4 px-8 py-4 
-         bg-gradient-to-r from-blue-600 to-blue-700 
-         text-white text-lg font-semibold 
-         rounded-2xl shadow-xl 
-         hover:shadow-2xl hover:from-blue-700 hover:to-blue-800 
-         active:from-blue-800 active:to-blue-900 
-         transition-all duration-300 ease-in-out 
-         transform hover:-translate-y-1 active:translate-y-0
-         border border-blue-400/30"
->
-  <span class="text-2xl">🏠</span>
-  <span class="tracking-wide">Dashboard</span>
-</button>
-<button 
-  @click="goToAnalytics"
-  class="group flex items-center gap-4 px-8 py-4 
-         bg-gradient-to-r from-blue-600 to-blue-700 
-         text-white text-lg font-semibold 
-         rounded-2xl shadow-xl 
-         hover:shadow-2xl hover:from-blue-700 hover:to-blue-800 
-         active:from-blue-800 active:to-blue-900 
-         transition-all duration-300 ease-in-out 
-         transform hover:-translate-y-1 active:translate-y-0
-         border border-blue-400/30"
->
-  
-  <span class="tracking-wide"><A>Analytics</A></span>
-</button>
-    <div class="h-8 w-px bg-slate-200"></div>
-       <h1 class="text-2xl font-bold text-slate-800">Gestion des Commandes</h1>
-            </div>
+   <!-- Header amélioré -->
+    <div class="admin-header">
+      <div class="header-top">
+        <div class="header-title-section">
+          <h1 class="page-title">
+            <span class="title-icon">📊</span>
+            Gestion des Commandes
+          </h1>
+          <p class="page-subtitle">Visualisez et gérez toutes les commandes de votre boutique</p>
+        </div>
+        
+        <!-- Boutons d'action -->
+        <div class="header-actions">
+          <div class="action-buttons">
+            <!-- Bouton Dashboard -->
+            <button 
+              @click="goToDashboard"
+              class="action-button dashboard-btn"
+            >
+              <div class="button-content">
+                <div class="button-icon">
+                  <span class="icon">🏠</span>
+                  <div class="icon-glow"></div>
+                </div>
+                <div class="button-text">
+                  <span class="button-title">Dashboard</span>
+                  <span class="button-subtitle">Tableau de bord</span>
+                </div>
+                <div class="button-arrow">
+                  <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M17 8l4 4m0 0l-4 4m4-4H3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+              </div>
+            </button>
             
+            <!-- Bouton Analytics -->
+            <button 
+              @click="goToAnalytics"
+              class="action-button analytics-btn"
+            >
+              <div class="button-content">
+                <div class="button-icon">
+                  <span class="icon">📈</span>
+                  <div class="icon-glow"></div>
+                </div>
+                <div class="button-text">
+                  <span class="button-title">Analytics</span>
+                  <span class="button-subtitle">Statistiques avancées</span>
+                </div>
+                <div class="button-arrow">
+                  <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M17 8l4 4m0 0l-4 4m4-4H3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+              </div>
+            </button>
           </div>
         </div>
+      </div>
+
+      <!-- Filtres rapides -->
       <div class="header-filters">
-        <div class="filter-group">
-          <label>Statut :</label>
-          <select v-model="statusFilter" class="filter-select">
-            <option value="">Toutes</option>
-            <option value="pending">En attente</option>
-            <option value="confirmed">Confirmées</option>
-            <option value="processing">En traitement</option>
-            <option value="shipped">Expédiées</option>
-            <option value="delivered">Livrées</option>
-            <option value="cancelled">Annulées</option>
-          </select>
+        <div class="filters-container">
+          <div class="filter-group">
+            <div class="filter-label">
+              <span class="filter-icon">🔍</span>
+              <span>Filtres rapides</span>
+            </div>
+            <div class="filter-controls">
+              <select v-model="statusFilter" class="filter-select">
+                <option value="">Tous les statuts</option>
+                <option value="pending">⏳ En attente</option>
+                <option value="confirmed">✅ Confirmées</option>
+                <option value="processing">🔄 En traitement</option>
+                <option value="shipped">🚚 Expédiées</option>
+                <option value="delivered">📦 Livrées</option>
+                <option value="cancelled">❌ Annulées</option>
+              </select>
+              
+              <select v-model="periodFilter" class="filter-select">
+                <option value="all">📅 Toutes périodes</option>
+                <option value="today">☀️ Aujourd'hui</option>
+                <option value="week">📅 Cette semaine</option>
+                <option value="month">📆 Ce mois</option>
+                <option value="quarter">📊 Ce trimestre</option>
+              </select>
+              
+              <button @click="exportOrders" class="export-button">
+                <span class="export-icon">📤</span>
+                <span>Exporter</span>
+              </button>
+            </div>
+          </div>
+          
+          <div class="search-container">
+            <div class="search-input-wrapper">
+              <span class="search-icon">🔍</span>
+              <input 
+                v-model="searchQuery" 
+                placeholder="Rechercher une commande, client, email..."
+                class="search-input"
+              />
+            </div>
+          </div>
         </div>
-        
-        <div class="filter-group">
-          <label>Période :</label>
-          <select v-model="periodFilter" class="filter-select">
-            <option value="all">Toutes périodes</option>
-            <option value="today">Aujourd'hui</option>
-            <option value="week">Cette semaine</option>
-            <option value="month">Ce mois</option>
-            <option value="quarter">Ce trimestre</option>
-          </select>
-        </div>
-        
-        <button @click="exportOrders" class="export-btn">
-          📤 Exporter CSV
-        </button>
       </div>
     </div>
 
@@ -228,7 +265,13 @@
           <button @click="applyBulkAction" class="apply-btn">Appliquer</button>
         </div>
       </div>
-      
+      <!-- Loading Indicator -->
+<div v-if="loading" class="loading-overlay">
+  <div class="loading-spinner">
+    <div class="spinner"></div>
+    <p>Chargement des commandes...</p>
+  </div>
+</div>
       <!-- Pagination -->
       <div class="pagination">
         <button @click="prevPage" :disabled="currentPage === 1" class="page-btn">
@@ -418,7 +461,17 @@ export default {
       orderToUpdate: null,
       newStatus: '',
       statusComment: '',
-      bulkAction: ''
+      bulkAction: '',
+       refreshInterval: null,
+      stats: {
+        totalOrders: 0,
+        totalRevenue: 0,
+        confirmedOrders: 0,
+        shippedOrders: 0,
+        deliveredOrders: 0,
+        averageOrderValue: 0
+      }
+      
     }
   },
   computed: {
@@ -469,7 +522,10 @@ export default {
           order.customer.phone.includes(query)
         );
       }
-      
+         // Statut
+    if (this.statusFilter !== '') {
+      result = result.filter(o => o.status === this.statusFilter);
+    }
       // Recherche générale
       if (this.searchQuery) {
         const query = this.searchQuery.toLowerCase();
@@ -493,15 +549,22 @@ export default {
     },
     
     totalOrders() {
-      return this.orders.length;
+      return this.stats.totalOrders || this.orders.length;
     },
-    
-    pendingOrders() {
-      return this.orders.filter(o => o.status === 'pending').length;
+   pendingOrders() {
+      return this.orders.filter(o => o.status === 'pending' || o.status === 'confirmed').length;
     },
-    
     totalRevenue() {
       return this.orders.reduce((sum, order) => sum + order.amount, 0);
+    },
+     
+    totalRevenue() {
+      return this.stats.totalRevenue || this.orders.reduce((sum, order) => sum + order.amount, 0);
+    },
+    
+    averageOrderValue() {
+      return this.stats.averageOrderValue || 
+        (this.orders.length > 0 ? this.totalRevenue / this.orders.length : 0);
     },
     
     averageOrderValue() {
@@ -511,89 +574,161 @@ export default {
 
   async mounted() {
     await this.loadOrders();
+    // Actualiser automatiquement toutes les 30 secondes
+    this.refreshInterval = setInterval(() => {
+      this.loadOrders();
+    }, 30000);
   },
+
+   beforeUnmount() {
+    // Nettoyer l'intervalle
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+    }
+  },
+  
   methods: {
-     async loadOrders() {
+  async loadOrders() {
       this.loading = true;
       try {
-        const response = await axios.get('/api/orders/admin/orders', {
+        const response = await axios.get('/api/orders/admin', {
           params: {
-            status: this.statusFilter,
             page: this.currentPage,
-            limit: this.itemsPerPage
+            limit: this.itemsPerPage,
+            status: this.statusFilter || undefined,
+            search: this.searchQuery || undefined,
+            startDate: this.getStartDateFilter(),
+            endDate: new Date().toISOString().split('T')[0]
           },
-          headers: {
-            Authorization: `Bearer ${this.$store.state.user.token}`
-          }
+          headers: this.getAuthHeaders()
         });
-
-        this.orders = response.data.orders.map(order => ({
-          id: order.id,
-          orderNumber: order.orderNumber,
-          date: order.createdAt,
-          time: new Date(order.createdAt).toLocaleTimeString('fr-FR'),
-          customer: {
-            name: `${order.user.firstName} ${order.user.lastName}`,
-            email: order.user.email,
-            phone: order.user.phone || ''
-          },
-          amount: parseFloat(order.totalPrice),
-          status: order.status,
-          payment: {
-            method: order.paymentMethod,
-            transactionId: `TRX-${order.id}`
-          },
-          delivery: {
-            method: order.shippingMethod,
-            address: order.shippingAddress,
-            trackingNumber: order.trackingNumber
-          },
-          items: order.items.map(item => ({
-            id: item.product.id,
-            name: item.product.name,
-            sku: item.product.sku,
-            price: parseFloat(item.unitPrice),
-            quantity: item.quantity
-          }))
-        }));
         
-        this.totalOrders = response.data.total;
+        if (response.data.success) {
+          this.orders = response.data.orders.map(order => this.formatOrderForFrontend(order));
+          this.stats = response.data.stats || {};
+          console.log(`✅ ${this.orders.length} commandes chargées`);
+        }
         
       } catch (error) {
-        console.error('Erreur chargement commandes:', error);
+        console.error('❌ Erreur chargement commandes:', error);
+        // Fallback avec données de démo si le backend n'est pas encore prêt
+        if (error.response && error.response.status === 404) {
+          this.orders = this.getSampleOrders();
+          this.calculateStats();
+        } else {
+          this.showNotification('Erreur de connexion au serveur', 'error');
+        }
       } finally {
         this.loading = false;
       }
     },
-        async updateOrderStatus(order) {
+    
+    formatOrderForFrontend(order) {
+      return {
+        id: order.id,
+        orderNumber: order.orderNumber || `CMD-${order.id.slice(-8)}`,
+        date: order.createdAt ? new Date(order.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        time: order.createdAt ? new Date(order.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString('fr-FR'),
+        customer: {
+          name: order.customerName || `${order.user?.firstName || ''} ${order.user?.lastName || ''}`.trim() || 'Client',
+          email: order.customerEmail || order.user?.email || '',
+          phone: order.customerPhone || order.user?.phone || ''
+        },
+        amount: order.totalPrice || 0,
+        subtotal: order.subtotal || (order.totalPrice - (order.shipping || 0)),
+        shipping: order.shipping || 0,
+        status: order.status || 'confirmed',
+        payment: {
+          method: order.paymentMethod || 'card',
+          transactionId: order.paymentTransactionId || `TRX-${Date.now()}`
+        },
+        delivery: {
+          method: order.shippingMethod || 'Standard',
+          address: order.shippingAddress || '',
+          trackingNumber: order.trackingNumber || ''
+        },
+        items: order.items?.map(item => ({
+          id: item.id,
+          name: item.productName || item.product?.name || 'Produit',
+          sku: item.product?.sku || 'N/A',
+          price: item.unitPrice || item.price || 0,
+          quantity: item.quantity || 1,
+          total: (item.unitPrice || 0) * (item.quantity || 1)
+        })) || []
+      };
+    },
+    getStartDateFilter() {
+      const now = new Date();
+      switch (this.periodFilter) {
+        case 'today':
+          return now.toISOString().split('T')[0];
+        case 'week':
+          const weekAgo = new Date(now);
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          return weekAgo.toISOString().split('T')[0];
+        case 'month':
+          const monthAgo = new Date(now);
+          monthAgo.setMonth(monthAgo.getMonth() - 1);
+          return monthAgo.toISOString().split('T')[0];
+        case 'quarter':
+          const quarterAgo = new Date(now);
+          quarterAgo.setMonth(quarterAgo.getMonth() - 3);
+          return quarterAgo.toISOString().split('T')[0];
+        default:
+          return null;
+      }
+    },
+    
+    calculateStats() {
+      this.stats = {
+        totalOrders: this.orders.length,
+        totalRevenue: this.orders.reduce((sum, order) => sum + order.amount, 0),
+        confirmedOrders: this.orders.filter(o => o.status === 'confirmed').length,
+        shippedOrders: this.orders.filter(o => o.status === 'shipped').length,
+        deliveredOrders: this.orders.filter(o => o.status === 'delivered').length,
+        averageOrderValue: this.orders.length > 0 ? 
+          this.orders.reduce((sum, order) => sum + order.amount, 0) / this.orders.length : 0
+      };
+    },
+   
+    async updateOrderStatus(order) {
+      this.orderToUpdate = order;
+      this.newStatus = order.status;
+      this.showStatusModal = true;
+    },
+    
+    async saveStatusUpdate() {
+      if (!this.orderToUpdate || !this.newStatus) return;
+      
       try {
         const response = await axios.put(
-          `/api/orders/admin/orders/${order.id}/status`,
+          `/api/orders/${this.orderToUpdate.id}/status`,
           {
             status: this.newStatus,
+            trackingNumber: this.newStatus === 'shipped' ? this.generateTrackingNumber() : undefined,
             notes: this.statusComment
           },
           {
-            headers: {
-              Authorization: `Bearer ${this.$store.state.user.token}`
-            }
+            headers: this.getAuthHeaders()
           }
         );
-
+        
         if (response.data.success) {
           // Mettre à jour localement
-          const index = this.orders.findIndex(o => o.id === order.id);
+          const index = this.orders.findIndex(o => o.id === this.orderToUpdate.id);
           if (index !== -1) {
             this.orders[index].status = this.newStatus;
-            this.orders[index].delivery.trackingNumber = response.data.order.trackingNumber;
+            if (response.data.order.trackingNumber) {
+              this.orders[index].delivery.trackingNumber = response.data.order.trackingNumber;
+            }
           }
           
-          this.showNotification('Statut mis à jour', 'success');
+          this.showNotification('Statut mis à jour avec succès', 'success');
           this.closeStatusModal();
         }
         
       } catch (error) {
-        console.error('Erreur mise à jour:', error);
+        console.error('❌ Erreur mise à jour statut:', error);
         this.showNotification('Erreur lors de la mise à jour', 'error');
       }
     },
@@ -601,9 +736,7 @@ export default {
     async exportOrders() {
       try {
         const response = await axios.get('/api/orders/admin/export', {
-          headers: {
-            Authorization: `Bearer ${this.$store.state.user.token}`
-          },
+          headers: this.getAuthHeaders(),
           responseType: 'blob'
         });
 
@@ -615,11 +748,88 @@ export default {
         link.click();
         
       } catch (error) {
-        console.error('Erreur export:', error);
+        console.error('❌ Erreur export:', error);
+        this.showNotification('Erreur lors de l\'export', 'error');
       }
     },
-
-
+      
+    async applyBulkAction() {
+      if (!this.bulkAction || this.selectedOrders.length === 0) return;
+      
+      try {
+        switch (this.bulkAction) {
+          case 'mark_confirmed':
+            await this.updateBulkStatus('confirmed');
+            break;
+          case 'mark_processing':
+            await this.updateBulkStatus('processing');
+            break;
+          case 'mark_shipped':
+            await this.updateBulkStatus('shipped');
+            break;
+          case 'cancel':
+            if (confirm(`Êtes-vous sûr de vouloir annuler ${this.selectedOrders.length} commande(s) ?`)) {
+              await this.updateBulkStatus('cancelled');
+            }
+            break;
+          case 'export':
+            await this.exportSelectedOrders();
+            break;
+        }
+        
+        this.selectedOrders = [];
+        this.bulkAction = '';
+        
+      } catch (error) {
+        console.error('❌ Erreur action groupée:', error);
+        this.showNotification('Erreur lors de l\'action groupée', 'error');
+      }
+    },
+    
+    async updateBulkStatus(status) {
+      try {
+        const response = await axios.put(
+          '/api/orders/bulk/status',
+          {
+            orderIds: this.selectedOrders,
+            status: status
+          },
+          {
+            headers: this.getAuthHeaders()
+          }
+        );
+        
+        if (response.data.success) {
+          // Mettre à jour localement
+          this.orders.forEach(order => {
+            if (this.selectedOrders.includes(order.id)) {
+              order.status = status;
+            }
+          });
+          
+          this.showNotification(`${this.selectedOrders.length} commande(s) mises à jour`, 'success');
+          await this.loadOrders(); // Recharger pour les stats
+        }
+        
+      } catch (error) {
+        throw error;
+      }
+    },
+    
+    async exportSelectedOrders() {
+      const selectedData = this.orders.filter(order => 
+        this.selectedOrders.includes(order.id)
+      );
+      
+      const csv = this.convertToCSV(selectedData);
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `commandes_selection_${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+    },
+    
     goToDashboard() {
       this.$router.push('/admin/products');
     },
@@ -849,17 +1059,33 @@ export default {
     closeModal() {
       this.selectedOrder = null;
     },
-    
+   getAuthHeaders() {
+      // Récupérer le token depuis localStorage ou Vuex store
+      const token = localStorage.getItem('authToken') || 
+                    (this.$store && this.$store.state.auth?.token);
+      
+      return {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+    },
     closeStatusModal() {
       this.showStatusModal = false;
       this.orderToUpdate = null;
       this.newStatus = '';
       this.statusComment = '';
     },
+        generateTrackingNumber() {
+      const prefix = 'TRK';
+      const timestamp = Date.now().toString(36).toUpperCase();
+      const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+      return `${prefix}${timestamp.slice(-6)}${random}`;
+    },
     
-    showNotification(message, type) {
-      // Implémentez votre système de notification
-      alert(message);
+   showNotification(message, type = 'info') {
+      // Utiliser votre système de notification
+      // Exemple avec alert temporaire :
+      alert(`${type === 'success' ? '✅' : '❌'} ${message}`);
     }
   }
 }
@@ -867,17 +1093,177 @@ export default {
 
 <style scoped>
 .admin-orders {
-  padding: 2rem;
-  background: #f8fafc;
   min-height: 100vh;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
 }
 
 .admin-header {
-  background: white;
+   background: white;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   padding: 1.5rem 2rem;
+  gap: 2rem;
+}
+
+.header-title-section {
+  flex: 1;
+}
+
+.page-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+.title-icon {
+  font-size: 2rem;
+}
+
+.page-subtitle {
+  margin: 0.5rem 0 0 0;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+/* Boutons d'action */
+.header-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 1rem;
+}
+
+.action-button {
+  border: none;
   border-radius: 12px;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  padding: 1rem 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  min-width: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, transparent 30%, rgba(255, 255, 255, 0.2) 50%, transparent 70%);
+  transform: translateX(-100%);
+  transition: transform 0.6s;
+}
+
+.action-button:hover::before {
+  transform: translateX(100%);
+}
+
+.dashboard-btn {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.2), 0 2px 4px -1px rgba(99, 102, 241, 0.1);
+}
+
+.dashboard-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3), 0 4px 6px -2px rgba(99, 102, 241, 0.15);
+}
+
+.analytics-btn {
+  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+  box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2), 0 2px 4px -1px rgba(16, 185, 129, 0.1);
+}
+
+.analytics-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3), 0 4px 6px -2px rgba(16, 185, 129, 0.15);
+}
+
+.button-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  color: white;
+}
+
+.button-icon {
+  position: relative;
+}
+
+.icon {
+  font-size: 1.75rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  position: relative;
+  z-index: 2;
+}
+
+.icon-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  filter: blur(8px);
+}
+
+.button-text {
+  flex: 1;
+  text-align: left;
+}
+
+.button-title {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.125rem;
+}
+
+.button-subtitle {
+  display: block;
+  font-size: 0.8rem;
+  opacity: 0.9;
+  font-weight: 400;
+}
+
+.button-arrow {
+  opacity: 0;
+  transform: translateX(-10px);
+  transition: all 0.3s ease;
+}
+
+.action-button:hover .button-arrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.arrow-icon {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2.5;
 }
 
 .admin-header h1 {
@@ -887,10 +1273,9 @@ export default {
 }
 
 .header-filters {
-  display: flex;
-  gap: 1.5rem;
-  align-items: center;
-  flex-wrap: wrap;
+  background: #f8fafc;
+  border-top: 1px solid #e5e7eb;
+  padding: 1.25rem 2rem;
 }
 
 .filter-group {
@@ -900,35 +1285,159 @@ export default {
 }
 
 .filter-group label {
-  font-weight: 500;
+   display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
   color: #4b5563;
+  font-weight: 500;
+  font-size: 0.9rem;
 }
-
+.filter-controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
 .filter-select {
-  padding: 0.5rem 1rem;
+   padding: 0.625rem 1rem;
   border: 1px solid #d1d5db;
-  border-radius: 6px;
+  border-radius: 8px;
   background: white;
   color: #374151;
-  min-width: 150px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  min-width: 180px;
+  transition: all 0.2s ease;
 }
 
-.export-btn {
-  margin-left: auto;
-  padding: 0.5rem 1.5rem;
+.filter-select:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.filter-select:hover {
+  border-color: #9ca3af;
+}
+
+
+.export-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
   background: #3b82f6;
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.3s ease;
+  transition: all 0.3s ease;
 }
 
-.export-btn:hover {
+.export-button:hover {
   background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2);
 }
 
+
+.export-icon {
+  font-size: 1.1rem;
+}
+
+/* Recherche */
+.search-container {
+  min-width: 300px;
+}
+
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 1rem;
+  color: #9ca3af;
+  font-size: 1rem;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.search-input::placeholder {
+  color: #9ca3af;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .header-top {
+    flex-direction: column;
+  }
+  
+  .action-buttons {
+    width: 100%;
+  }
+  
+  .action-button {
+    flex: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .header-top,
+  .header-filters {
+    padding: 1.25rem;
+  }
+  
+  .filters-container {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .filter-controls {
+    flex-wrap: wrap;
+  }
+  
+  .filter-select {
+    min-width: 150px;
+  }
+  
+  .search-container {
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 640px) {
+  .filter-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filter-select {
+    width: 100%;
+  }
+}
 /* Stats Cards */
 .stats-cards {
   display: grid;
@@ -1663,5 +2172,36 @@ th {
   .action-btn {
     width: 100%;
   }
+  .loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+}
+
+.loading-spinner {
+  text-align: center;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
 }
 </style>

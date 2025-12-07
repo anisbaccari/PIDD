@@ -266,17 +266,12 @@ export default {
   
   props: {
     order: {
-      type: Object,
-      default: () => ({})
-    },
-    deliveryInfo: {
-      type: Object,
-      default: () => ({})
-    }
+     user: Object
   },
   data() {
     return {
-         order: {},
+         order: null,
+          deliveryInfo: null,
       isProcessing: false,
       trackingSteps: [
         {
@@ -332,10 +327,15 @@ export default {
       ],
       trackingNumber: '',
       isProcessing: false,
+       cartItems: [],
       progressPercentage: 20
     }
   },
-  mounted() {
+   async created() {
+    // Récupérer les articles du panier depuis le store ou localStorage
+     await this.loadOrderData();
+  },
+  async mounted() {
     console.log('📦 OrderConfirmation monté')
     this.generateTrackingNumber()
     this.startTrackingSimulation()
@@ -344,6 +344,26 @@ export default {
     getUserFirstName() {
       const name = this.deliveryInfo?.address?.fullName || ''
       return name.split(' ')[0] || ''
+    },
+    async loadOrderData() {
+      try {
+        // Récupérer depuis localStorage (passé depuis CheckoutPage)
+        const orderData = localStorage.getItem('lastOrder');
+        
+        if (orderData) {
+          const parsedOrder = JSON.parse(orderData);
+          this.order = parsedOrder;
+          this.deliveryInfo = parsedOrder.deliveryInfo || {};
+          
+          console.log('✅ Commande chargée:', this.order);
+        } else {
+          console.warn('⚠️ Aucune commande trouvée');
+          // Rediriger vers le panier si pas de commande
+          this.$router.push('/cart');
+        }
+      } catch (error) {
+        console.error('❌ Erreur chargement commande:', error);
+      }
     },
       async loadOrder(orderId) {
       try {
@@ -485,33 +505,120 @@ export default {
       this.isProcessing = true;
       
       try {
-        // Appel API pour finaliser la commande
-        const response = await axios.post('/api/orders/create', {
-          userId: this.$store.state.user.id,
-          items: this.$store.state.cart.items,
-          deliveryInfo: this.deliveryInfo,
-          payment: {
-            method: 'Carte bancaire',
-            status: 'paid'
-          }
+        console.log('🔄 Création de la commande...');
+        
+        // 1. Créer la commande dans la base de données
+        const orderResponse = await axios.post('/api/admin/orders', {
+          userId: this.user?.id || this.order.userId,
+          orderNumber: this.order.orderNumber || this.generateOrderId(),
+          customerName: this.deliveryInfo?.address?.fullName || 'Client',
+          customerEmail: this.deliveryInfo?.address?.email || this.user?.email,
+          customerPhone: this.deliveryInfo?.address?.phone || '',
+          items: this.order.items || [],
+          subtotal: this.order.subtotal || 0,
+          shipping: this.order.deliveryPrice || 0,
+          total: this.order.total || this.order.amount,
+          status: 'confirmed',
+          paymentMethod: this.order.paymentMethod || 'card',
+          shippingAddress: {
+            fullName: this.deliveryInfo?.address?.fullName,
+            street: this.deliveryInfo?.address?.street,
+            city: this.deliveryInfo?.address?.city,
+            postalCode: this.deliveryInfo?.address?.postalCode,
+            country: this.deliveryInfo?.address?.country,
+            phone: this.deliveryInfo?.address?.phone
+          },
+          shippingMethod: this.deliveryInfo?.option?.name || 'Standard',
+          trackingNumber: this.trackingNumber
+        }, {
+          headers: this.getAuthHeaders()
         });
-
-        if (response.data.success) {
-          this.order = response.data.order;
-          this.$store.commit('clearCart');
-          
-          // Rediriger vers la page de confirmation avec l'ID
-          this.$router.push(`/order-confirmation/${this.order.id}`);
-        }
+        
+        console.log('✅ Commande créée:', orderResponse.data);
+        
+        // 2. Mettre à jour les stocks des produits
+        await this.updateProductStocks();
+        
+        // 3. Nettoyer le localStorage
+        this.clearOrderData();
+        
+        this.showToast('✅ Commande finalisée avec succès !');
+        
+        // 4. Rediriger vers les commandes après 2 secondes
+        setTimeout(() => {
+          this.$router.push('/profile/orders');
+        }, 2000);
         
       } catch (error) {
-        console.error('Erreur confirmation:', error);
-        this.showToast('Erreur lors de la confirmation');
+        console.error('❌ Erreur confirmation:', error);
+        this.showToast('❌ Erreur lors de la confirmation', 'error');
       } finally {
         this.isProcessing = false;
       }
     },
     
+     async updateProductStocks() {
+      try {
+        console.log('🔄 Mise à jour des stocks...');
+        
+        const updatePromises = this.order.items.map(async (item) => {
+          try {
+            // Appel API pour diminuer le stock
+            const response = await axios.patch(
+              `/api/products/${item.productId}/decrease-stock`,
+              {
+                quantity: item.quantity
+              },
+              {
+                headers: this.getAuthHeaders()
+              }
+            );
+            
+            console.log(`✅ Stock mis à jour pour produit ${item.productId}`);
+            return response.data;
+          } catch (error) {
+            console.error(`❌ Erreur stock produit ${item.productId}:`, error);
+            throw error;
+          }
+        });
+        
+        await Promise.all(updatePromises);
+        console.log('✅ Tous les stocks ont été mis à jour');
+        
+      } catch (error) {
+        console.error('❌ Erreur mise à jour stocks:', error);
+        throw error;
+      }
+    },
+
+     getAuthHeaders() {
+      const token = localStorage.getItem('token');
+      return {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+    },
+    
+    clearOrderData() {
+      localStorage.removeItem('lastOrder');
+      localStorage.removeItem('lastOrderTimestamp');
+      localStorage.removeItem('cart');
+      console.log('🧹 Données de commande nettoyées');
+    },
+    calculateTotal() {
+      return this.cartItems.reduce((total, item) => {
+        return total + (item.price * item.quantity);
+      }, 0) + (this.deliveryInfo?.option?.price || 0);
+    },
+    
+    clearCart() {
+      // Vider le panier dans le store
+      if (this.$store.state.cart) {
+        this.$store.commit('clearCart');
+      }
+      // Vider le localStorage
+      localStorage.removeItem('cartItems');
+    },
     downloadInvoice() {
       // Simulation de téléchargement de facture
       this.showToast('Facture téléchargée !')

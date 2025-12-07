@@ -37,7 +37,8 @@
                 class="cart-item"
               >
                 <div class="item-image">
-                  <img :src="getProductImage(item.img)" :alt="item.name" />
+                  <img :src="getProductImage(item)" :alt="item.name || 'Produit'" />
+
                 </div>
                 
                 <div class="item-details">
@@ -142,6 +143,22 @@ export default {
   data() {
     return {
       deliveryPrice: 0, // Livraison gratuite
+         productImageMap: {
+        // ID produits Homme
+        1: 'noir.png',      // T-shirt Noir Classique
+        2: 'blanc.png',     // T-shirt Blanc Sport  
+        3: 'gris.png',      // T-shirt Gris Urban
+        
+        // ID produits Femme
+        4: 'rosefemme.png', // T-shirt Rose Élégant
+        5: 'blancfemme.png', // T-shirt Blanc Femme
+        6: 'noirfemme.png', // T-shirt Noir Femme
+        
+        // ID produits Enfant
+        7: 'enfantbleu.png', // T-shirt Bleu Enfant
+        8: 'enfantrouge.png' // T-shirt Rouge Enfant
+      },
+      // Mapping nom d'image -> import
       imageMap: {
         'noir.png': noir,
         'blanc.png': blanc,
@@ -192,11 +209,27 @@ export default {
       console.log('🚀 Redirection vers paiement');
       this.$router.push('/checkout');
     },
-    
-    getProductImage(imgName) {
-      if (!imgName) return '';
-      return this.imageMap[imgName] || '';
-    },
+  getProductImage(product) {
+  if (!product) {
+    console.warn('Produit undefined reçu dans getProductImage');
+    return noir; // fallback
+  }
+
+  // Si le produit a déjà une propriété img
+  if (product.img && this.imageMap[product.img]) {
+    return this.imageMap[product.img];
+  }
+
+  // Sinon, chercher dans le mapping par ID
+  if (product.id && this.productImageMap[product.id]) {
+    const imgName = this.productImageMap[product.id];
+    return this.imageMap[imgName] || noir;
+  }
+
+  // Fallback
+  return noir;
+},
+
     
     formatPrice(price) {
       return new Intl.NumberFormat('fr-FR', {

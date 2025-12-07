@@ -4,8 +4,8 @@
     <div class="checkout-header">
       <div class="header-content">
         <router-link to="/" class="brand">
-          <span class="brand-icon"</span>
-          <span class="brand-name"></span>
+          <span class="brand-icon">🛍️</span>
+          <span class="brand-name">MonShop</span>
         </router-link>
         <div class="header-info">
           <div class="secure-badge">
@@ -60,7 +60,7 @@
                   <input 
                     v-model="deliveryAddress.fullName" 
                     type="text" 
-                    placeholder="Jean Dupont"
+                    placeholder="Hermann Tchuente"
                     class="form-input"
                     @focus="highlightField"
                   >
@@ -90,7 +90,7 @@
                   <input 
                     v-model="deliveryAddress.postalCode" 
                     type="text" 
-                    placeholder="75000"
+                    placeholder="1000"
                     class="form-input"
                     @focus="highlightField"
                   >
@@ -100,7 +100,7 @@
                   <input 
                     v-model="deliveryAddress.city" 
                     type="text" 
-                    placeholder="Paris"
+                    placeholder="Bruxelles"
                     class="form-input"
                     @focus="highlightField"
                   >
@@ -109,10 +109,11 @@
                   <label class="form-label">Pays</label>
                   <select v-model="deliveryAddress.country" class="form-input" @focus="highlightField">
                     <option value="">Sélectionner un pays</option>
-                    <option value="FR">France</option>
                     <option value="BE">Belgique</option>
+                    <option value="FR">France</option>
                     <option value="CH">Suisse</option>
                     <option value="LU">Luxembourg</option>
+                    <option value="AU">Autres</option>
                   </select>
                 </div>
               </div>
@@ -291,7 +292,7 @@
                 <span class="btn-icon">🎉</span>
                 Voir le détail de ma commande
               </span>
-            </button>
+             </button>
             
             <button 
               class="btn btn-outline"
@@ -368,7 +369,7 @@
           <div class="price-breakdown">
             <div class="price-row">
               <span>Sous-total</span>
-              <span>{{ formatPrice(getCartTotal ? getCartTotal() : 0) }}</span>
+              <span>{{ formatPrice(subtotal) }}</span>
             </div>
             <div class="price-row">
               <span>Livraison</span>
@@ -419,10 +420,22 @@ export default {
     PaymentMethod
   },
   props: {
-    user: Object,
-    cartItems: Array,
-    getCartTotal: Function,
-    clearCart: Function
+    user: {
+      type: Object,
+      default: () => null
+    },
+    cartItems: {
+      type: Array,
+      default: () => []
+    },
+    getCartTotal: {
+      type: Function,
+      default: () => 0
+    },
+    clearCart: {
+      type: Function,
+      default: () => {}
+    }
   },
   data() {
     return {
@@ -490,10 +503,12 @@ export default {
       return this.deliveryOptions.find(opt => opt.id === this.selectedDelivery) || this.deliveryOptions[0]
     },
     
+    subtotal() {
+      return this.getCartTotal ? this.getCartTotal() : 0
+    },
+    
     orderTotal() {
-      const subtotal = this.getCartTotal ? this.getCartTotal() : 0
-      const deliveryPrice = this.selectedDeliveryOption.price
-      return subtotal + deliveryPrice
+      return this.subtotal + this.selectedDeliveryOption.price
     },
     
     isDeliveryStepValid() {
@@ -515,16 +530,19 @@ export default {
   mounted() {
     console.log('🛒 CheckoutPage monté')
     
+    // Initialiser avec les données utilisateur si disponibles
     if (this.user) {
       this.deliveryAddress.fullName = `${this.user.prenom || ''} ${this.user.nom || ''}`.trim()
       this.deliveryAddress.phone = this.user.telephone || ''
     }
     
+    // Vérifier si le panier est vide
     if (!this.cartItems || this.cartItems.length === 0) {
       console.warn('⚠️ Panier vide, redirection vers le panier')
       this.$router.push('/cart')
     }
     
+    // Calculer la meilleure option de livraison
     this.calculateBestDeliveryOption()
   },
   methods: {
@@ -534,9 +552,7 @@ export default {
     },
     
     calculateBestDeliveryOption() {
-      const subtotal = this.getCartTotal ? this.getCartTotal() : 0
-      
-      if (subtotal >= 50) {
+      if (this.subtotal >= 50) {
         this.selectedDelivery = 'gratuite'
       } else {
         this.selectedDelivery = 'standard'
@@ -574,7 +590,7 @@ export default {
           estimatedDelivery: this.calculateEstimatedDelivery()
         },
         payment: paymentData,
-        subtotal: this.getCartTotal ? this.getCartTotal() : 0,
+        subtotal: this.subtotal,
         deliveryPrice: this.selectedDeliveryOption.price,
         total: this.orderTotal,
         status: 'confirmed'
@@ -590,48 +606,70 @@ export default {
     },
     
     async completeOrder() {
-      if (this.isProcessing) return
-      
-      this.isProcessing = true
-      
-      try {
-        const orderId = this.orderDetails?.id || this.generateOrderId()
-        
-        const orderData = {
-          orderId,
-          orderNumber: orderId,
-          amount: this.orderTotal,
-          paymentMethod: this.orderDetails?.payment?.method || 'credit_card',
-          deliveryMethod: this.selectedDeliveryOption.name,
-          deliveryAddress: this.deliveryAddress,
-          items: this.cartItems || [],
-          status: 'confirmed'
-        }
-        
-        localStorage.setItem('lastOrder', JSON.stringify(orderData))
-        localStorage.setItem('lastOrderTimestamp', new Date().toISOString())
-        
-        this.clearCartLocal()
-        
-        await new Promise(resolve => setTimeout(resolve, 800))
-        
-        this.redirectToOrderConfirmation(orderData)
-        
-      } catch (error) {
-        console.error('🚨 Erreur lors de la finalisation:', error)
-        alert('Une erreur est survenue. Veuillez réessayer.')
-        this.isProcessing = false
-      }
-    },
+  if (this.isProcessing) return
+  
+  this.isProcessing = true
+  
+  try {
+    const orderId = this.orderDetails?.id || this.generateOrderId()
+    const trackingNumber = this.generateTrackingNumber()
     
+    const orderData = {
+      orderId,
+      orderNumber: orderId,
+      amount: this.orderTotal,
+      paymentMethod: this.orderDetails?.payment?.method || 'credit_card',
+      deliveryMethod: this.selectedDeliveryOption.name,
+      deliveryAddress: this.deliveryAddress,
+      items: this.cartItems || [],
+      status: 'confirmed',
+      date: new Date().toISOString(),
+      subtotal: this.subtotal,
+      deliveryPrice: this.selectedDeliveryOption.price,
+      trackingNumber: trackingNumber,
+      estimatedDelivery: this.calculateEstimatedDelivery()
+    }
+    
+    // Sauvegarder la commande dans localStorage
+    localStorage.setItem('lastOrder', JSON.stringify(orderData))
+    localStorage.setItem('lastOrderTimestamp', new Date().toISOString())
+    
+    // Vider le panier
+    this.clearCartLocal()
+    
+    // Simulation de délai de traitement
+    await new Promise(resolve => setTimeout(resolve, 800))
+    
+    // Rediriger vers la page de confirmation avec TOUTES les données
+    this.redirectToOrderConfirmation(orderData)
+    
+  } catch (error) {
+    console.error('🚨 Erreur lors de la finalisation:', error)
+    alert('Une erreur est survenue. Veuillez réessayer.')
+    this.isProcessing = false
+  }
+},
+    generateTrackingNumber() {
+  const date = new Date()
+  const year = date.getFullYear().toString().substring(2)
+  const month = (date.getMonth() + 1).toString().padStart(2, '0')
+  const day = date.getDate().toString().padStart(2, '0')
+  const random = Math.random().toString(36).substring(2, 8).toUpperCase()
+  return `MONSHOP-${year}${month}${day}-${random}`
+},
     clearCartLocal() {
       try {
+        // Nettoyer plusieurs clés possibles de localStorage
         localStorage.removeItem('cart')
         localStorage.removeItem('monShop_cart')
         localStorage.removeItem('shoppingCart')
         
-        if (this.$parent) {
-          this.$emit('cart-cleared')
+        // Émettre un événement pour notifier le parent
+        this.$emit('cart-cleared')
+        
+        // Appeler la fonction clearCart du parent si elle existe
+        if (this.clearCart && typeof this.clearCart === 'function') {
+          this.clearCart()
         }
         
         console.log('🛒 Panier nettoyé')
@@ -640,36 +678,45 @@ export default {
       }
     },
     
-    redirectToOrderConfirmation(orderData) {
-      console.log('🔄 Redirection vers confirmation...')
-      
-      try {
-        this.$router.push({
-          name: 'OrderConfirmation',
-          query: {
-            orderId: orderData.orderId,
-            orderNumber: orderData.orderNumber,
-            amount: orderData.amount,
-            paymentMethod: orderData.paymentMethod,
-            deliveryMethod: orderData.deliveryMethod
-          }
-        })
-        
-      } catch (routerError) {
-        console.error('❌ Erreur de redirection router:', routerError)
-        
-        try {
-          localStorage.setItem('currentOrder', JSON.stringify(orderData))
-          window.location.href = '/order/confirmation'
-          
-        } catch (fallbackError) {
-          console.error('❌ Fallback échoué:', fallbackError)
-          alert(`Commande confirmée ! Numéro: ${orderData.orderId}`)
-          this.$router.push('/')
-        }
-      }
-    },
+  redirectToOrderConfirmation(orderData) {
+  console.log('🔄 Redirection vers confirmation avec données:', orderData)
+  
+  try {
+    // Stocker les données dans localStorage pour la page confirmation
+    localStorage.setItem('currentOrder', JSON.stringify(orderData))
     
+    // Rediriger vers la page de confirmation avec TOUTES les données
+    this.$router.push({
+      name: 'OrderConfirmation',
+      query: {
+        orderId: orderData.orderId,
+        orderNumber: orderData.orderNumber,
+        amount: orderData.amount,
+        paymentMethod: orderData.paymentMethod,
+        deliveryMethod: orderData.deliveryMethod,
+        trackingNumber: orderData.trackingNumber,
+        estimatedDelivery: orderData.estimatedDelivery
+      },
+      params: {
+        orderData: JSON.stringify(orderData)
+      }
+    })
+    
+  } catch (routerError) {
+    console.error('❌ Erreur de redirection router:', routerError)
+    
+    // Fallback: Redirection directe avec les données dans l'URL
+    try {
+      localStorage.setItem('currentOrder', JSON.stringify(orderData))
+      window.location.href = `/order/confirmation?orderId=${orderData.orderId}&tracking=${orderData.trackingNumber}`
+      
+    } catch (fallbackError) {
+      console.error('❌ Fallback échoué:', fallbackError)
+      alert(`Commande confirmée ! Numéro: ${orderData.orderId}`)
+      this.$router.push('/')
+    }
+  }
+},
     generateOrderId() {
       const prefix = 'CMD'
       const timestamp = Date.now().toString(36).toUpperCase()

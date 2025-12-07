@@ -11,11 +11,12 @@ import CartPage from '../views/CartPage.vue'
 
 // Import des nouvelles vues de paiement
 import CheckoutPage from '../views/CheckoutPage.vue'
-import PaymentSuccess from '../views/PaymentSuccess.vue'
+//import PaymentSuccess from '../views/PaymentSuccess.vue'
 
 // Import des composants d'authentification
 import LoginForm from '../components/LoginForm.vue'
 import RegisterForm from '../components/RegisterForm.vue'
+import OrderConfirmation from '../components/OrderConfirmation.vue'
 
 const routes = [
   { 
@@ -48,6 +49,7 @@ const routes = [
     component: Profilview,
     props: true
   },
+  
   { 
     path: '/login', 
     name: 'Login', 
@@ -59,6 +61,19 @@ const routes = [
     name: 'Register', 
     component: RegisterForm,
     props: true
+  },
+  { 
+    path: '/order/confirmation', 
+    name: 'OrderConfirmation', 
+    component: OrderConfirmation,
+    props: (route) => ({
+      orderId: route.query.orderId,
+      amount: route.query.amount,
+      paymentMethod: route.query.paymentMethod,
+      deliveryMethod: route.query.deliveryMethod,
+      trackingNumber: route.query.trackingNumber,
+      estimatedDelivery: route.query.estimatedDelivery
+    })
   },
   {
     path: '/categories',
@@ -104,20 +119,7 @@ const routes = [
       title: 'Finaliser votre commande'
     }
   },
-  // 🆕 NOUVELLE ROUTE : Confirmation de paiement
-  {
-    path: '/payment-success',
-    name: 'PaymentSuccess',
-    component: PaymentSuccess,
-    props: (route) => ({ 
-      orderId: route.query.orderId,
-      amount: route.query.amount,
-      method: route.query.method 
-    }),
-    meta: { 
-      title: 'Commande confirmée'
-    }
-  },
+
   
   // Redirection par défaut
   { 
