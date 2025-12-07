@@ -30,22 +30,25 @@
               </button>
             </div>
             
-            <div  class="cart-items"  v-if="this.cartItems[0].id" >
+            <div  class="cart-items"  >
               <div 
                 v-for="order in this.cartItems" 
                 :key="order.id" 
                 class="cart-item"
               >
-
    
               <!-- PAR PANIER  -->
                   <div class="cart-orderItem">
-                    <p>Commandes </p>
+                    <p>Commandes {{ this.cartItems[0].order[0]}} </p>
+
                       <!-- PAR PRODUITS COMMANDEES  -->
                     <div class="itemList"
                       v-for = "itemList in order.orderItem"
                       :key=" order.orderItem.id" 
                     >
+
+                    <p>sadssdasd</p>
+
                       <div class="item-details">
                   <h3 class="product-name">{{ itemList.product.name }}</h3>
                   <p class="product-brand">{{ itemList.product.brand }}</p>
@@ -146,6 +149,7 @@ export default {
     'getUser',
     'setPanier',
     'getFirstPanier',
+    'tempCart'
 
     
 /*     'addToCartGlobal', 
@@ -157,7 +161,6 @@ export default {
   data() {
     return {
       dataUser:  this?.getUser() || { id:"", username: "", password : ""},
-      tempCart : [],
       deliveryPrice: 0, // Livraison gratuite
       imageMap: {
         'noir.png': noir,
@@ -179,8 +182,11 @@ export default {
       this.cartItems = await this.getPanier()
       console.log(" cartiem :",this.getPanier())
     }else { 
-      this.cartItems = this.getFirstPanier()
-      console.log("[mounted] : this.cartItems",this.cartItems.order);
+      this.cartItems =this.formatPanier( this.tempCart)
+      console.log("[mounted] :  this.tempCart", this.tempCart);
+
+      console.log("[mounted] : this.cartItems",this.cartItems);
+      console.log("[mounted] : this.cartItems",this.cartItems[0]);
       console.log("[mounted] : this.cartItems length ",this.cartItems.length);
 
       
@@ -191,6 +197,36 @@ export default {
     // totalItems() et subtotal() sont déjà dans App.vue
   },
   methods: {
+    formatPanier(order)
+    {
+
+      // to make orderiten id 
+      let producIndex = 0 
+      const productOrderItems  = order.map( o => ({
+          id :producIndex++,
+          product : o
+      }))
+
+      let orderItemIndex = 0 
+      const orderItemList = productOrderItems.map( o => ({
+        id :orderItemIndex++,
+        itemList : o
+      }))
+
+      let  productOrderIndex = 0 
+      const productOrder = orderItemList.map( o =>( {
+        id :productOrderIndex++,
+        orderItem:o
+      }))
+
+      let  orderListIndex = 0 
+      const orderList = productOrder.map( o =>( {
+        id :orderListIndex++,
+        order: productOrder
+      }))
+
+      return orderList
+    },
   async  getPanier(){
           try {
 

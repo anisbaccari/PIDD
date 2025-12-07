@@ -10,7 +10,7 @@ export default {
   data() {
     return { 
       user: {id:'', username:'', password:'',is_admin : true},
-      tempCart : {order:{}}
+      tempCart : []
     };
   },
   methods: {
@@ -35,7 +35,9 @@ export default {
     setPanier(panier) {
 
       try {
-          this.tempCart.order = panier;
+          this.tempCart.push(panier);
+          console.error('[setPanier]  this.tempCart',  this.tempCart);
+
         
       } catch (error) {
           console.error('setPanier error', error);
@@ -45,10 +47,10 @@ export default {
     getFirstPanier() {
 
       try {
-        if(this.tempCart){
-          console.log('getPanier this.tempCart', this.tempCart);
+        if(this.tempCart[0]){
+          console.log('[App] getFirstPanier this.tempCart', this.tempCart.target);
 
-          return this.tempCart.order;
+          return this.tempCart[0];
         }
         else
           return null;
@@ -114,7 +116,7 @@ export default {
     
     <!-- Contenu principal - UNIQUEMENT le router-view -->
     <router-view 
-    
+      :tempCart="tempCart"
       :user="user"
       :getUser="getUser"
       :setUser="setUser" 

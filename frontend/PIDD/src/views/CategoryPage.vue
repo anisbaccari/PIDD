@@ -60,10 +60,10 @@ import api from '../api.js'
 export default {
   name: 'CategoryPage',
   // ✅ AJOUT: Props pour la méthode globale d'ajout au panier
-  props: ['user', 'setUser','getUser', 'getFirstPanier','addToCartGlobal','id'],
+  props: ['user', 'setUser','getUser', 'tempCart','getFirstPanier','addToCartGlobal','id'],
   data() {
     return {
-      tempCart: {order:{}},
+    //  tempCart: [{order:{}}],
       categoryName: "",
       // ✅ AJOUT: Champ img manquant dans les produits
       allProducts: [
@@ -153,7 +153,7 @@ export default {
           description: "T-shirt enfant avec impression Marvel, parfait pour les fans de super-héros."
         }
       ],
-      dataUser: this.getUser() || { id:"", username: "", password : ""},
+      dataUser: this.getUser() || { id:"", username: "", password : "",is_admin : true},
 
       products: [],
 
@@ -173,7 +173,7 @@ export default {
   },
   mounted() {
     this.initProduct();
-    this.tempCart = this.getFirstPanier()
+    this.tempCart 
   //  this.loadCategoryProducts()
   },
   watch: {
@@ -186,13 +186,13 @@ export default {
   },
   methods: {
       async initProduct(){
-      console.log("my ids ",this.dataUser.id)
+      console.log("[initProduct]my ids ",this.dataUser.id)
       const productList =  await api.get(`http://localhost:3000/product/all`,
         {params:{id:this.id}}
       )
       const products = JSON.stringify(productList)
       this.setProduct(productList.data)
-      console.log('productList : ',this.products);
+      console.log(' [initProduct] All productList : ',this.products);
     },
     setProduct(productList){
       this.products = productList;
@@ -208,7 +208,7 @@ export default {
          {
 
          
-          console.log("product : ",JSON.stringify(product.id));
+          console.log("[addToCart] product : ",JSON.stringify(product.id));
         // const prodData = JSON.stringify(product);
           const res = await api.post("http://localhost:3000/product/add", {
                 userId:this.dataUser.id,
@@ -217,8 +217,8 @@ export default {
               });
           }else 
           {
-            this.addToTmpCart(product)
-          console.log("product : ",this.tempCart);
+          this.addToTmpCart(product)
+          console.log("[addToCart] product - no user : ",this.tempCart);
 
           }
      } catch (error) {
@@ -228,7 +228,11 @@ export default {
      }
      ,
      addToTmpCart(product){
-      this.tempCart.order =  product;
+      console.log('[addToTmpCart] added product : ',product);
+
+      this.tempCart.push(product)
+      console.log('[addToTmpCart]  this.tempCart[0] : ', this.tempCart[0]);
+
      },
      getTmpCart(){
       return this.tempCart;
