@@ -6,11 +6,14 @@ import { Product } from '../models/Product.js';
 export async function getPanier(request, reply) {
   try {
 
-      console.log("======================== [getPanier] ========================");
+      console.log('\x1b[31m%s\x1b[0m',"======================== [getPanier] ========================");
       let id = request.user.id; 
       const idByToken = request.user?.id;
       console.log(" [getPanier] idByToken :",idByToken);
       const panier =  await getOrder(idByToken)
+     
+
+      console.log(" [getPanier] panier :",panier);
 
       reply.send(panier);
   } catch (err) {
@@ -23,7 +26,7 @@ export async function getOrder(id)
 {
   try {
     
-        console.log("======================== [getOrder] ========================");
+        console.log('\x1b[31m%s\x1b[0m',"======================== [getOrder] ========================");
         const idByToken = id;
 
        const order = await Order.findAll({ // Panier (Commandes)

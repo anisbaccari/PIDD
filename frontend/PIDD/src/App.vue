@@ -9,22 +9,53 @@ export default {
   
   data() {
     return { 
-      user: {id:'', username:'', password:'',panier: ['s','d','s'],is_admin : true} 
+      user: {id:'', username:'', password:'',is_admin : true},
+      tempCart : {order:{}}
     };
   },
   methods: {
     setUser(user) {
+      try {
       this.user = user;
+      } catch (error) {
+      console.error('setUser error', error);
+        
+      }
 
     },
     getUser() {
+      try {
       return this.user;
+        
+      } catch (error) {
+        
+        console.error('getUser error', error);
+      }
     },
     setPanier(panier) {
-      this.user.panier = panier;
+
+      try {
+          this.tempCart.order = panier;
+        
+      } catch (error) {
+          console.error('setPanier error', error);
+        
+      }
     },
-    getPanier() {
-      return this.user.panier;
+    getFirstPanier() {
+
+      try {
+        if(this.tempCart){
+          console.log('getPanier this.tempCart', this.tempCart);
+
+          return this.tempCart.order;
+        }
+        else
+          return null;
+      } catch (error) {
+          console.error('getPanier error', error);
+        
+      }
     },
   },
   async mounted() {
@@ -83,10 +114,11 @@ export default {
     
     <!-- Contenu principal - UNIQUEMENT le router-view -->
     <router-view 
+    
       :user="user"
       :getUser="getUser"
       :setUser="setUser" 
-      :getPanier="getPanier" 
+      :getFirstPanier="getFirstPanier" 
       :setPanier="setPanier"
     />
     <AppFooter />

@@ -7,10 +7,10 @@
 
 
       <h1 class="title">Mon Panier</h1>
-      <div v-if="this.cartItems" class="maincontent">
+    <div v-if="this.cartItems" class="maincontent">
 
       <!-- Panier vide -->
-      <div v-if="this.cartItems.length === 0" class="empty-cart">
+      <div v-if="this.cartItems.length == 0 || !this.cartItems[0] " class="empty-cart">
         <div class="empty-icon">🛒</div>
         <h2>Votre panier est vide</h2>
         <p>Découvrez nos produits et ajoutez-les à votre panier</p>
@@ -30,7 +30,7 @@
               </button>
             </div>
             
-            <div class="cart-items">
+            <div  class="cart-items"  v-if="this.cartItems[0].id" >
               <div 
                 v-for="order in this.cartItems" 
                 :key="order.id" 
@@ -117,7 +117,10 @@
           </div>
         </div>
       </div>
-      </div>
+    
+    
+    
+    </div>
 
       
     </div>
@@ -142,6 +145,8 @@ export default {
     'setUser',
     'getUser',
     'setPanier',
+    'getFirstPanier',
+
     
 /*     'addToCartGlobal', 
     'updateCartQuantity', 
@@ -151,7 +156,7 @@ export default {
   ],
   data() {
     return {
-      dataUser: this.getUser() || { id:"", username: "", password : ""},
+      dataUser:  this?.getUser() || { id:"", username: "", password : ""},
       tempCart : [],
       deliveryPrice: 0, // Livraison gratuite
       imageMap: {
@@ -168,27 +173,34 @@ export default {
       total : 0
     }
   },
-  mounted(){
-    this.cartItems = this.getPanier()
-    console.log(" cartiem :",this.getPanier())
+ async mounted(){
+    if(this.dataUser.id)
+    {
+      this.cartItems = await this.getPanier()
+      console.log(" cartiem :",this.getPanier())
+    }else { 
+      this.cartItems = this.getFirstPanier()
+      console.log("[mounted] : this.cartItems",this.cartItems.order);
+      console.log("[mounted] : this.cartItems length ",this.cartItems.length);
+
+      
+    }
   },
   computed: {
     // ✅ SUPPRIMEZ ces computed properties redondantes
     // totalItems() et subtotal() sont déjà dans App.vue
   },
   methods: {
-      async  getPanier(){
+  async  getPanier(){
           try {
-                console.log("[getPanier]============");
+
+                
+                  console.log("[getPanier]============");
 
                   const token = localStorage.getItem("token");
-                  if (token == '') {
-                    console.log("[getPanier] : no token found");
-                    return;
-                  }
+                  if (token) {
+                  
 
-                  console.log("[getPanier] token found :", token)
-                // console.log("[APP] user found :", this.user)
 
                   const res = await api.get(`http://localhost:3000/panier`, {
                   headers: { Authorization: `Bearer ${token}` }
@@ -197,9 +209,17 @@ export default {
                 const order =res.data;  
                 console.log("[Panier] order : ",JSON.stringify(order))
                 this.setCart(order);
-                console.log("[getPanier]gettotal")
 
-                this.getTotal()                  
+                this.getTotal()     
+                this.getUser()
+                console.log("[getPanier] user found :", this.user)
+
+                  } else {
+                    console.log("[getPanier] : no token found");
+                    this.tempCart = this.getFirstPanier()
+                    console.log("[getPanier] : this.tempCart",this.tempCart);
+                    
+                  }
           
               } catch (error) {
                 console.log("[Panier] error : ",error)
@@ -219,7 +239,7 @@ export default {
     setCart(order){
         this.cartItems = order;
       
-         console.log("[Panier] (setCart) panier : ",JSON.stringify(this.cartItems ))
+        // console.log("[Panier] (setCart) panier : ",JSON.stringify(this.cartItems ))
     },
     getTotal(){
 
@@ -265,6 +285,7 @@ export default {
                     }
                 });
               }
+            await this.getPanier()
       } catch (error) {
             console.log("[removeItem] error : ",error)
         

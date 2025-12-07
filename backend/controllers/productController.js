@@ -3,6 +3,7 @@ import { User } from '../models/User.js';
 import { Product } from '../models/Product.js';
 import { Order } from '../models/Order.js';
 import { OrderItem } from '../models/OrderItem.js';
+import { getOrder} from './panierController.js';
 
 export async function getAllProducts(request, reply) {
   try {
@@ -41,7 +42,6 @@ export async function getProductById(request, reply) {
     reply.status(500).send({ error: err.message });
   }
 }
-
 
 export async function getProductByCategory(request, reply)
 {
@@ -196,74 +196,77 @@ export async function addProductToOrder(request, reply) {
   }
 }
 
+
+/* ================== NOT THE ROMVE ONE  */
 export async function deleteFromCart(request, reply) {
   try {
     
 
-          console.log("========================  [deleteFromCart] ========================");
+        console.log("========================  [deleteFromCart] ========================");
        
-    const { userId, productId } = request.body;
-      console.log("[removeItem] userId, productId ",userId, productId)
+        const { userId, productId } = request.body;
+        console.log("[removeItem] userId, productId ",userId, productId)
 
-    if (!userId || !productId) {
-      console.log("[removeItem]Missing userId or productId ")
+        if (!userId || !productId) {
+          console.log("[removeItem]Missing userId or productId ")
+          return reply.code(400).send({ error: "Missing userId or productId" });
+        }
 
-      return reply.code(400).send({ error: "Missing userId or productId" });
-    }
+        // Find the pending order of this user
+        const order = await Order.findOne({
+          where: { userId, status: "pending" }
+        });
 
-    // Find the pending order of this user
-    const order = await Order.findOne({
-      where: { userId, status: "pending" }
-    });
+        if (!order) {
+          console.log("[removeItem] No active order found for user ")
+          return reply.code(404).send({ error: "No active order found for user" });
+        }
+        console.log("[removeItem]order ",order)
 
-    if (!order) {
-      console.log("[removeItem] No active order found for user ")
+        // Find the matching order item
+        const item = await OrderItem.findOne({
+          where: {
+            orderId: order.id,
+            productId
+          }
+        });
 
-      return reply.code(404).send({ error: "No active order found for user" });
-    }
-      console.log("[removeItem]order ",order)
+        if (!item) {
+          console.log("[removeItem]OrderItem not found in cart")
+          
+          return reply.code(404).send({ error: "Product not found in cart" });
+        }
 
-    // Find the matching order item
-    const item = await OrderItem.findOne({
-      where: {
-        orderId: order.id,
-        productId
+        // Delete the order item
+        await item.destroy();
+
+        // Check if order is now empty
+        const remaining = await OrderItem.count({
+          where: { orderId: order.id }
+        });
+          console.log("[removeItem] order.id : ",order.id)
+
+        // If no items left, remove the order too
+      if (remaining === 0) {
+        await order.destroy();
+        return reply.send({
+          success: true,
+          message: "Product removed and empty order deleted"
+        });
       }
-    });
 
-    if (!item) {
-      console.log("[removeItem]OrderItem not found in cart")
-      
-      return reply.code(404).send({ error: "Product not found in cart" });
-    }
-
-    // Delete the order item
-    await item.destroy();
-
-    // Check if order is now empty
-    const remaining = await OrderItem.count({
-      where: { orderId: order.id }
-    });
-      console.log("[removeItem] order.id : ",order.id)
-
-    // If no items left, remove the order too
-    if (remaining === 0) {
-      await order.destroy();
-      return reply.send({
-        success: true,
-        message: "Product removed and empty order deleted"
+      // Otherwise update order price
+      order.totalPrice = await OrderItem.sum("unitPrice", {
+        where: { orderId: order.id }
       });
-    }
 
-    // Otherwise update order price
-    order.totalPrice = await OrderItem.sum("unitPrice", {
-      where: { orderId: order.id }
-    });
+      await order.save();
 
-    await order.save();
-    console.log("======================== END  [deleteFromCart] ========================");
+      const panier = getOrder(userId)
+      console.log("[removeItem] panier : ",panier)
 
-    reply.send({ success: true, message: "Product removed from cart" });
+      console.log("======================== END  [deleteFromCart] ========================");
+      reply.send(panier);
 
   } catch (err) {
     console.log(err);
@@ -276,9 +279,9 @@ export async function deleteFromCart(request, reply) {
 
   export async function deleteProduct(request,reply){
     
-      console.log("========== [updateProduct] ==========");
-      console.log("params:", request.params);
-      const { id } = request.params;
+      console.log("========== [deleteProduct] ==========");
+      console.log("params:", request.body);
+      const { id } = request.body;
 
       try {
         const deleted = await Product.destroy({

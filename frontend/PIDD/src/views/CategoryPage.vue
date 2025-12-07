@@ -60,10 +60,10 @@ import api from '../api.js'
 export default {
   name: 'CategoryPage',
   // ✅ AJOUT: Props pour la méthode globale d'ajout au panier
-  props: ['user', 'setUser','getUser', 'addToCartGlobal','id'],
+  props: ['user', 'setUser','getUser', 'getFirstPanier','addToCartGlobal','id'],
   data() {
     return {
-        tempCart: [],
+      tempCart: {order:{}},
       categoryName: "",
       // ✅ AJOUT: Champ img manquant dans les produits
       allProducts: [
@@ -156,6 +156,7 @@ export default {
       dataUser: this.getUser() || { id:"", username: "", password : ""},
 
       products: [],
+
       imageMap: {
         'noir.png': noir,
         'blanc.png': blanc,
@@ -172,6 +173,7 @@ export default {
   },
   mounted() {
     this.initProduct();
+    this.tempCart = this.getFirstPanier()
   //  this.loadCategoryProducts()
   },
   watch: {
@@ -202,6 +204,10 @@ export default {
     async addToCart(product) {
      try {
          console.log("my id ",this.dataUser.id)
+         if(this.dataUser.id)
+         {
+
+         
           console.log("product : ",JSON.stringify(product.id));
         // const prodData = JSON.stringify(product);
           const res = await api.post("http://localhost:3000/product/add", {
@@ -209,7 +215,12 @@ export default {
                 productId: product.id,   // no need JSON.stringify
                 quantity: 1
               });
+          }else 
+          {
+            this.addToTmpCart(product)
+          console.log("product : ",this.tempCart);
 
+          }
      } catch (error) {
       console.log('[addToCart] error : ',error);
       
@@ -217,7 +228,7 @@ export default {
      }
      ,
      addToTmpCart(product){
-      this.tempCart.push(product);
+      this.tempCart.order =  product;
      },
      getTmpCart(){
       return this.tempCart;
