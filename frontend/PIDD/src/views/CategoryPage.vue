@@ -214,20 +214,19 @@ export default {
     
     // ✅ AJOUT: Méthode pour ajouter au panier
     addToCart(product) {
-      const productToAdd = {
-        ...product,
-        quantity: 1
-      }
-      
-      if (this.addToCartGlobal) {
-        this.addToCartGlobal(productToAdd)
-      } else {
-        this.addToCartLocal(productToAdd)
-      }
-      
-      this.showSuccess(`✅ ${product.name} ajouté au panier !`)
-    },
-    
+  const productToAdd = {
+    ...product,
+    quantity: 1
+  };
+  
+  if (this.addToCartGlobal) {
+    this.addToCartGlobal(productToAdd);
+    this.showSuccessNotification(`✅ ${product.name} ajouté au panier !`);
+  } else {
+    this.addToCartLocal(productToAdd);
+    this.showSuccessNotification(`✅ ${product.name} ajouté au panier !`);
+  }
+},
     // ✅ AJOUT: Méthode de fallback
     addToCartLocal(product) {
       const existingCart = JSON.parse(localStorage.getItem('monShop_cart') || '[]')

@@ -1,181 +1,416 @@
 <template>
-  <div class="admin-page">
-    <!-- Navigation Admin
-    <nav class="navigation">
-      <router-link to="/" class="nav-logo">MonShop Admin</router-link>
-      <div class="nav-links">
-        <router-link to="/admin" class="nav-link">Dashboard</router-link>
-        <router-link to="/admin/products" class="nav-link">Produits</router-link>
-        <router-link to="/" class="nav-link">Retour au site</router-link>
-      </div>
-      <div class="nav-login">
-        <div v-if="user" class="user-menu">
-          <span class="welcome-message">Admin: {{ user.prenom }}</span>
-          <button @click="logout" class="logout-button">Déconnexion</button>
+  <div class="admin-dashboard">
+    <!-- Sidebar Navigation -->
+    <aside class="admin-sidebar" :class="{ 'show': sidebarCollapsed }">
+      <div class="sidebar-header">
+        <div class="admin-logo">
+          <span class="logo-icon">🛍️</span>
+          <span class="logo-text">Admin Dashboard</span>
+        </div>
+        <div class="admin-profile">
+          <div class="profile-avatar">
+            {{ getUserInitials() }}
+          </div>
+          <div class="profile-info">
+            <h3>{{ user?.name || user?.username || 'Admin' }} {{ user?.lastName || '' }}</h3>
+            <span class="role-badge" :class="user?.is_admin ? 'admin' : 'moderator'">
+              {{ user?.is_admin ? 'Administrateur' : 'Utilisateur' }}
+            </span>
+          </div>
         </div>
       </div>
-    </nav>
-    -->
 
-    <div class="admin-content">
-      <h1 class="title">Gestion des Produits</h1>
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <h4 class="section-title">Tableau de bord</h4>
+          <router-link to="/admin/dashboard" class="nav-item" active-class="active">
+            <span class="nav-icon">📊</span>
+            <span class="nav-text">Vue d'ensemble</span>
+          </router-link>
+        </div>
 
-      <!-- Barre d'actions -->
-      <div class="admin-actions">
-        <button @click="showAddForm = true" class="btn-primary">
-          + Ajouter un produit
+        <div class="nav-section">
+          <h4 class="section-title">Gestion</h4>
+          <router-link to="/admin/products" class="nav-item" active-class="active">
+            <span class="nav-icon">📦</span>
+            <span class="nav-text">Produits</span>
+            <span class="nav-badge">{{ products.length }}</span>
+          </router-link>
+          
+          <router-link to="/admin/orders" class="nav-item" active-class="active">
+            <span class="nav-icon">📋</span>
+            <span class="nav-text">Commandes</span>
+            <span class="nav-badge new">{{ pendingOrdersCount }}</span>
+          </router-link>
+          
+          <router-link to="/admin/users" class="nav-item" active-class="active">
+            <span class="nav-icon">👥</span>
+            <span class="nav-text">Utilisateurs</span>
+          </router-link>
+        </div>
+
+        <div class="nav-section">
+          <h4 class="section-title">Analyse</h4>
+          <router-link to="/admin/analytics" class="nav-item" active-class="active">
+            <span class="nav-icon">📈</span>
+            <span class="nav-text">Analytics</span>
+          </router-link>
+          
+          <router-link to="/admin/reports" class="nav-item" active-class="active">
+            <span class="nav-icon">📄</span>
+            <span class="nav-text">Rapports</span>
+          </router-link>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button @click="logout" class="logout-btn">
+          <span class="logout-icon">🚪</span>
+          <span class="logout-text">Déconnexion</span>
         </button>
-        <div class="search-bar">
-          <input 
-            v-model="searchQuery" 
-            placeholder="Rechercher un produit..." 
-            class="search-input"
-          />
+        <div class="version-info">v1.0.0</div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="admin-main">
+      <!-- Top Header -->
+      <header class="admin-header">
+        <div class="header-left">
+          <button class="menu-toggle" @click="toggleSidebar">
+            <span class="menu-icon">☰</span>
+          </button>
+          <h1 class="page-title">Gestion des Produits</h1>
+        </div>
+        
+        <div class="header-right">
+          <div class="header-search">
+            <input 
+              v-model="searchQuery" 
+              type="text" 
+              placeholder="Rechercher un produit..."
+              class="search-input"
+            />
+            <span class="search-icon">🔍</span>
+          </div>
+          
+          <div class="header-actions">
+            <button class="header-btn notification-btn">
+              <span class="btn-icon">🔔</span>
+              <span class="notification-count">{{ notifications.length }}</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Stats Cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon total">📦</div>
+          <div class="stat-content">
+            <h3>Total Produits</h3>
+            <p class="stat-number">{{ products.length }}</p>
+          </div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-icon low">⚠️</div>
+          <div class="stat-content">
+            <h3>Stock Faible</h3>
+            <p class="stat-number">{{ lowStockCount }}</p>
+          </div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-icon category">🏷️</div>
+          <div class="stat-content">
+            <h3>Catégories</h3>
+            <p class="stat-number">3</p>
+          </div>
+        </div>
+        
+        <div class="stat-card">
+          <div class="stat-icon value">💰</div>
+          <div class="stat-content">
+            <h3>Valeur Stock</h3>
+            <p class="stat-number">{{ formatPrice(totalStockValue) }}</p>
+          </div>
         </div>
       </div>
 
-      <!-- Liste des produits -->
-      <div class="products-table">
-        <div class="table-header">
-          <div class="table-row header-row">
-            <div class="table-cell">Image</div>
-            <div class="table-cell">Nom</div>
-            <div class="table-cell">Marque</div>
-            <div class="table-cell">Prix</div>
-            <div class="table-cell">Catégorie</div>
-            <div class="table-cell">Actions</div>
+      <!-- Main Content -->
+      <div class="content-card">
+        <div class="card-header">
+          <h2>Liste des Produits</h2>
+          <div class="card-actions">
+            <button @click="showAddModal" class="action-btn primary">
+              <span class="btn-icon">➕</span>
+              Ajouter un produit
+            </button>
+            <div class="view-controls">
+              <button class="view-btn" :class="{ active: viewMode === 'grid' }" @click="viewMode = 'grid'">
+                <span class="btn-icon">▦</span>
+              </button>
+              <button class="view-btn" :class="{ active: viewMode === 'list' }" @click="viewMode = 'list'">
+                <span class="btn-icon">≡</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        <div class="table-body">
-          <div 
-            v-for="product in filteredProducts" 
-            :key="product.id" 
-            class="table-row"
-          >
-            <div class="table-cell image-cell">
-              <img :src="getProductImage(product.img)" :alt="product.name" class="product-thumb" />
+        <!-- Products Table -->
+        <div v-if="viewMode === 'list'" class="products-table">
+          <table>
+            <thead>
+              <tr>
+                <th class="check-col">
+                  <input type="checkbox" v-model="selectAll" @change="toggleSelectAll">
+                </th>
+                <th class="image-col">Image</th>
+                <th>Produit</th>
+                <th>Catégorie</th>
+                <th>Prix</th>
+                <th>Stock</th>
+                <th>Statut</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="product in paginatedProducts" :key="product.id" :class="{ selected: selectedProducts.includes(product.id) }">
+                <td>
+                  <input type="checkbox" :value="product.id" v-model="selectedProducts">
+                </td>
+                <td>
+                  <img :src="getProductImageUrl(product.img)" :alt="product.name" class="product-image">
+                </td>
+                <td>
+                  <div class="product-info">
+                    <h4 class="product-name">{{ product.name }}</h4>
+                    <p class="product-desc">{{ product.description }}</p>
+                  </div>
+                </td>
+                <td>
+                  <span class="category-tag" :class="'cat-' + product.category">
+                    {{ getCategoryName(product.category) }}
+                  </span>
+                </td>
+                <td class="price-cell">
+                  {{ formatPrice(product.price) }}
+                </td>
+                <td>
+                  <div class="stock-info">
+                    <div class="stock-bar">
+                      <div class="stock-fill" :style="{ width: getStockPercentage(product) + '%' }"></div>
+                    </div>
+                    <span :class="{ 'low-stock': product.quantity < 10 }">
+                      {{ product.quantity }} unités
+                    </span>
+                  </div>
+                </td>
+                <td>
+                  <span class="status-badge" :class="getProductStatus(product)">
+                    {{ getProductStatus(product) === 'active' ? 'Actif' : 'Inactif' }}
+                  </span>
+                </td>
+                <td>
+                  <div class="action-buttons">
+                    <button @click="editProduct(product)" class="action-btn edit-btn" title="Modifier">
+                      ✏️
+                    </button>
+                    <button @click="duplicateProduct(product)" class="action-btn duplicate-btn" title="Dupliquer">
+                      📋
+                    </button>
+                    <button @click="deleteProduct(product.id)" class="action-btn delete-btn" title="Supprimer">
+                      🗑️
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Products Grid -->
+        <div v-else class="products-grid">
+          <div class="grid-header">
+            <div class="grid-info">
+              {{ filteredProducts.length }} produits affichés
             </div>
-            <div class="table-cell name-cell">
-              <strong>{{ product.name }}</strong>
+            <div class="grid-sort">
+              <select v-model="sortBy" class="sort-select">
+                <option value="name">Trier par nom</option>
+                <option value="price">Trier par prix</option>
+                <option value="quantity">Trier par stock</option>
+              </select>
             </div>
-            <div class="table-cell">
-              {{ product.brand }}
-            </div>
-            <div class="table-cell">
-              {{ formatPrice(product.price) }}
-            </div>
-            <div class="table-cell">
-              <span class="category-badge">{{ getCategoryName(product.categoryId) }}</span>
-            </div>
-            <div class="table-cell actions-cell">
-              <button @click="editProduct(product)" class="btn-edit">
-                ✏️ Modifier
-              </button>
-              <button @click="deleteProduct(product.id)" class="btn-delete">
-                🗑️ Supprimer
-              </button>
+          </div>
+          
+          <div class="grid-container">
+            <div 
+              v-for="product in paginatedProducts" 
+              :key="product.id" 
+              class="product-card"
+            >
+              <div class="product-card-header">
+                <input type="checkbox" :value="product.id" v-model="selectedProducts" class="card-checkbox">
+                <img :src="getProductImageUrl(product.img)" :alt="product.name" class="card-image">
+                <div class="card-actions">
+                  <button @click="editProduct(product)" class="card-action-btn edit">
+                    ✏️
+                  </button>
+                  <button @click="deleteProduct(product.id)" class="card-action-btn delete">
+                    🗑️
+                  </button>
+                </div>
+              </div>
+              
+              <div class="product-card-body">
+                <div class="product-category">
+                  <span class="category-badge" :class="'cat-' + product.category">
+                    {{ getCategoryName(product.category) }}
+                  </span>
+                </div>
+                
+                <h3 class="product-title">{{ product.name }}</h3>
+                <p class="product-description">{{ product.description }}</p>
+                
+                <div class="product-meta">
+                  <div class="meta-item">
+                    <span class="meta-label">Prix:</span>
+                    <span class="meta-value">{{ formatPrice(product.price) }}</span>
+                  </div>
+                  <div class="meta-item">
+                    <span class="meta-label">Stock:</span>
+                    <span class="meta-value" :class="{ 'low': product.quantity < 10 }">
+                      {{ product.quantity }} unités
+                    </span>
+                  </div>
+                </div>
+                
+                <div class="product-status">
+                  <span class="status-dot" :class="getProductStatus(product)"></span>
+                  <span class="status-text">{{ product.quantity > 0 ? 'En stock' : 'Rupture' }}</span>
+                </div>
+              </div>
+              
+              <div class="product-card-footer">
+                <button @click="editProduct(product)" class="card-btn edit">
+                  Modifier
+                </button>
+                <button @click="duplicateProduct(product)" class="card-btn duplicate">
+                  Dupliquer
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Message si aucun produit -->
-      <div v-if="filteredProducts.length === 0" class="empty-state">
-        <p>Aucun produit trouvé</p>
-      </div>
-    </div>
+        <!-- Bulk Actions -->
+        <div v-if="selectedProducts.length > 0" class="bulk-actions">
+          <div class="bulk-info">
+            {{ selectedProducts.length }} produit(s) sélectionné(s)
+          </div>
+          <div class="bulk-buttons">
+            <button @click="updateStockBulk" class="bulk-btn stock">
+              📦 Mettre à jour le stock
+            </button>
+            <button @click="deleteSelected" class="bulk-btn delete">
+              🗑️ Supprimer
+            </button>
+          </div>
+        </div>
 
-    <!-- Modal d'édition/ajout -->
-    <div v-if="showModal" class="modal-overlay" @click="closeModal">
-      <div class="modal-content" @click.stop>
+        <!-- Pagination -->
+        <div class="pagination">
+          <button class="page-btn" :disabled="currentPage === 1" @click="currentPage--">
+            ← Précédent
+          </button>
+          
+          <div class="page-numbers">
+            <button 
+              v-for="page in totalPages" 
+              :key="page" 
+              @click="currentPage = page"
+              :class="{ active: currentPage === page }"
+              class="page-number"
+            >
+              {{ page }}
+            </button>
+          </div>
+          
+          <button class="page-btn" :disabled="currentPage === totalPages" @click="currentPage++">
+            Suivant →
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Modal pour ajouter/modifier un produit -->
+    <div v-if="showModal" class="modal-overlay">
+      <div class="modal-content">
         <div class="modal-header">
           <h2>{{ editingProduct ? 'Modifier le produit' : 'Ajouter un produit' }}</h2>
-          <button @click="closeModal" class="close-btn">×</button>
+          <button @click="showModal = false" class="close-btn">×</button>
         </div>
-
-        <form @submit.prevent="saveProduct" class="product-form">
-          <div class="form-grid">
+        
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Nom du produit *</label>
+            <input v-model="form.name" type="text" class="form-input" required>
+          </div>
+          
+          <div class="form-row">
             <div class="form-group">
-              <label for="name">Nom du produit *</label>
-              <input 
-                id="name"
-                v-model="form.name" 
-                type="text" 
-                required 
-                placeholder="Ex: T-shirt Noir Classique"
-              />
+              <label>Prix (€) *</label>
+              <input v-model="form.price" type="number" min="0" step="0.01" class="form-input" required>
             </div>
-
+            
             <div class="form-group">
-              <label for="brand">Marque *</label>
-              <input 
-                id="brand"
-                v-model="form.brand" 
-                type="text" 
-                required 
-                placeholder="Ex: Nike"
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="price">Prix (€) *</label>
-              <input 
-                id="price"
-                v-model="form.price" 
-                type="number" 
-                step="0.01" 
-                min="0" 
-                required 
-                placeholder="Ex: 29.99"
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="categoryId">Catégorie *</label>
-              <select id="categoryId" v-model="form.categoryId" required>
-                <option value="">Sélectionnez une catégorie</option>
-                <option value="1">Homme</option>
-                <option value="2">Femme</option>
-                <option value="3">Enfant</option>
-              </select>
-            </div>
-
-            <div class="form-group full-width">
-              <label for="image">Image</label>
-              <select id="image" v-model="form.img">
-                <option value="">Sélectionnez une image</option>
-                <option value="noir.png">T-shirt Noir</option>
-                <option value="blanc.png">T-shirt Blanc</option>
-                <option value="gris.png">T-shirt Gris</option>
-                <option value="rosefemme.png">T-shirt Rose Femme</option>
-                <option value="blancfemme.png">T-shirt Blanc Femme</option>
-                <option value="noirfemme.png">T-shirt Noir Femme</option>
-                <option value="enfantbleu.png">T-shirt Bleu Enfant</option>
-                <option value="enfantrouge.png">T-shirt Rouge Enfant</option>
-              </select>
-            </div>
-
-            <div class="form-group full-width">
-              <label for="description">Description</label>
-              <textarea 
-                id="description"
-                v-model="form.description" 
-                rows="4" 
-                placeholder="Description du produit..."
-              ></textarea>
+              <label>Quantité en stock *</label>
+              <input v-model="form.quantity" type="number" min="0" class="form-input" required>
             </div>
           </div>
-
-          <div class="form-actions">
-            <button type="button" @click="closeModal" class="btn-cancel">
-              Annuler
-            </button>
-            <button type="submit" class="btn-save" :disabled="loading">
-              {{ loading ? 'Enregistrement...' : 'Enregistrer' }}
-            </button>
+          
+          <div class="form-group">
+            <label>Catégorie *</label>
+            <select v-model="form.category" class="form-select" required>
+              <option value="">Sélectionner une catégorie</option>
+              <option value="1">Homme</option>
+              <option value="2">Femme</option>
+              <option value="3">Enfants</option>
+            </select>
           </div>
-        </form>
+          
+          <div class="form-group">
+            <label>Image *</label>
+            <select v-model="form.img" class="form-select" required>
+              <option value="">Sélectionner une image</option>
+              <option value="noir.png">T-shirt Noir Homme</option>
+              <option value="blanc.png">T-shirt Blanc Homme</option>
+              <option value="gris.png">T-shirt Gris Homme</option>
+              <option value="rosefemme.png">T-shirt Rose Femme</option>
+              <option value="blancfemme.png">T-shirt Blanc Femme</option>
+              <option value="noirfemme.png">T-shirt Noir Femme</option>
+              <option value="enfantbleu.png">T-shirt Bleu Enfant</option>
+              <option value="enfantrouge.png">T-shirt Rouge Enfant</option>
+            </select>
+            <div v-if="form.img" class="image-preview">
+              <img :src="getProductImageUrl(form.img)" alt="Preview" class="preview-img">
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Description *</label>
+            <textarea v-model="form.description" rows="3" class="form-textarea" required></textarea>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button @click="showModal = false" class="btn btn-secondary">Annuler</button>
+          <button @click="saveProduct" class="btn btn-primary">
+            {{ editingProduct ? 'Mettre à jour' : 'Ajouter' }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -187,6 +422,10 @@
 </template>
 
 <script>
+import axios from 'axios';
+
+// URL de l'API - utilisez une variable d'environnement ou une URL directe
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 // Import des images
 import noir from '../assets/noir.png'
 import blanc from '../assets/blanc.png'
@@ -203,19 +442,22 @@ export default {
   data() {
     return {
       products: [],
+      orders: [],
+      users: [],
+      notifications: [],
       searchQuery: '',
       showModal: false,
-      showAddForm: false,
       editingProduct: null,
       loading: false,
       form: {
         name: '',
-        brand: '',
         price: 0,
-        categoryId: '',
+        quantity: 0,
+        category: '',
         img: '',
         description: ''
       },
+      formErrors: {},
       notification: {
         show: false,
         message: '',
@@ -230,7 +472,14 @@ export default {
         'noirfemme.png': noirfemme,
         'enfantbleu.png': enfantbleu,
         'enfantrouge.png': enfantrouge
-      }
+      },
+      selectedProducts: [],
+      selectAll: false,
+      viewMode: 'list',
+      sortBy: 'name',
+      currentPage: 1,
+      itemsPerPage: 10,
+      sidebarCollapsed: false
     }
   },
   computed: {
@@ -240,368 +489,1499 @@ export default {
       const query = this.searchQuery.toLowerCase();
       return this.products.filter(product => 
         product.name.toLowerCase().includes(query) ||
-        product.brand.toLowerCase().includes(query)
+        product.description.toLowerCase().includes(query)
       );
+    },
+    
+    sortedProducts() {
+      const sorted = [...this.filteredProducts];
+      
+      switch (this.sortBy) {
+        case 'name':
+          return sorted.sort((a, b) => a.name.localeCompare(b.name));
+        case 'price':
+          return sorted.sort((a, b) => b.price - a.price);
+        case 'quantity':
+          return sorted.sort((a, b) => b.quantity - a.quantity);
+        default:
+          return sorted;
+      }
+    },
+    
+    lowStockCount() {
+      return this.products.filter(p => p.quantity < 10).length;
+    },
+    
+    totalStockValue() {
+      return this.products.reduce((total, product) => {
+        return total + (product.price * product.quantity);
+      }, 0);
+    },
+    
+    pendingOrdersCount() {
+      return this.orders.filter(order => order.status === 'pending').length;
+    },
+    
+    paginatedProducts() {
+      const start = (this.currentPage - 1) * this.itemsPerPage;
+      const end = start + this.itemsPerPage;
+      return this.sortedProducts.slice(start, end);
+    },
+    
+    totalPages() {
+      return Math.ceil(this.filteredProducts.length / this.itemsPerPage);
     }
   },
   async mounted() {
-    await this.loadProducts();
+    await this.loadData();
   },
   methods: {
+    async loadData() {
+      await this.loadProducts();
+      await this.loadOrders();
+      await this.loadUsers();
+    },
+    
     async loadProducts() {
       try {
-        // Pour l'instant, on utilise les données locales
-        // À remplacer par un appel API
-        this.products = this.getSampleProducts();
-        console.log('📦 Produits chargés:', this.products.length);
+        this.loading = true;
+        const response = await axios.get(`${API_URL}/products`, {
+          headers: this.getAuthHeaders()
+        });
+        this.products = response.data;
       } catch (error) {
-        console.error('❌ Erreur chargement produits:', error);
-        this.showNotification('Erreur lors du chargement des produits', 'error');
-      }
-    },
-
-    getSampleProducts() {
-      return [
-        { id: 101, name: "T-shirt Noir Classique", brand: "Nike", price: 20, categoryId: 1, img: 'noir.png', description: "T-shirt en coton 100% biologique" },
-        { id: 102, name: "T-shirt Blanc Sport", brand: "Adidas", price: 25, categoryId: 1, img: 'blanc.png', description: "T-shirt technique en matière respirante" },
-        { id: 103, name: "T-shirt Gris Urban", brand: "Puma", price: 23, categoryId: 1, img: 'gris.png', description: "T-shirt streetwear en coton premium" },
-        { id: 201, name: "T-shirt Rose Élégant", brand: "Zara", price: 22, categoryId: 2, img: 'rosefemme.png', description: "T-shirt féminin en coton stretch" },
-        { id: 202, name: "T-shirt Blanc Femme", brand: "H&M", price: 18, categoryId: 2, img: 'blancfemme.png', description: "T-shirt basique femme, coupe standard" },
-        { id: 203, name: "T-shirt Noir Femme", brand: "Mango", price: 21, categoryId: 2, img: 'noirfemme.png', description: "T-shirt femme en coton bio" },
-        { id: 301, name: "T-shirt Bleu Enfant", brand: "Disney", price: 15, categoryId: 3, img: 'enfantbleu.png', description: "T-shirt pour enfant avec motif Disney" },
-        { id: 302, name: "T-shirt Rouge Super-héros", brand: "Marvel", price: 16, categoryId: 3, img: 'enfantrouge.png', description: "T-shirt enfant avec impression Marvel" }
-      ];
-    },
-
-    editProduct(product) {
-      this.editingProduct = product;
-      this.form = { ...product };
-      this.showModal = true;
-    },
-
-    async saveProduct() {
-      // Validation
-      if (!this.validateForm()) return;
-
-      this.loading = true;
-
-      try {
-        if (this.editingProduct) {
-          // Mise à jour du produit
-          await this.updateProduct(this.form);
-          this.showNotification('Produit mis à jour avec succès', 'success');
-        } else {
-          // Création d'un nouveau produit
-          await this.createProduct(this.form);
-          this.showNotification('Produit créé avec succès', 'success');
-        }
-
-        await this.loadProducts();
-        this.closeModal();
-      } catch (error) {
-        console.error('❌ Erreur sauvegarde produit:', error);
-        this.showNotification('Erreur lors de la sauvegarde', 'error');
+        console.error('Erreur chargement produits:', error);
+          // Fallback vers des données mockées si l'API n'est pas disponible
+        this.products = this.getMockProducts();
+         this.showNotification('Chargement des données mockées (API non disponible)', 'warning');
       } finally {
         this.loading = false;
       }
     },
-
-    async updateProduct(productData) {
-      // Simulation d'appel API - À remplacer par PUT /api/products/:id
-      console.log('🔄 Mise à jour produit:', productData);
-      
-      const index = this.products.findIndex(p => p.id === productData.id);
-      if (index !== -1) {
-        this.products[index] = productData;
-      }
-      
-      // Sauvegarder dans localStorage pour la démo
-      this.saveToLocalStorage();
-    },
-
-    async createProduct(productData) {
-      // Simulation d'appel API - À remplacer par POST /api/products
-      console.log('🆕 Création produit:', productData);
-      
-      const newProduct = {
-        ...productData,
-        id: this.generateProductId()
-      };
-      
-      this.products.push(newProduct);
-      this.saveToLocalStorage();
-    },
-
-    async deleteProduct(productId) {
-      if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) return;
-
+    
+    async loadOrders() {
       try {
-        // Simulation d'appel API - À remplacer par DELETE /api/products/:id
-        console.log('🗑️ Suppression produit:', productId);
-        
-        this.products = this.products.filter(p => p.id !== productId);
-        this.saveToLocalStorage();
-        
-        this.showNotification('Produit supprimé avec succès', 'success');
+        const response = await axios.get(`${API_URL}/orders`, {
+          headers: this.getAuthHeaders()
+        });
+        this.orders = response.data;
       } catch (error) {
-        console.error('❌ Erreur suppression produit:', error);
-        this.showNotification('Erreur lors de la suppression', 'error');
+        console.error('Erreur chargement commandes:', error);
+        this.orders = [];
+      }
+
+    },
+    
+    async loadUsers() {
+      try {
+        const response = await axios.get(`${API_URL}/users`, {
+          headers: this.getAuthHeaders()
+        });
+        this.users = response.data;
+      } catch (error) {
+        console.error('Erreur chargement utilisateurs:', error);
+          this.users = [];
       }
     },
-
-    validateForm() {
-      if (!this.form.name.trim()) {
-        this.showNotification('Le nom du produit est obligatoire', 'error');
-        return false;
-      }
-      if (!this.form.brand.trim()) {
-        this.showNotification('La marque est obligatoire', 'error');
-        return false;
-      }
-      if (this.form.price <= 0) {
-        this.showNotification('Le prix doit être positif', 'error');
-        return false;
-      }
-      if (!this.form.categoryId) {
-        this.showNotification('La catégorie est obligatoire', 'error');
-        return false;
-      }
-      return true;
+     
+    getMockProducts() {
+      return [
+        {
+          id: '1',
+          name: 'T-Shirt Homme Noir',
+          price: 20,
+          quantity: 30,
+          category: '1',
+          img: 'noir.png',
+          description: 'Cotton classic tee'
+        },
+        {
+          id: '2',
+          name: 'T-Shirt Homme Blanc',
+          price: 25,
+          quantity: 50,
+          category: '1',
+          img: 'blanc.png',
+          description: 'Cotton classic tee'
+        },
+        {
+          id: '3',
+          name: 'T-Shirt Homme Gris',
+          price: 23,
+          quantity: 50,
+          category: '1',
+          img: 'gris.png',
+          description: 'Cotton classic tee'
+        },
+        {
+          id: '4',
+          name: 'T-Shirt Femme Rose',
+          price: 22,
+          quantity: 30,
+          category: '2',
+          img: 'rosefemme.png',
+          description: 'Cotton classic tee'
+        },
+        {
+          id: '5',
+          name: 'T-Shirt Femme Blanc',
+          price: 24,
+          quantity: 30,
+          category: '2',
+          img: 'blancfemme.png',
+          description: 'Cotton classic tee'
+        },
+        {id: '6', name: "T-shirt Noir Femme",
+         price: 21,
+         quantity: 30,
+         category: '2',
+         img : 'noirfemme.png',
+         description: 'Cotton classic tee' 
+        },
+        { id:'7',
+        name: "T-shirt Bleu Enfant",
+        price: 15,
+        quantity: 30,
+        category: 3, 
+        img : 'enfantbleu.png',
+        description: 'Cool kid' 
+       },
+        { id: '8',
+        name: "T-shirt Rouge Enfant",
+          price: 16,
+          quantity: 30,
+          category: 3,
+          img : 'enfantrouge.png',
+           description: 'Cool kid' 
+          }
+      ];
     },
-
-    generateProductId() {
-      // Génère un ID unique basé sur la catégorie
-      const categoryId = parseInt(this.form.categoryId);
-      const productsInCategory = this.products.filter(p => 
-        Math.floor(p.id / 100) === categoryId
-      );
-      return categoryId * 100 + productsInCategory.length + 1;
-    },
-
-    saveToLocalStorage() {
-      localStorage.setItem('admin_products', JSON.stringify(this.products));
-    },
-
-    closeModal() {
-      this.showModal = false;
-      this.editingProduct = null;
-      this.form = {
-        name: '',
-        brand: '',
-        price: 0,
-        categoryId: '',
-        img: '',
-        description: ''
+    
+   getAuthHeaders() {
+      const token = localStorage.getItem('token');
+      return token ? {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      } : {
+        'Content-Type': 'application/json'
       };
     },
-
-    getProductImage(imgName) {
-      if (!imgName) return '';
+    
+    
+    getProductImageUrl(imgName) {
       return this.imageMap[imgName] || '';
     },
-
-    getCategoryName(categoryId) {
+    
+    getCategoryName(category) {
       const categories = {
         1: 'Homme',
         2: 'Femme',
-        3: 'Enfant'
+        3: 'Enfants'
       };
-      return categories[categoryId] || 'Inconnue';
+      return categories[category] || 'Non catégorisé';
     },
-
+    
     formatPrice(price) {
       return new Intl.NumberFormat('fr-FR', {
         style: 'currency',
         currency: 'EUR'
       }).format(price);
     },
-
+    
+    getStockPercentage(product) {
+      const maxStock = 100;
+      return Math.min((product.quantity / maxStock) * 100, 100);
+    },
+    
+    getProductStatus(product) {
+      return product.quantity > 0 ? 'active' : 'inactive';
+    },
+    
+    showAddModal() {
+      this.editingProduct = null;
+      this.form = {
+        name: '',
+        price: 0,
+        quantity: 0,
+        category: '',
+        img: '',
+        description: ''
+      };
+      this.formErrors = {};
+      this.showModal = true;
+    },
+    
+    editProduct(product) {
+      this.editingProduct = product;
+      this.form = { ...product };
+      this.formErrors = {};
+      this.showModal = true;
+    },
+    
+    async saveProduct() {
+      // Validation
+      if (!this.validateForm()) return;
+      
+      try {
+        this.loading = true;
+        
+        if (this.editingProduct) {
+          // Mise à jour
+          const response = await axios.put(
+            `${API_URL}/products/${this.editingProduct.id}`,
+            this.form,
+            { headers: this.getAuthHeaders() }
+          );
+          
+          const index = this.products.findIndex(p => p.id === this.editingProduct.id);
+          if (index !== -1) {
+            this.products[index] = response.data;
+          }
+          
+          this.showNotification('Produit mis à jour avec succès', 'success');
+        } else {
+          // Ajout
+          const response = await axios.post(
+            `${API_URL}/products`,
+            this.form,
+            { headers: this.getAuthHeaders() }
+          );
+          
+          this.products.push(response.data);
+          this.showNotification('Produit ajouté avec succès', 'success');
+        }
+        
+        this.showModal = false;
+      } catch (error) {
+        console.error('Erreur sauvegarde produit:', error);
+        this.showNotification('Erreur lors de la sauvegarde', 'error');
+      } finally {
+        this.loading = false;
+      }
+    },
+    
+    async deleteProduct(id) {
+      if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) return;
+      
+      try {
+        await axios.delete(`${API_URL}/products/${id}`, {
+          headers: this.getAuthHeaders()
+        });
+        
+        this.products = this.products.filter(p => p.id !== id);
+        this.showNotification('Produit supprimé avec succès', 'success');
+      } catch (error) {
+        console.error('Erreur suppression produit:', error);
+        this.showNotification('Erreur lors de la suppression', 'error');
+      }
+    },
+    
+    async duplicateProduct(product) {
+      try {
+        const duplicatedProduct = {
+          ...product,
+          name: product.name + ' (Copie)',
+          id: undefined
+        };
+        
+        const response = await axios.post(
+          `${API_URL}/products`,
+          duplicatedProduct,
+          { headers: this.getAuthHeaders() }
+        );
+        
+        this.products.push(response.data);
+        this.showNotification('Produit dupliqué avec succès', 'success');
+      } catch (error) {
+        console.error('Erreur duplication produit:', error);
+        this.showNotification('Erreur lors de la duplication', 'error');
+      }
+    },
+    
+    validateForm() {
+      this.formErrors = {};
+      
+      if (!this.form.name.trim()) {
+        this.formErrors.name = 'Le nom est requis';
+      }
+      
+      if (!this.form.price || this.form.price <= 0) {
+        this.formErrors.price = 'Le prix doit être supérieur à 0';
+      }
+      
+      if (!this.form.quantity || this.form.quantity < 0) {
+        this.formErrors.quantity = 'La quantité est requise';
+      }
+      
+      if (!this.form.category) {
+        this.formErrors.category = 'La catégorie est requise';
+      }
+      
+      if (!this.form.img) {
+        this.formErrors.img = "L'image est requise";
+      }
+      
+      if (!this.form.description.trim()) {
+        this.formErrors.description = 'La description est requise';
+      }
+      
+      return Object.keys(this.formErrors).length === 0;
+    },
+    
     showNotification(message, type = 'success') {
       this.notification = {
         show: true,
         message,
         type
       };
-      
       setTimeout(() => {
         this.notification.show = false;
       }, 3000);
     },
-
-    logout() {
-      if (this.setUser) {
-        this.setUser(null);
+    
+    getUserInitials() {
+      if (!this.user) return 'AD';
+      const first = (this.user.name || this.user.username || 'A')[0] || '';
+      const last = (this.user.lastName || '')[0] || '';
+      return (first + last).toUpperCase();
+    },
+    
+    toggleSidebar() {
+      this.sidebarCollapsed = !this.sidebarCollapsed;
+    },
+    
+    toggleSelectAll() {
+      if (this.selectAll) {
+        this.selectedProducts = this.filteredProducts.map(p => p.id);
+      } else {
+        this.selectedProducts = [];
       }
+    },
+    
+    async updateStockBulk() {
+      if (this.selectedProducts.length === 0) {
+        this.showNotification('Veuillez sélectionner au moins un produit', 'error');
+        return;
+      }
+      
+      const newStock = prompt('Entrez la nouvelle quantité pour les produits sélectionnés:');
+      if (newStock === null) return;
+      
+      const quantity = parseInt(newStock);
+      if (isNaN(quantity) || quantity < 0) {
+        this.showNotification('Veuillez entrer un nombre valide', 'error');
+        return;
+      }
+      
+      try {
+        const updates = this.selectedProducts.map(async (productId) => {
+          return axios.patch(
+            `${API_URL}/products/${productId}`,
+            { quantity },
+            { headers: this.getAuthHeaders() }
+          );
+        });
+        
+        await Promise.all(updates);
+        
+        // Mettre à jour localement
+        this.products.forEach(product => {
+          if (this.selectedProducts.includes(product.id)) {
+            product.quantity = quantity;
+          }
+        });
+        
+        this.showNotification('Stock mis à jour avec succès', 'success');
+        this.selectedProducts = [];
+        this.selectAll = false;
+      } catch (error) {
+        console.error('Erreur mise à jour stock:', error);
+        // Mise à jour locale si erreur réseau
+        if (error.code === 'ERR_NETWORK') {
+          this.products.forEach(product => {
+            if (this.selectedProducts.includes(product.id)) {
+              product.quantity = quantity;
+            }
+          });
+        this.showNotification('Stock mis à jour (mode démo)', 'success');
+          this.selectedProducts = [];
+          this.selectAll = false;
+        } else {
+          this.showNotification('Erreur lors de la mise à jour du stock', 'error');
+        }
+      }
+    },
+    
+   async deleteSelected() {
+      if (this.selectedProducts.length === 0) {
+        this.showNotification('Veuillez sélectionner au moins un produit', 'error');
+        return;
+      }
+      
+      if (!confirm(`Êtes-vous sûr de vouloir supprimer ${this.selectedProducts.length} produit(s) ?`)) return;
+      
+      try {
+        const deletions = this.selectedProducts.map(async (productId) => {
+          return axios.delete(`${API_URL}/products/${productId}`, {
+            headers: this.getAuthHeaders()
+          });
+        });
+        
+        await Promise.all(deletions);
+        
+        this.products = this.products.filter(p => !this.selectedProducts.includes(p.id));
+        this.showNotification('Produits supprimés avec succès', 'success');
+        this.selectedProducts = [];
+        this.selectAll = false;
+      } catch (error) {
+        console.error('Erreur suppression produits:', error);
+        
+        // Suppression locale si erreur réseau
+        if (error.code === 'ERR_NETWORK') {
+          this.products = this.products.filter(p => !this.selectedProducts.includes(p.id));
+          this.showNotification('Produits supprimés (mode démo)', 'success');
+          this.selectedProducts = [];
+          this.selectAll = false;
+        } else {
+          this.showNotification('Erreur lors de la suppression', 'error');
+        }
+      }
+    },
+    
+    logout() {
+      this.setUser(null);
       localStorage.removeItem('token');
-      this.$router.push('/');
+      localStorage.removeItem('user');
+      this.$router.push('/login');
+    }
+  },
+  watch: {
+    selectedProducts(newVal) {
+      this.selectAll = newVal.length === this.filteredProducts.length && this.filteredProducts.length > 0;
     }
   }
 }
 </script>
 
 <style scoped>
-.admin-page {
+.admin-dashboard {
+  display: flex;
   min-height: 100vh;
   background: #f8fafc;
 }
 
-.admin-content {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 2rem;
-}
-
-.title {
-  font-size: 2.5rem;
-  font-weight: 700;
-  margin-bottom: 2rem;
-  color: #1f2937;
-  text-align: center;
-}
-
-/* Barre d'actions */
-.admin-actions {
+/* Sidebar */
+.admin-sidebar {
+  width: 280px;
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  color: white;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  position: fixed;
+  height: 100vh;
+  z-index: 100;
+  transition: transform 0.3s ease;
+}
+
+.sidebar-header {
+  padding: 2rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.admin-logo {
+  display: flex;
   align-items: center;
+  gap: 0.75rem;
   margin-bottom: 2rem;
+}
+
+.logo-icon {
+  font-size: 1.8rem;
+}
+
+.logo-text {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.admin-profile {
+  display: flex;
+  align-items: center;
   gap: 1rem;
 }
 
-.btn-primary {
-  padding: 0.75rem 1.5rem;
-  background: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 8px;
+.profile-avatar {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.profile-info h3 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1rem;
   font-weight: 600;
-  cursor: pointer;
-  transition: background 0.3s ease;
 }
 
-.btn-primary:hover {
-  background: #2563eb;
+.role-badge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+  font-weight: 500;
 }
 
-.search-bar {
+.role-badge.admin {
+  background: rgba(139, 92, 246, 0.2);
+  color: #a78bfa;
+}
+
+.sidebar-nav {
   flex: 1;
-  max-width: 400px;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.nav-section {
+  margin-bottom: 2rem;
+}
+
+.section-title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+  margin: 0 0 1rem 0;
+  font-weight: 600;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  color: #cbd5e1;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  margin-bottom: 0.5rem;
+  position: relative;
+}
+
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.nav-item.active {
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  color: white;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.nav-icon {
+  font-size: 1.2rem;
+  width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-text {
+  flex: 1;
+  font-weight: 500;
+}
+
+.nav-badge {
+  font-size: 0.75rem;
+  padding: 0.125rem 0.5rem;
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.nav-badge.new {
+  background: rgba(34, 197, 94, 0.2);
+  color: #86efac;
+}
+
+.sidebar-footer {
+  padding: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.logout-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.logout-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.version-info {
+  text-align: center;
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 1rem;
+}
+
+/* Main Content */
+.admin-main {
+  flex: 1;
+  margin-left: 280px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.admin-header {
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #4b5563;
+}
+
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.header-search {
+  position: relative;
+  width: 300px;
 }
 
 .search-input {
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #d1d5db;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
+  font-size: 0.95rem;
+  background: #f8fafc;
+  transition: all 0.3s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6b7280;
   font-size: 1rem;
 }
 
-/* Table des produits */
-.products-table {
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.header-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
   background: white;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-}
-
-.table-header {
-  background: #f8fafc;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.table-row {
-  display: grid;
-  grid-template-columns: 80px 1fr 1fr 100px 120px 200px;
-  gap: 1rem;
-  align-items: center;
-  padding: 1rem 1.5rem;
-}
-
-.header-row {
-  font-weight: 600;
-  color: #374151;
-}
-
-.table-cell {
+  cursor: pointer;
   display: flex;
   align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  position: relative;
 }
 
-.table-body .table-row {
-  border-bottom: 1px solid #f3f4f6;
-  transition: background 0.2s ease;
+.header-btn:hover {
+  background: #f8fafc;
+  border-color: #d1d5db;
 }
 
-.table-body .table-row:hover {
-  background: #f9fafb;
-}
-
-.table-body .table-row:last-child {
-  border-bottom: none;
-}
-
-/* Cellules spécifiques */
-.image-cell {
+.notification-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #ef4444;
+  color: white;
+  font-size: 0.75rem;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
   justify-content: center;
 }
 
-.product-thumb {
-  width: 50px;
-  height: 50px;
-  object-fit: contain;
-  border-radius: 6px;
-  background: #f9fafb;
+/* Stats Cards */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  padding: 1.5rem 2rem;
 }
 
-.name-cell {
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+}
+
+.stat-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+}
+
+.stat-icon.total {
+  background: linear-gradient(135deg, #f0f9ff, #e6f7ff);
+  color: #3b82f6;
+}
+
+.stat-icon.low {
+  background: linear-gradient(135deg, #fef3c7, #fef9c3);
+  color: #d97706;
+}
+
+.stat-icon.category {
+  background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+  color: #8b5cf6;
+}
+
+.stat-icon.value {
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  color: #10b981;
+}
+
+.stat-content h3 {
+  font-size: 0.95rem;
+  color: #6b7280;
+  margin: 0 0 0.5rem 0;
   font-weight: 500;
 }
 
-.category-badge {
+.stat-number {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+/* Main Content Card */
+.content-card {
+  background: white;
+  margin: 0 2rem 2rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e5e7eb;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-header {
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-header h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+}
+
+.action-btn.primary {
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  color: white;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.action-btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.3);
+}
+
+.view-controls {
+  display: flex;
+  gap: 0.25rem;
+  background: #f8fafc;
+  padding: 0.25rem;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.view-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  transition: all 0.3s ease;
+}
+
+.view-btn.active {
+  background: white;
+  color: #3b82f6;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Table Styles */
+.products-table {
+  flex: 1;
+  overflow-x: auto;
+}
+
+.products-table table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.products-table thead {
+  background: #f8fafc;
+}
+
+.products-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #4b5563;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.products-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #f3f4f6;
+  vertical-align: middle;
+}
+
+.products-table tr:hover {
+  background: #f9fafb;
+}
+
+.products-table tr.selected {
+  background: #f0f9ff;
+}
+
+.check-col {
+  width: 40px;
+}
+
+.image-col {
+  width: 80px;
+}
+
+.product-image {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.product-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.product-name {
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.product-brand {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.product-desc {
+  color: #9ca3af;
+  font-size: 0.8rem;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.category-tag {
+  display: inline-block;
   padding: 0.25rem 0.75rem;
-  background: #e0e7ff;
-  color: #3730a3;
   border-radius: 20px;
   font-size: 0.8rem;
   font-weight: 500;
 }
 
-.actions-cell {
+.category-tag.cat-1 {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.category-tag.cat-2 {
+  background: #fce7f3;
+  color: #9d174d;
+}
+
+.category-tag.cat-3 {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.price-cell {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.stock-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 120px;
+}
+
+.stock-bar {
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.stock-fill {
+  height: 100%;
+  background: #10b981;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.stock-info span {
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+.stock-info .low-stock {
+  color: #ef4444;
+  font-weight: 500;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.status-badge.active {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.inactive {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.action-buttons {
   display: flex;
   gap: 0.5rem;
 }
 
-.btn-edit {
-  padding: 0.5rem 1rem;
-  background: #fbbf24;
-  color: white;
-  border: none;
+.action-buttons button {
+  width: 36px;
+  height: 36px;
   border-radius: 6px;
-  font-size: 0.8rem;
+  border: none;
   cursor: pointer;
-  transition: background 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
 }
 
-.btn-edit:hover {
-  background: #f59e0b;
+.action-buttons .edit-btn {
+  background: #fef3c7;
+  color: #d97706;
 }
 
-.btn-delete {
+.action-buttons .edit-btn:hover {
+  background: #fde68a;
+}
+
+.action-buttons .duplicate-btn {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.action-buttons .duplicate-btn:hover {
+  background: #bfdbfe;
+}
+
+.action-buttons .delete-btn {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.action-buttons .delete-btn:hover {
+  background: #fecaca;
+}
+
+/* Grid View */
+.products-grid {
+  padding: 1.5rem;
+}
+
+.grid-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.grid-info {
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.sort-select {
   padding: 0.5rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  color: #4b5563;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.product-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.product-card-header {
+  position: relative;
+  height: 180px;
+  background: #f8fafc;
+}
+
+.card-checkbox {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  z-index: 2;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card-actions {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  z-index: 2;
+}
+
+.card-action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.card-action-btn.edit:hover {
+  background: #3b82f6;
+  color: white;
+}
+
+.card-action-btn.delete:hover {
   background: #ef4444;
   color: white;
-  border: none;
-  border-radius: 6px;
+}
+
+.product-card-body {
+  padding: 1.5rem;
+}
+
+.product-category {
+  margin-bottom: 0.75rem;
+}
+
+.category-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
   font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.category-badge.cat-1 {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.category-badge.cat-2 {
+  background: #fce7f3;
+  color: #9d174d;
+}
+
+.category-badge.cat-3 {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.product-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 0.25rem 0;
+}
+
+.product-brand {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin: 0 0 0.75rem 0;
+}
+
+.product-description {
+  color: #9ca3af;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  margin: 0 0 1rem 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.product-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.meta-label {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.meta-value {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.meta-value.low {
+  color: #ef4444;
+}
+
+.product-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-dot.active {
+  background: #10b981;
+  animation: pulse 2s infinite;
+}
+
+.status-dot.inactive {
+  background: #ef4444;
+}
+
+.status-text {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.product-card-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #f3f4f6;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.card-btn {
+  flex: 1;
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  color: #4b5563;
+  font-size: 0.85rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.3s ease;
+  transition: all 0.3s ease;
 }
 
-.btn-delete:hover {
-  background: #dc2626;
+.card-btn.edit:hover {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
 }
 
-/* Modal */
+.card-btn.duplicate:hover {
+  background: #8b5cf6;
+  color: white;
+  border-color: #8b5cf6;
+}
+
+/* Bulk Actions */
+.bulk-actions {
+  padding: 1rem 2rem;
+  background: #f0f9ff;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.bulk-info {
+  color: #3b82f6;
+  font-weight: 500;
+}
+
+.bulk-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.bulk-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.bulk-btn.export {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.bulk-btn.export:hover {
+  background: #bfdbfe;
+}
+
+.bulk-btn.stock {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.bulk-btn.stock:hover {
+  background: #bbf7d0;
+}
+
+.bulk-btn.delete {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.bulk-btn.delete:hover {
+  background: #fecaca;
+}
+
+/* Pagination */
+.pagination {
+  padding: 1.5rem 2rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+}
+
+.page-btn {
+  padding: 0.5rem 1rem;
+  border: 1px solid #e5e7eb;
+  background: white;
+  color: #4b5563;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.page-btn:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #d1d5db;
+}
+
+.page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-numbers {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.page-number {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  color: #4b5563;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.page-number:hover {
+  background: #f8fafc;
+}
+
+.page-number.active {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+/* Modal Styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -610,8 +1990,8 @@ export default {
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
   z-index: 1000;
 }
 
@@ -622,118 +2002,128 @@ export default {
   max-width: 600px;
   max-height: 90vh;
   overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
 .modal-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem 2rem;
-  border-bottom: 1px solid #e5e7eb;
 }
 
 .modal-header h2 {
   margin: 0;
+  font-size: 1.25rem;
   color: #1f2937;
 }
 
 .close-btn {
   background: none;
   border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
+  font-size: 2rem;
   color: #6b7280;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
 }
 
 .close-btn:hover {
-  color: #374151;
+  background: #f3f4f6;
 }
 
-/* Formulaire */
-.product-form {
-  padding: 2rem;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+.modal-body {
+  padding: 1.5rem;
 }
 
 .form-group {
-  display: flex;
-  flex-direction: column;
+  margin-bottom: 1.5rem;
 }
 
 .form-group label {
-  font-weight: 600;
+  display: block;
   margin-bottom: 0.5rem;
+  font-weight: 500;
   color: #374151;
 }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
+.form-input,
+.form-select,
+.form-textarea {
+  width: 100%;
   padding: 0.75rem;
   border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 1rem;
-  transition: border-color 0.3s ease;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
 }
 
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.form-group.full-width {
-  grid-column: 1 / -1;
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
 }
 
-.form-actions {
+.image-preview {
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.preview-img {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.modal-footer {
+  padding: 1.5rem;
+  border-top: 1px solid #e5e7eb;
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #e5e7eb;
 }
 
-.btn-cancel {
+.btn {
   padding: 0.75rem 1.5rem;
-  background: #6b7280;
-  color: white;
-  border: none;
-  border-radius: 6px;
+  border-radius: 8px;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.3s ease;
-}
-
-.btn-cancel:hover {
-  background: #4b5563;
-}
-
-.btn-save {
-  padding: 0.75rem 1.5rem;
-  background: #10b981;
-  color: white;
   border: none;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.3s ease;
+  transition: all 0.3s ease;
 }
 
-.btn-save:hover:not(:disabled) {
-  background: #059669;
+.btn-secondary {
+  background: #f3f4f6;
+  color: #374151;
 }
 
-.btn-save:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.btn-secondary:hover {
+  background: #e5e7eb;
+}
+
+.btn-primary {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #2563eb;
 }
 
 /* Notifications */
@@ -768,117 +2158,147 @@ export default {
   }
 }
 
-/* Navigation (identique aux autres pages) */
-.navigation {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 2rem;
-  background: white;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-.nav-logo {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #3b82f6;
-  text-decoration: none;
-}
-
-.nav-links {
-  display: flex;
-  gap: 2rem;
-}
-
-.nav-link {
-  text-decoration: none;
-  color: #374151;
-  font-weight: 500;
-  transition: color 0.3s ease;
-}
-
-.nav-link:hover,
-.nav-link.router-link-active {
-  color: #3b82f6;
-}
-
-.nav-login {
-  display: flex;
-  align-items: center;
-}
-
-.user-menu {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.welcome-message {
-  color: #3b82f6;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.logout-button {
-  padding: 0.5rem 1rem;
-  background: #ef4444;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.logout-button:hover {
-  background: #dc2626;
-  transform: translateY(-1px);
-}
-
 /* Responsive */
+@media (max-width: 1024px) {
+  .admin-sidebar {
+    transform: translateX(-100%);
+  }
+  
+  .admin-sidebar.show {
+    transform: translateX(0);
+  }
+  
+  .admin-main {
+    margin-left: 0;
+  }
+  
+  .menu-toggle {
+    display: block;
+  }
+  
+  .grid-container {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
+}
+
 @media (max-width: 768px) {
-  .admin-content {
+  .admin-header {
+    flex-direction: column;
+    gap: 1rem;
     padding: 1rem;
   }
   
-  .admin-actions {
-    flex-direction: column;
-    align-items: stretch;
+  .header-right {
+    width: 100%;
+    justify-content: space-between;
   }
   
-  .table-row {
-    grid-template-columns: 1fr;
-    gap: 0.5rem;
+  .header-search {
+    flex: 1;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
     padding: 1rem;
-  }
-  
-  .table-cell {
-    justify-content: flex-start;
-  }
-  
-  .actions-cell {
-    justify-content: center;
-  }
-  
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .navigation {
-    flex-direction: column;
     gap: 1rem;
   }
   
-  .nav-links {
-    gap: 1rem;
-    flex-wrap: wrap;
-    justify-content: center;
+  .content-card {
+    margin: 0 1rem 1rem;
   }
   
-  .user-menu {
+  .card-header {
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 1rem;
     text-align: center;
   }
+  
+  .products-table {
+    font-size: 0.9rem;
+  }
+  
+  .products-table th,
+  .products-table td {
+    padding: 0.75rem;
+  }
+  
+  .grid-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .bulk-actions {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+  
+  .pagination {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  @media (max-width: 768px) {
+  .admin-header {
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+  }
+  
+  .header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .header-search {
+    flex: 1;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 1rem;
+    gap: 1rem;
+  }
+  
+  .content-card {
+    margin: 0 1rem 1rem;
+  }
+  
+  .card-header {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+  
+  .products-table {
+    font-size: 0.9rem;
+  }
+  
+  .products-table th,
+  .products-table td {
+    padding: 0.75rem;
+  }
+  
+  .grid-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .bulk-actions {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+  
+  .pagination {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
 }
 </style>

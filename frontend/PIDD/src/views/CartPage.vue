@@ -1,25 +1,5 @@
 <template>
   <div class="cart-page">
-    <!-- Navigation 
-    <nav class="navigation">
-      <router-link to="/" class="nav-logo">MonShop</router-link>
-      <div class="nav-links">
-        <router-link to="/" class="nav-link">Accueil</router-link>
-        <router-link to="/categories" class="nav-link">Collections</router-link>
-        <router-link to="/cart" class="nav-link">Panier ({{ getTotalItems() }})</router-link>
-      </div>
-      <div class="nav-login">
-        <div v-if="user" class="user-menu">
-          <span class="welcome-message">Bienvenue, {{ user.prenom }}!</span>
-          <button @click="logout" class="logout-button">Déconnexion</button>
-        </div>
-        <router-link v-else to="/login" class="login-button">
-          Se connecter
-        </router-link>
-      </div>
-    </nav>
-    -->
-
     <div class="cart-content">
       <!-- Fil d'Ariane -->
       <nav class="breadcrumb">
@@ -44,7 +24,7 @@
           <!-- Liste des articles -->
           <div class="cart-items-section">
             <div class="section-header">
-              <!-- <h2>Articles ({{ getTotalItems() }})</h2> -->
+              <h2>Articles ({{ getTotalItems() }})</h2>
               <button @click="clearCart" class="clear-cart-btn" v-if="cartItems.length > 0">
                 Vider le panier
               </button>
@@ -63,7 +43,7 @@
                 <div class="item-details">
                   <h3 class="product-name">{{ item.name }}</h3>
                   <p class="product-brand">{{ item.brand }}</p>
-                <!--   <p class="product-price-unit">{{ formatPrice(item.price) }} l'unité</p> -->
+                  <p class="product-price-unit">{{ formatPrice(item.price) }} l'unité</p>
                 </div>
                 
                 <div class="quantity-controls">
@@ -74,27 +54,26 @@
                   >
                     −
                   </button>
-               <!--    <span class="quantity">{{ item.quantity }}</span> -->
-                <!--   <button 
+                  <span class="quantity">{{ item.quantity }}</span>
+                  <button 
                     @click="updateQuantity(item.id, item.quantity + 1)"
                     class="quantity-btn"
                   >
-                  +
-                </button>
-                -->
+                    +
+                  </button>
                 </div>
                 
-<!--                 <div class="item-total">
+                <div class="item-total">
                   {{ formatPrice(item.price * item.quantity) }}
-                </div> -->
+                </div>
                 
-<!--                 <button 
+                <button 
                   @click="removeItem(item.id)"
                   class="remove-btn"
                   title="Supprimer"
                 >
                   ×
-                </button> -->
+                </button>
               </div>
             </div>
           </div>
@@ -105,8 +84,8 @@
               <h3>Résumé de la commande</h3>
               
               <div class="summary-line">
-<!--                 <span>Sous-total ({{ getTotalItems() }} articles)</span>
-                <span>{{ formatPrice(getCartTotal()) }}</span> -->
+                <span>Sous-total ({{ getTotalItems() }} articles)</span>
+                <span>{{ formatPrice(getCartTotal()) }}</span>
               </div>
               
               <div class="summary-line">
@@ -118,7 +97,7 @@
               
               <div class="summary-total">
                 <span>Total</span>
-               <!--  <span class="total-price">{{ formatPrice(getCartTotal()) }}</span> -->
+                        <span class="total-price">{{ formatPrice(getCartTotal()) }}</span>
               </div>
               
               <button class="checkout-btn" @click="proceedToCheckout">
@@ -172,13 +151,8 @@ export default {
         'noirfemme.png': noirfemme,
         'enfantbleu.png': enfantbleu,
         'enfantrouge.png': enfantrouge
-      },
-      cartItems : []
+      }
     }
-  },
-  computed: {
-    // ✅ SUPPRIMEZ ces computed properties redondantes
-    // totalItems() et subtotal() sont déjà dans App.vue
   },
   methods: {
     updateQuantity(productId, newQuantity) {
@@ -205,8 +179,18 @@ export default {
         return;
       }
       
-      this.$router.push('/checkout');
+      // Vérifier si l'utilisateur est connecté
+      if (!this.user) {
+        this.showError('Veuillez vous connecter pour continuer');
+        this.$router.push({
+          path: '/login',
+          query: { redirect: '/checkout' } // Sauvegarder la destination
+        });
+        return;
+      }
+      
       console.log('🚀 Redirection vers paiement');
+      this.$router.push('/checkout');
     },
     
     getProductImage(imgName) {
@@ -219,18 +203,6 @@ export default {
         style: 'currency',
         currency: 'EUR'
       }).format(price);
-    },
-    
-    logout() {
-      if (this.setUser) {
-        this.setUser(null);
-      }
-      localStorage.removeItem('token');
-      this.$router.push('/');
-    },
-    
-    showSuccess(message) {
-      alert(`✅ ${message}`);
     },
     
     showError(message) {
@@ -343,6 +315,9 @@ export default {
 }
 
 .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   border-bottom: 1px solid #e5e7eb;
   padding-bottom: 1rem;
   margin-bottom: 1.5rem;
@@ -353,6 +328,19 @@ export default {
   margin: 0;
 }
 
+.clear-cart-btn {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 0.9rem;
+  text-decoration: underline;
+}
+
+.clear-cart-btn:hover {
+  color: #dc2626;
+}
+
 /* Articles individuels */
 .cart-item {
   display: grid;
@@ -361,6 +349,7 @@ export default {
   align-items: center;
   padding: 1.5rem 0;
   border-bottom: 1px solid #f3f4f6;
+  position: relative;
 }
 
 .cart-item:last-child {
@@ -417,6 +406,9 @@ export default {
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .quantity-btn:hover:not(:disabled) {
@@ -455,6 +447,9 @@ export default {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .remove-btn:hover {
@@ -536,90 +531,6 @@ export default {
   text-decoration: underline;
 }
 
-/* Navigation (identique aux autres pages) */
-.navigation {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 2rem;
-  background: white;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.nav-logo {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #3b82f6;
-  text-decoration: none;
-}
-
-.nav-links {
-  display: flex;
-  gap: 2rem;
-}
-
-.nav-link {
-  text-decoration: none;
-  color: #374151;
-  font-weight: 500;
-  transition: color 0.3s ease;
-}
-
-.nav-link:hover,
-.nav-link.router-link-active {
-  color: #3b82f6;
-}
-
-.nav-login {
-  display: flex;
-  align-items: center;
-}
-
-.user-menu {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.welcome-message {
-  color: #3b82f6;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.login-button {
-  padding: 0.5rem 1rem;
-  background: #3b82f6;
-  color: white !important;
-  border-radius: 8px;
-  text-decoration: none;
-  transition: all 0.3s ease;
-}
-
-.login-button:hover {
-  background: #2563eb;
-  transform: translateY(-1px);
-}
-
-.logout-button {
-  padding: 0.5rem 1rem;
-  background: #ef4444;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.logout-button:hover {
-  background: #dc2626;
-  transform: translateY(-1px);
-}
-
 /* Responsive */
 @media (max-width: 768px) {
   .cart-content {
@@ -646,11 +557,12 @@ export default {
   
   .quantity-controls {
     justify-self: start;
+    margin-top: 0.5rem;
   }
   
   .item-total {
-    justify-self: end;
-    margin-left: auto;
+    justify-self: start;
+    margin-top: 0.5rem;
   }
   
   .remove-btn {
@@ -659,23 +571,10 @@ export default {
     right: 0;
   }
   
-  .cart-item {
-    position: relative;
-  }
-  
-  .navigation {
+  .section-header {
     flex-direction: column;
     gap: 1rem;
-  }
-  
-  .nav-links {
-    gap: 1rem;
-  }
-  
-  .user-menu {
-    flex-direction: column;
-    gap: 0.5rem;
-    text-align: center;
+    align-items: flex-start;
   }
 }
 </style>

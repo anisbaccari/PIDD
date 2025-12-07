@@ -6,6 +6,7 @@ import profileRoutes from './routes/profileRoutes.js';
 import panierRoutes from './routes/panierRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import categorieRoutes from './routes/categorieRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 
 import homeRoute from './routes/homeRoute.js';
 
@@ -46,8 +47,15 @@ await fastify.register(profileRoutes, { prefix: '/profil' });
 await fastify.register(categorieRoutes, { prefix: '/categories' });
 await fastify.register(productRoutes, { prefix: '/product' });
 await fastify.register(panierRoutes, { prefix: '/panier' });
+await fastify.register(adminRoutes, { prefix: '/admin' });
 
 
+/*
+ console.log('\x1b[31m%s\x1b[0m', 'This is red text');
+console.log('\x1b[32m%s\x1b[0m', 'This is green text');
+console.log('\x1b[33m%s\x1b[0m', 'This is yellow text');
+console.log('\x1b[36m%s\x1b[0m', 'This is cyan text'); 
+*/
 
 
 
