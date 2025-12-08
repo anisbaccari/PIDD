@@ -39,7 +39,7 @@
    
               <!-- PAR PANIER  -->
                   <div class="cart-orderItem">
-                    <p>Commandes {{ this.cartItems[0].order[0]}} </p>
+                    <p>Commandes </p>
 
                       <!-- PAR PRODUITS COMMANDEES  -->
                     <div class="itemList"
