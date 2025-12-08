@@ -314,7 +314,7 @@ export default {
             console.log("[removeItem] this.user.id : ",this.user.id)
 
               if (productId) {
-            await api.delete("http://localhost:3000/product/remove", {
+            await api.delete("http://localhost:3000/product/removeFromCart", {
                     data: {
                       userId: this.user.id,
                       productId: productId

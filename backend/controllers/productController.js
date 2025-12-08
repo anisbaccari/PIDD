@@ -275,14 +275,14 @@ export async function deleteFromCart(request, reply) {
 }
 
 
-
+/// DELETE A PRODUCT (ADMIN)
 
   export async function deleteProduct(request,reply){
     
       console.log("========== [deleteProduct] ==========");
       console.log("params:", request.body);
-      const { id } = request.body;
-
+      const { productId } = request.body;
+      const id = productId
       try {
         const deleted = await Product.destroy({
           where: { id }

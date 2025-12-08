@@ -363,7 +363,11 @@ export default {
       try {
         // Simulation d'appel API - À remplacer par DELETE /api/products/:id
         console.log('🗑️ Suppression produit:', productId);
-        const res = await api.delete(`/product/delete/${productId}`);
+        const res = await api.delete(`/product/deleteProduct`,
+          {
+            productId:productId
+          }
+        );
         console.log("[DELETEPRODCT] res ",res )
         this.products = this.products.filter(p => p.id !== productId);
         this.saveToLocalStorage();
