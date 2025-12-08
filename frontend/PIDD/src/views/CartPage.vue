@@ -39,7 +39,7 @@
    
               <!-- PAR PANIER  -->
                   <div class="cart-orderItem">
-                    <p>Commandes {{ this.cartItems[0].order[0]}} </p>
+                    <p>Commandes </p>
 
                       <!-- PAR PRODUITS COMMANDEES  -->
                     <div class="itemList"
@@ -131,15 +131,15 @@
 
 <script>
 // Import des images
-import noir from '../assets/noir.png'
+import api from '../api'
 import blanc from '../assets/blanc.png'
-import rosefemme from '../assets/rosefemme.png'
 import blancfemme from '../assets/blancfemme.png'
-import noirfemme from '../assets/noirfemme.png'
 import enfantbleu from '../assets/enfantbleu.png'
 import enfantrouge from '../assets/enfantrouge.png'
 import gris from '../assets/gris.png'
-import api from '../api';
+import noir from '../assets/noir.png'
+import noirfemme from '../assets/noirfemme.png'
+import rosefemme from '../assets/rosefemme.png'
 
 export default {
   name: 'CartPage',
