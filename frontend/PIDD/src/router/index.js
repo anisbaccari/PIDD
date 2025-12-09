@@ -7,7 +7,7 @@ import ProductPage from '../views/ProductPage.vue'
 import Profilview from '../views/Profilview.vue'
 import AllCategories from '../views/AllCategories.vue'
 import CartPage from '../views/CartPage.vue'
-
+import CheckoutPage from '../views/CheckoutPage.vue'
 // Import des composants d'authentification
 import LoginForm from '../components/LoginForm.vue'
 import RegisterForm from '../components/RegisterForm.vue'
@@ -17,6 +17,12 @@ const routes = [
     path: '/', 
     name: 'Home', 
     component: Home,
+    props: true
+  },
+  { 
+    path: '/Checkout', 
+    name: 'CheckoutPage', 
+    component: CheckoutPage,
     props: true
   },
   { 

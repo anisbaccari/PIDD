@@ -1,0 +1,190 @@
+
+        <!-- Étape 2 : Paiement -->
+        <div v-else-if="currentStep === 2" class="step-container">
+          <div class="step-header">
+            <h2 class="step-title">Paiement</h2>
+            <p class="step-subtitle">Comment souhaitez-vous payer ?</p>
+          </div>
+          
+          <!-- Récapitulatif -->
+          <div class="summary-card">
+            <div class="summary-header">
+              <div class="summary-icon">📦</div>
+              <h3>Votre livraison</h3>
+            </div>
+            <div class="summary-content">
+              <div class="summary-item">
+                <span class="summary-label">Adresse</span>
+                <span class="summary-value">{{ deliveryAddress.street }}, {{ deliveryAddress.postalCode }} {{ deliveryAddress.city }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">Mode</span>
+                <span class="summary-value">{{ selectedDeliveryOption.name }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">Délai</span>
+                <span class="summary-value">{{ selectedDeliveryOption.deliveryTime }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">Transporteur</span>
+                <span class="summary-value">{{ selectedDeliveryOption.carrier }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Méthodes de paiement -->
+          <div class="section-card">
+            <div class="section-header">
+              <div class="section-icon">💳</div>
+              <h3>Moyen de paiement</h3>
+            </div>
+            <PaymentMethod 
+              :amount="orderTotal"
+              @payment-completed="handlePaymentCompleted"
+              @payment-error="handlePaymentError"
+            />
+          </div>
+        </div>
+
+        <!-- Étape 3 : Confirmation -->
+        <div v-else-if="currentStep === 3" class="step-container confirmation-container">
+          <div class="success-animation">
+            <div class="success-circle">
+              <div class="checkmark">✓</div>
+            </div>
+          </div>
+          
+          <div class="confirmation-header">
+            <h1 class="confirmation-title">Commande confirmée !</h1>
+            <p class="confirmation-subtitle">
+              Merci {{ deliveryAddress.fullName.split(' ')[0] || '' }}, votre commande a été enregistrée.
+            </p>
+          </div>
+          
+          <div class="order-card">
+            <div class="order-header">
+              <h3>Résumé de la commande</h3>
+              <span class="order-badge">#{{ orderDetails?.id || generateOrderId() }}</span>
+            </div>
+            
+            <div class="order-details">
+              <div class="detail-row">
+                <span class="detail-label">Numéro de commande</span>
+                <span class="detail-value">{{ orderDetails?.id || generateOrderId() }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Date</span>
+                <span class="detail-value">{{ new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Montant total</span>
+                <span class="detail-value price">{{ formatPrice(orderTotal) }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Mode de livraison</span>
+                <span class="detail-value">{{ selectedDeliveryOption.name }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Livraison estimée</span>
+                <span class="detail-value">{{ calculateEstimatedDelivery() }}</span>
+              </div>
+            </div>
+            
+            <div class="order-timeline">
+              <div class="timeline-item active">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                  <h4>Commande confirmée</h4>
+                  <p>Votre commande est enregistrée</p>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                  <h4>Préparation</h4>
+                  <p>Notre équipe prépare votre colis</p>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                  <h4>Expédition</h4>
+                  <p>Votre colis est envoyé</p>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                  <h4>Livraison</h4>
+                  <p>Votre colis est livré</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="confirmation-actions">
+            <button 
+              class="btn btn-primary btn-lg btn-confirm"
+              @click="completeOrder"
+              :disabled="isProcessing"
+            >
+              <span v-if="isProcessing" class="btn-loading">
+                <span class="spinner"></span>
+                Traitement...
+              </span>
+              <span v-else>
+                <span class="btn-icon">🎉</span>
+                Voir le détail de ma commande
+              </span>
+             </button>
+            
+            <button 
+              class="btn btn-outline"
+              @click="currentStep = 1"
+              :disabled="isProcessing"
+            >
+              <span class="btn-icon">↶</span>
+              Modifier la commande
+            </button>
+          </div>
+          
+          <div class="confirmation-footer">
+            <div class="info-box">
+              <div class="info-icon">📧</div>
+              <div class="info-content">
+                <h4>Email de confirmation</h4>
+                <p>Un récapitulatif détaillé vous a été envoyé par email.</p>
+              </div>
+            </div>
+            <div class="info-box">
+              <div class="info-icon">📱</div>
+              <div class="info-content">
+                <h4>Suivi en temps réel</h4>
+                <p>Suivez votre commande dans votre espace client.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Navigation -->
+        <div v-if="currentStep < 3" class="step-navigation">
+          <button 
+            v-if="currentStep > 1"
+            class="btn btn-outline"
+            @click="currentStep--"
+          >
+            <span class="btn-icon">←</span>
+            Retour
+          </button>
+          
+          <button 
+            v-if="currentStep === 1"
+            class="btn btn-primary btn-next"
+            @click="goToPaymentStep"
+            :disabled="!isDeliveryStepValid"
+          >
+            Continuer vers le paiement
+            <span class="btn-icon">→</span>
+          </button>
+        </div>
+      </div>
