@@ -54,7 +54,7 @@ await fastify.register(productRoutes, { prefix: '/product' });
 await fastify.register(panierRoutes, { prefix: '/panier' });
 await fastify.register(adminRoutes, { prefix: '/admin' });
 await fastify.register(orderRoutes, { prefix: '/api/orders' }); // Enregistrez les routes d'orders
-
+await fastify.register(homeRoute, { prefix: '/hello' })
 // ========== HEALTH CHECK ==========
 fastify.get('/health', async () => {
   return { 
