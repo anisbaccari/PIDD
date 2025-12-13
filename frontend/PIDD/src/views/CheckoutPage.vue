@@ -1,7 +1,6 @@
 <template>
 
   <div class="cart-page">
-
     <h2>Votre Panier</h2>
 
     <!-- ====================== -->
