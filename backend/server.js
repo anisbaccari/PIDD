@@ -1,75 +1,69 @@
-import Fastify from 'fastify';
-import dotenv from 'dotenv';
+// server.js
 import cors from '@fastify/cors';
+import dotenv from 'dotenv';
+import Fastify from 'fastify';
+
+// Routes
+import adminRoutes from './routes/adminRoutes.js';
 import authRoutes from './routes/authRoutes.js';
-import profileRoutes from './routes/profileRoutes.js';
+import categorieRoutes from './routes/categorieRoutes.js';
+import homeRoute from './routes/homeRoute.js';
 import panierRoutes from './routes/panierRoutes.js';
 import productRoutes from './routes/productRoutes.js';
-import categorieRoutes from './routes/categorieRoutes.js';
+import profileRoutes from './routes/profileRoutes.js';
 
-import homeRoute from './routes/homeRoute.js';
-
-import {initDatabase} from './database/initDb.js';
+// Database
+import { initDatabase } from './database/initDb.js';
 import { sequelize } from './database/mysql.js';
-// import models (to register them & associations)
- //Doing this execute the file as each ifle import been executeed
-import './models/User.js';
+
+// Models (pour les associations)
 import './models/Admin.js';
-import './models/Product.js';
 import './models/Order.js';
 import './models/OrderItem.js';
-
-
-import { User } from './models/User.js';
-import { Admin } from './models/Admin.js';
-import { Product } from './models/Product.js';
-import { Order } from './models/Order.js';
-import { OrderItem } from './models/OrderItem.js';
+import './models/Product.js';
+import './models/User.js';
 
 dotenv.config();
 
 const fastify = Fastify({ logger: true });
 
-// Enable CORS
+// --------------------
+// Middleware CORS
+// --------------------
 await fastify.register(cors, {
-  origin: '*',
+  origin: '*', // À changer en production pour ton frontend
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   exposedHeaders: ['Authorization']
-
 });
 
-// Register routes
+// --------------------
+// Routes
+// --------------------
 await fastify.register(homeRoute);
 await fastify.register(authRoutes, { prefix: '/auth' });
 await fastify.register(profileRoutes, { prefix: '/profil' });
 await fastify.register(categorieRoutes, { prefix: '/categories' });
 await fastify.register(productRoutes, { prefix: '/product' });
 await fastify.register(panierRoutes, { prefix: '/panier' });
+await fastify.register(adminRoutes, { prefix: '/admin' });
 
-
-
-
-
-
-// Start server
-
-const start = async () =>{
+// --------------------
+// Démarrage serveur
+// --------------------
+const start = async () => {
   try {
-
-    await initDatabase();
- 
-
-    await sequelize.authenticate();
-    // sync all models (create or alter tables to match models)
-    await sequelize.sync({ alter: true });
+    await initDatabase();            // Initialise la base si besoin
+    await sequelize.authenticate();  // Vérifie la connexion
+    await sequelize.sync({ alter: true }); // Sync tables
     fastify.log.info('✅ DB synced');
+
     await fastify.listen({ port: process.env.PORT || 3000 });
-    console.log('Server running at http://localhost:3000');
+    console.log(`Server running at http://localhost:${process.env.PORT || 3000}`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);
   }
-}
+};
 
 start();

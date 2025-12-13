@@ -1,22 +1,6 @@
 <template>
   <div class="admin-page">
-    <!-- Navigation Admin
-    <nav class="navigation">
-      <router-link to="/" class="nav-logo">MonShop Admin</router-link>
-      <div class="nav-links">
-        <router-link to="/admin" class="nav-link">Dashboard</router-link>
-        <router-link to="/admin/products" class="nav-link">Produits</router-link>
-        <router-link to="/" class="nav-link">Retour au site</router-link>
-      </div>
-      <div class="nav-login">
-        <div v-if="user" class="user-menu">
-          <span class="welcome-message">Admin: {{ user.prenom }}</span>
-          <button @click="logout" class="logout-button">Déconnexion</button>
-        </div>
-      </div>
-    </nav>
-    -->
-
+  
     <div class="admin-content">
       <h1 class="title">Gestion des Produits</h1>
 
@@ -66,7 +50,7 @@
               {{ formatPrice(product.price) }}
             </div>
             <div class="table-cell">
-              <span class="category-badge">{{ getCategoryName(product.categoryId) }}</span>
+              <span class="category-badge">{{ getCategoryName(product.category) }}</span>
             </div>
             <div class="table-cell actions-cell">
               <button @click="editProduct(product)" class="btn-edit">
@@ -107,7 +91,7 @@
               />
             </div>
 
-            <div class="form-group">
+<!--             <div class="form-group">
               <label for="brand">Marque *</label>
               <input 
                 id="brand"
@@ -117,7 +101,7 @@
                 placeholder="Ex: Nike"
               />
             </div>
-
+ -->
             <div class="form-group">
               <label for="price">Prix (€) *</label>
               <input 
@@ -196,6 +180,8 @@ import noirfemme from '../assets/noirfemme.png'
 import enfantbleu from '../assets/enfantbleu.png'
 import enfantrouge from '../assets/enfantrouge.png'
 import gris from '../assets/gris.png'
+import api from '../api.js'
+
 
 export default {
   name: 'AdminProducts',
@@ -209,10 +195,11 @@ export default {
       editingProduct: null,
       loading: false,
       form: {
+        id:'',
         name: '',
-        brand: '',
+        /* brand: '', */
         price: 0,
-        categoryId: '',
+        category: '',
         img: '',
         description: ''
       },
@@ -239,8 +226,7 @@ export default {
       
       const query = this.searchQuery.toLowerCase();
       return this.products.filter(product => 
-        product.name.toLowerCase().includes(query) ||
-        product.brand.toLowerCase().includes(query)
+        product.name.toLowerCase().includes(query)
       );
     }
   },
@@ -250,13 +236,38 @@ export default {
   methods: {
     async loadProducts() {
       try {
-        // Pour l'instant, on utilise les données locales
-        // À remplacer par un appel API
-        this.products = this.getSampleProducts();
-        console.log('📦 Produits chargés:', this.products.length);
+            console.log("[Admin]============");
+
+            const token = localStorage.getItem("token");
+            if (token == '') {
+            console.log("[Admin] : no token found");
+            return;
+              }
+
+            console.log("[Admin] token found :", token)
+            // console.log("[APP] user found :", this.user)
+
+            const res = await api.get(`http://localhost:3000/admin`, {
+            headers: { Authorization: `Bearer ${token}` }
+            });
+
+            const product =res.data;  
+          //  console.log("[Admin] PRODUCT : ",JSON.stringify(product))
+            this.setProduct(product);
       } catch (error) {
         console.error('❌ Erreur chargement produits:', error);
         this.showNotification('Erreur lors du chargement des produits', 'error');
+      }
+    },
+    setProduct(product){
+      try {
+        
+            if(!product)
+              return
+            this.products = product
+    
+      } catch (error) {
+        
       }
     },
 
@@ -273,14 +284,24 @@ export default {
       ];
     },
 
-    editProduct(product) {
-      this.editingProduct = product;
-      this.form = { ...product };
-      this.showModal = true;
+    async editProduct(product) {
+      try {
+            console.log('[Adminproduct] editProduct : ',JSON.stringify(product) );
+            const productToSend = JSON.stringify(product)
+            this.showModal = true;
+            this.editingProduct = true;
+            this.form = { ...product };
+
+           //await this.saveProduct()
+
+        } catch (err) {
+          console.error("Update error:", err.response?.data || err.message);
+        }
     },
 
     async saveProduct() {
       // Validation
+      
       if (!this.validateForm()) return;
 
       this.loading = true;
@@ -288,13 +309,18 @@ export default {
       try {
         if (this.editingProduct) {
           // Mise à jour du produit
+         // await this.editProduct(this.editingProduct)
           await this.updateProduct(this.form);
           this.showNotification('Produit mis à jour avec succès', 'success');
+            this.editingProduct = false;
+
         } else {
           // Création d'un nouveau produit
           await this.createProduct(this.form);
           this.showNotification('Produit créé avec succès', 'success');
         }
+         const res = await api.put(`/product/update/${ this.form.id}`, this.form);;
+          console.log("Updated: product ", res.data);
 
         await this.loadProducts();
         this.closeModal();
@@ -315,8 +341,7 @@ export default {
         this.products[index] = productData;
       }
       
-      // Sauvegarder dans localStorage pour la démo
-      this.saveToLocalStorage();
+
     },
 
     async createProduct(productData) {
@@ -338,7 +363,12 @@ export default {
       try {
         // Simulation d'appel API - À remplacer par DELETE /api/products/:id
         console.log('🗑️ Suppression produit:', productId);
-        
+        const res = await api.delete(`/product/deleteProduct`,
+          {
+            productId:productId
+          }
+        );
+        console.log("[DELETEPRODCT] res ",res )
         this.products = this.products.filter(p => p.id !== productId);
         this.saveToLocalStorage();
         
@@ -354,15 +384,15 @@ export default {
         this.showNotification('Le nom du produit est obligatoire', 'error');
         return false;
       }
-      if (!this.form.brand.trim()) {
+    /*   if (!this.form.brand.trim()) {
         this.showNotification('La marque est obligatoire', 'error');
         return false;
-      }
+      } */
       if (this.form.price <= 0) {
         this.showNotification('Le prix doit être positif', 'error');
         return false;
       }
-      if (!this.form.categoryId) {
+      if (!this.form.category) {
         this.showNotification('La catégorie est obligatoire', 'error');
         return false;
       }
@@ -387,7 +417,7 @@ export default {
       this.editingProduct = null;
       this.form = {
         name: '',
-        brand: '',
+       /*  brand: '', */
         price: 0,
         categoryId: '',
         img: '',

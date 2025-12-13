@@ -52,7 +52,7 @@ export default {
   props: ['user', 'setUser', 'getUser'],
   data() {
     return {
-      DataUser: this?.getUser() || { username: '', password: '' },
+      DataUser: this?.getUser() || { id: "", username: '', password: '' },
       message: ''
     }
   },

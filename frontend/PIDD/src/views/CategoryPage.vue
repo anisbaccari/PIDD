@@ -1,27 +1,6 @@
 <template>
   <div class="category-page">
-    <!-- Navigation
-    <nav class="navigation">
-      <router-link to="/" class="nav-logo">MonShop</router-link>
-      <div class="nav-links">
-        <router-link to="/" class="nav-link">Accueil</router-link>
-        <router-link to="/categories" class="nav-link">Collections</router-link>
-        <router-link to="/category/1" class="nav-link">Homme</router-link>
-        <router-link to="/category/2" class="nav-link">Femme</router-link>
-        <router-link to="/category/3" class="nav-link">Enfants</router-link>
-        <router-link to="/cart" class="nav-link">Panier</router-link>
-      </div>
-      <div class="nav-login">
-        <div v-if="user" class="user-menu">
-          <span class="welcome-message">Bienvenue, {{ user.prenom }}!</span>
-          <button @click="logout" class="logout-button">Déconnexion</button>
-        </div>
-        <router-link v-else to="/login" class="login-button nav-link">
-          Se connecter
-        </router-link>
-      </div>
-    </nav>
-    -->
+
 
     <div class="category-content">
       <!-- Fil d'Ariane -->
@@ -39,7 +18,8 @@
           :key="p.id"
           class="product-card"
         >
-          <img :src="p.image" :alt="p.name" class="product-img" />
+           <img :src="getProductImage(p.img)" 
+                           :alt="p.name" />
           <div class="product-info">
             <p class="product-name">{{ p.name }}</p>
             <p class="product-brand">{{ p.brand }}</p>
@@ -48,11 +28,11 @@
           
           <div class="product-card-actions">
             <router-link :to="`/product/${p.id}`" class="view-details-btn">
-              Voir détails
+              Voir détailsss
             </router-link>
             <!-- ✅ BOUTON AJOUTER AU PANIER -->
             <button @click="addToCart(p)" class="add-to-cart-quick-btn" title="Ajouter au panier">
-              🛒
+              🛒 
             </button>
           </div>
         </div>
@@ -76,14 +56,14 @@ import noirfemme from '../assets/noirfemme.png'
 import enfantbleu from '../assets/enfantbleu.png'
 import enfantrouge from '../assets/enfantrouge.png'
 import gris from '../assets/gris.png'
-
+import api from '../api.js'
 export default {
   name: 'CategoryPage',
   // ✅ AJOUT: Props pour la méthode globale d'ajout au panier
-  props: ['user', 'setUser', 'addToCartGlobal'],
+  props: ['user', 'setUser','getUser', 'tempCart','getFirstPanier','addToCartGlobal','id'],
   data() {
     return {
-      products: [],
+    //  tempCart: [{order:{}}],
       categoryName: "",
       // ✅ AJOUT: Champ img manquant dans les produits
       allProducts: [
@@ -172,29 +152,97 @@ export default {
           categoryId: 3,
           description: "T-shirt enfant avec impression Marvel, parfait pour les fans de super-héros."
         }
-      ]
+      ],
+      dataUser: this.getUser() || { id:"", username: "", password : "",is_admin : true},
+
+      products: [],
+
+      imageMap: {
+        'noir.png': noir,
+        'blanc.png': blanc,
+        'rosefemme.png': rosefemme,
+        'gris.png': gris,
+        'blancfemme.png': blancfemme,
+        'noirfemme.png': noirfemme,
+        'enfantbleu.png': enfantbleu,
+        'enfantrouge.png': enfantrouge
+      },
+      categoryName: "",
+
     }
   },
   mounted() {
-    this.loadCategoryProducts()
+    this.initProduct();
+    this.tempCart 
+  //  this.loadCategoryProducts()
   },
   watch: {
     '$route.params.id': {
       handler() {
-        this.loadCategoryProducts()
+        this.initProduct()
       },
       immediate: true
     }
   },
   methods: {
-    loadCategoryProducts() {
+      async initProduct(){
+      console.log("[initProduct]my ids ",this.dataUser.id)
+      const productList =  await api.get(`http://localhost:3000/product/all`,
+        {params:{id:this.id}}
+      )
+      const products = JSON.stringify(productList)
+      this.setProduct(productList.data)
+      console.log(' [initProduct] All productList : ',this.products);
+    },
+    setProduct(productList){
+      this.products = productList;
+    },
+    getProductImage(imgName) {
+      if (!imgName) return '';
+      return this.imageMap[imgName] || '';
+    },
+    async addToCart(product) {
+     try {
+         console.log("my id ",this.dataUser.id)
+         if(this.dataUser.id)
+         {
+
+         
+          console.log("[addToCart] product : ",JSON.stringify(product.id));
+        // const prodData = JSON.stringify(product);
+          const res = await api.post("http://localhost:3000/product/add", {
+                userId:this.dataUser.id,
+                productId: product.id,   // no need JSON.stringify
+                quantity: 1
+              });
+          }else 
+          {
+          this.addToTmpCart(product)
+          console.log("[addToCart] product - no user : ",this.tempCart);
+
+          }
+     } catch (error) {
+      console.log('[addToCart] error : ',error);
+      
+     }
+     }
+     ,
+     addToTmpCart(product){
+      console.log('[addToTmpCart] added product : ',product);
+
+      this.tempCart.push(product)
+      console.log('[addToTmpCart]  this.tempCart[0] : ', this.tempCart[0]);
+
+     },
+     getTmpCart(){
+      return this.tempCart;
+     }
+/*    
+ loadCategoryProducts() {
       const categoryId = parseInt(this.$route.params.id);
       console.log("🔄 Filtrage pour catégorie:", categoryId);
       
-      // ✅ FILTRAGE LOCAL SIMPLE
-      this.products = this.allProducts.filter(product => 
-        product.categoryId === categoryId
-      );
+
       
       // Définir le nom de la catégorie
       this.setCategoryName(categoryId);
@@ -255,6 +303,7 @@ export default {
       // Simple alert pour l'instant
       alert(message)
     }
+     */
   }
 }
 </script>

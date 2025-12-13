@@ -9,46 +9,86 @@ export default {
   
   data() {
     return { 
-      user: {id:'', username:'', password:'',panier: ['s','d','s']} 
+      user: {id:'', username:'', password:'',is_admin : true},
+      tempCart : []
     };
   },
   methods: {
     setUser(user) {
+      try {
       this.user = user;
+      } catch (error) {
+      console.error('setUser error', error);
+        
+      }
+
     },
     getUser() {
+      try {
       return this.user;
+        
+      } catch (error) {
+        
+        console.error('getUser error', error);
+      }
     },
     setPanier(panier) {
-      this.user.panier = panier;
+
+      try {
+          this.tempCart.push(panier);
+          console.error('[setPanier]  this.tempCart',  this.tempCart);
+
+        
+      } catch (error) {
+          console.error('setPanier error', error);
+        
+      }
     },
-    getPanier() {
-      return this.user.panier;
+    getFirstPanier() {
+
+      try {
+        if(this.tempCart[0]){
+          console.log('[App] getFirstPanier this.tempCart', this.tempCart.target);
+
+          return this.tempCart[0];
+        }
+        else
+          return null;
+      } catch (error) {
+          console.error('getPanier error', error);
+        
+      }
     },
   },
   async mounted() {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      console.log("[navBar] : no token found");
-      return;
-    }
-    console.log("[init] token found :", token)
+
 
     try {
-      // Correction : toujours essayer de récupérer le profil si token existe
-      const res = await api.get('http://localhost:3000/profil/:id', {
+
+          const token = localStorage.getItem("token");
+          if (token == null) {
+            console.log("[App] : no token found");
+            return;
+          }
+
+        console.log("[init] token found :", token)
+       // console.log("[APP] user found :", this.user)
+        console.log("TOKEN =>", `"${token}"`);
+
+        const res = await api.get(`http://localhost:3000/profil`, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
       // axios puts parsed JSON on res.data
       this.user = res.data.user;
-      console.log('profile', res.data);
+      console.log('[App]  profile', res.data);
       
     } catch (err) {
       console.error('profile error', err.response?.data || err.message);
-      console.error('[USER + TOKEN]', this?.user, token);
+      console.error('profile error',  err.message);
+
       // Optionnel : déconnecter si token invalide
-      localStorage.removeItem("token");
+   //   localStorage.removeItem("token");
       this.user = null;
     }
   }
@@ -62,12 +102,13 @@ export default {
       <router-link to="/" class="nav-logo">MonShop</router-link>
       <div class="nav-links">
         <router-link to="/" class="nav-link">Accueil</router-link>
+        <router-link v-if="this.user && this.user.is_admin" to="/admin" class="nav-link">Admin</router-link>
         <router-link to="/category/1" class="nav-link">Homme</router-link>
         <router-link to="/category/2" class="nav-link">Femme</router-link>
         <router-link to="/category/3" class="nav-link">Enfants</router-link>
         <router-link to="/cart" class="nav-link">Panier</router-link>
       </div>
-      <div class="nav-login">
+       <div class="nav-login">
         <router-link v-if="!user" to="/login" class="login-button nav-link">Se connecter</router-link>
         <UserAvatar v-else :user="user" :getUser="getUser" :setUser="setUser"/>
       </div>
@@ -75,10 +116,11 @@ export default {
     
     <!-- Contenu principal - UNIQUEMENT le router-view -->
     <router-view 
+      :tempCart="tempCart"
       :user="user"
       :getUser="getUser"
       :setUser="setUser" 
-      :getPanier="getPanier" 
+      :getFirstPanier="getFirstPanier" 
       :setPanier="setPanier"
     />
     <AppFooter />

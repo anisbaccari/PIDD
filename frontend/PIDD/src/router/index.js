@@ -11,12 +11,18 @@ import CartPage from '../views/CartPage.vue'
 // Import des composants d'authentification
 import LoginForm from '../components/LoginForm.vue'
 import RegisterForm from '../components/RegisterForm.vue'
-
+import AdminProducts from '../views/AdminProducts.vue'
 const routes = [
   { 
     path: '/', 
     name: 'Home', 
     component: Home,
+    props: true
+  },
+  { 
+    path: '/admin', 
+    name: 'AdminProducts', 
+    component: AdminProducts,
     props: true
   },
   { 

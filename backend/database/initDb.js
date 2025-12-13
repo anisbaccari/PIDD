@@ -42,13 +42,14 @@ const connection = await mysql.createConnection({
 await connection.query(`DROP DATABASE IF EXISTS \`${process.env.DB_NAME}\`;`);
 await connection.query(`CREATE DATABASE IF NOT EXISTS \`${process.env.DB_NAME}\`;`);
 await connection.end();
-console.log(' DATABASE created : ',process.env.DB_NAME);
+console.log(' ** * DATABASE created : ',process.env.DB_NAME);
 
 
 const adminList = [
-  { username: 'Anis',name: 'Anis',lastName: 'b', email: 'Anis@example.com', password: 'Anis' },
-  { username: 'Hermann',name: 'Hermann',lastName: 's', email: 'Hermann@example.com', password: 'Hermann' },
-  { username: 'Franklin',name: 'Franklin',lastName: 'x', email: 'Franklin@example.com', password: 'Franklin' },
+  { username: 'Anis',name: 'Anis',lastName: 's', email: 'Anis@example.com', password: 'Anis',is_admin:true },
+  { username: 'Test',name: 'Test',lastName: 'b', email: 'Test@example.com', password: 'Test',is_admin:false },
+  { username: 'Hermann',name: 'Hermann',lastName: 's', email: 'Hermann@example.com', password: 'Hermann',is_admin:true },
+  { username: 'Franklin',name: 'Franklin',lastName: 'x', email: 'Franklin@example.com', password: 'Franklin' ,is_admin:true},
 
   // Add more admins as needed
 ];
@@ -64,39 +65,23 @@ const productList = [
         { name: "T-shirt Gris Urban",category: 1, price: 23,quantity: 50, description: 'Cotton classic tee' ,img : grisImg},
         
         // Produits Femme
-        { name: "T-shirt Rose Élégant", category: 2,price: 22, description: 'Cotton classic tee' ,img : rosefemmeImg},
-        { name: "T-shirt Blanc Femme", category: 2,price: 24, description: 'Cotton classic tee' ,img : blancfemmeImg},
-        { name: "T-shirt Noir Femme", category: 2,price: 21, description: 'Cotton classic tee' ,img : noirfemmeImg},
+        { name: "T-shirt Rose Élégant", category: 2,price: 22,quantity: 30, description: 'Cotton classic tee' ,img : rosefemmeImg},
+        { name: "T-shirt Blanc Femme", category: 2,price: 24, quantity: 30,description: 'Cotton classic tee' ,img : blancfemmeImg},
+        { name: "T-shirt Noir Femme", category: 2,price: 21, quantity: 30,description: 'Cotton classic tee' ,img : noirfemmeImg},
         
         // Produits Enfants
-        { name: "T-shirt Bleu Enfant", category: 3, price: 15, description: 'Cool kid' ,img : enfantbleuImg },
-        { name: "T-shirt Rouge Enfant", category: 3, price: 16, description: 'Cool kid' ,img : enfantrougeImg}
+        { name: "T-shirt Bleu Enfant", category: 3, price: 15,quantity: 30, description: 'Cool kid' ,img : enfantbleuImg },
+        { name: "T-shirt Rouge Enfant", category: 3, price: 16,quantity: 30, description: 'Cool kid' ,img : enfantrougeImg}
       
 ];
 
 
-// OrderItems => un produit commande => plusieur produits coammande = une Comamnde 
 
-const orderItemList = [
-  {
-    orderId : 1,quantity : 1,unitPrice : 32,
-    orderId : 2,quantity : 1,unitPrice : 32,
-    orderId : 3,quantity : 1,unitPrice : 32
-  }
-]
-
-
-// Order => Commande => Panier = toutes les commandes 
-const orderList = [
-  {
-    userId : 1, totalPrice : 32 , status : "paid",
-    userId : 2, totalPrice : 32 , status : "paid",
-    userId : 2, totalPrice : 32 , status : ""
-  }
-]
 
 export const initDatabase = async () => {
-  await ensureDatabase();
+ 
+  try {
+     await ensureDatabase();
   await sequelize.authenticate();
   await sequelize.sync({ alter: true });
 
@@ -108,19 +93,41 @@ export const initDatabase = async () => {
 
   
   // Bulk create admins
-  await User.bulkCreate(adminList, { ignoreDuplicates: true });
-
+  const users = await User.bulkCreate(adminList/* , { ignoreDuplicates: true } */);
+ 
   // Bulk create products
-  await Product.bulkCreate(productList, { ignoreDuplicates: true });
-
-  // Bulk create Order/Commande
-  await Order.bulkCreate(orderList, { ignoreDuplicates: true });
+  const prodRepsonse =  await Product.bulkCreate(productList, { ignoreDuplicates: true });
   
+  // Order => Commande => Panier = toutes les commandes
+  const orderList = [
+    { userId:users[0].id, totalPrice: 32, status: 'paid' },
+    { userId: users[0].id, totalPrice: 32, status: 'pending' },
+    { userId: users[1].id, totalPrice: 32, status: 'pending' }
+  ];
+  // Bulk create Order/Commande
+//  const orderResponse = await Order.bulkCreate(orderList, { ignoreDuplicates: true });
+
+  // OrderItems => un produit commandee => plusieurs produits commandés = une Commande
+  const orderItemList = [
+    { orderId: orderResponse[0].id, quantity: 1, unitPrice: 32 ,productId : prodRepsonse[0].id},
+    { orderId:  orderResponse[0].id, quantity: 1, unitPrice: 32 ,productId : prodRepsonse[1].id},
+        { orderId:  orderResponse[0].id, quantity: 1, unitPrice: 32 ,productId : prodRepsonse[5].id},
+    { orderId: orderResponse[1].id, quantity: 1, unitPrice: 32 ,productId : prodRepsonse[2].id}
+  ];
+
   // Bulk create OrderItem/Produit commandee
-  await OrderItem.bulkCreate(orderItemList, { ignoreDuplicates: true });
+  //const orderItemResponse = await OrderItem.bulkCreate(orderItemList, { ignoreDuplicates: true });
+
+  console.log('[INITDB] orderResponse (orders plain):', orderResponse.map(o => o.get({ plain: true })));
+  console.log('[INITDB] orderItemResponse (order items plain):', orderItemResponse.map(o => o.get({ plain: true })));
+
 
   console.log('======================DATABASE======================');
 
   console.log('Seed done',adminList);
+  } catch (error) {
+  console.log('[INITDB] ERROR ',error);
+    
+  }
 
 };

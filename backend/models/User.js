@@ -4,9 +4,11 @@ import { sequelize } from '../database/mysql.js';
 
 export const User = sequelize.define('User', {
   id: { type: DataTypes.INTEGER.UNSIGNED, primaryKey: true, autoIncrement: true },
-  nom: { type: DataTypes.STRING(100), allowNull: true },
-  prenom: { type: DataTypes.STRING(100), allowNull: true },
   username: { type: DataTypes.STRING(100), allowNull: false, unique: true },
+  name: { type: DataTypes.STRING(100), allowNull: false, unique: true },
+  lastName: { type: DataTypes.STRING(100), allowNull: false },
+  email: { type: DataTypes.STRING(200), allowNull: false },
   passwordHash: { type: DataTypes.STRING(200), allowNull: false },
+  is_admin: { type: DataTypes.BOOLEAN, allowNull: false }
 }, { tableName: 'users' });
 

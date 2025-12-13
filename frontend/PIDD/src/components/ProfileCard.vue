@@ -26,7 +26,7 @@ export default {
       async  getProfil(){
         try {
                 this.token = localStorage.getItem('token'); 
-                if(this.token == "")
+                if(!this.token )
                 {
                     console.log("[Profil] : no token found ");
                     return;
@@ -36,9 +36,13 @@ export default {
                 console.log("[Profil] : token found : ",this.token);
                 console.log("[Profil] : Data id : ",this.DataUser.id);
 
-                const res =   await api.get(`/profil/:${this.DataUser.id}`);
-                console.log("[Profil] response  : ", res);
-               // this.DataUser.username = res.data.user.username;
+                const res =   await api.get(`/profil`,
+                    {
+                        headers: {Authorization:  `Bearer ${this.token}` }
+                    }
+                );
+                this.DataUser = res.data.user;
+                console.log("[Profil] response  : ", this.DataUser);
 
             } catch (error) {
                 console.error("[Profil] Error : ",error);
