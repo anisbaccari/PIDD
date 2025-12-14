@@ -26,6 +26,12 @@ const routes = [
     props: true
   },
   { 
+    path: '/succes', 
+    name: 'succesPage', 
+    component: CheckoutPage,
+    props: true
+  },
+  { 
     path: '/admin', 
     name: 'AdminProducts', 
     component: AdminProducts,

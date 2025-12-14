@@ -7,7 +7,7 @@ import panierRoutes from './routes/panierRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import categorieRoutes from './routes/categorieRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
-
+import stripeRoutes from './routes/stripeRoutes.js';
 import homeRoute from './routes/homeRoute.js';
 
 import {initDatabase} from './database/initDb.js';
@@ -48,6 +48,8 @@ await fastify.register(categorieRoutes, { prefix: '/categories' });
 await fastify.register(productRoutes, { prefix: '/product' });
 await fastify.register(panierRoutes, { prefix: '/panier' });
 await fastify.register(adminRoutes, { prefix: '/admin' });
+await fastify.register(stripeRoutes, { prefix: '/stripe' });
+
 
 
 /*

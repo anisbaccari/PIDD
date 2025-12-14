@@ -90,7 +90,7 @@
       <div id="card-errors" class="error-text"></div>
       <button 
         class="checkout-btn" 
-        @click="proceedToCheckout"
+        @click="payWithStripe"
       >
         Procéder au paiement
       </button>
@@ -157,6 +157,9 @@ export default {
     }
   },
  async mounted(){
+  this.stripe = await loadStripe(
+      import.meta.env.VITE_STRIPE_PUBLIC_KEY 
+     );
     if(this.dataUser.id)
     {
       this.cartItems = await this.getPanier()
@@ -169,11 +172,10 @@ export default {
       console.log("[mounted] : this.cartItems",this.cartItems[0]);
       console.log("[mounted] : this.cartItems length ",this.cartItems.length);
       
+      
     }
+   // console.log("[mounted] :  import.meta.env.VITE_STRIPE_PUBLIC_KEY ", import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
-    this.stripe = await loadStripe(
-    'pk_test_XXXXXXXXXXXXXXXX'
-     );
 
     this.elements = this.stripe.elements();
 
@@ -184,12 +186,15 @@ export default {
   methods: {
     async payWithStripe() {
     try {
+
+      console.log("[payWithStripe] : this.cartItems id ",this.cartItems[0].id);
+
       // 1️⃣ Call backend
       const res = await api.post(
-        'http://localhost:3000/create-payment-intent',
+        'http://localhost:3000/stripe/create-payment-intent',
         {
           amount: 30,
-          orderId : oderdId || 1
+          orderId :this.cartItems[0].id
         }
       );
 

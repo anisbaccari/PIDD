@@ -63,6 +63,23 @@ export async function getOrder(id)
   }
 }
 
+export async function getOrderById(id)
+{
+  try {
+    
+        console.log('\x1b[31m%s\x1b[0m',"======================== [getOrderById] ========================");
+        const orderId = id;
+
+        const order = await Order.findByPk(orderId); // Panier (Commandes)
+        return order
+
+
+  } catch (error) {
+    console.log(" [getOrderById] error :",error);
+   
+    
+  }
+}
 function getDataOrder(order)
 {
     try {
@@ -90,4 +107,31 @@ function getDataOrder(order)
       
     }
 
+}
+
+export async function updateOrder(orderId)
+{
+  try {
+    console.log('\x1b[31m%s\x1b[0m',"======================== [updateOrder] ========================");
+
+    const order = await Order.findByPk(orderId);
+
+    if(!order)
+    {
+      console.log('\x1b[31m%s\x1b[0m',' ORDER empty')
+      return null
+    }
+
+    order.status = 'paid'
+    order.save()
+    console.log(" [updateOrder] order ",order);
+
+    console.log(" [updateOrder] succed ");
+
+    return order;
+    
+  } catch (error) {
+    console.log(" [getOrderById] error :",error);
+    
+  }
 }
