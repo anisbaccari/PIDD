@@ -65,7 +65,7 @@
       <!-- Total des articles -->
       <div class="summary-row">
         <span>Total des articles :</span>
-        <span>{{ formatPrice(total) }}</span>
+        <span>{{ this.total }}</span>
       </div>
 
       <!-- Frais de livraison -->
@@ -73,7 +73,7 @@
         <span>Frais de livraison :</span>
         <span>
           <span v-if="deliveryPrice === 0">Gratuit 🎁</span>
-          <span v-else>{{ formatPrice(deliveryPrice) }}</span>
+          <span v-else>{{this.deliveryPrice }}</span>
         </span>
       </div>
 
@@ -83,10 +83,11 @@
       <div class="summary-total">
         <span>Total à payer :</span>
         <span class="total-price">
-          {{ formatPrice(total + deliveryPrice) }}
+          {{ this.total + this.deliveryPrice}}
         </span>
       </div>
-
+      <div id="card-element" class="card-box"></div>
+      <div id="card-errors" class="error-text"></div>
       <button 
         class="checkout-btn" 
         @click="proceedToCheckout"
@@ -114,6 +115,8 @@ import enfantbleu from '../assets/enfantbleu.png'
 import enfantrouge from '../assets/enfantrouge.png'
 import gris from '../assets/gris.png'
 import api from '../api';
+import { loadStripe } from '@stripe/stripe-js';
+
 export default { 
 
   name: 'CartPage',
@@ -147,7 +150,10 @@ export default {
         'enfantrouge.png': enfantrouge
       },
       cartItems : {},
-      total : 0
+      total : 0,
+      stripe: null,
+      elements: null,
+      cardElement: null
     }
   },
  async mounted(){
@@ -162,11 +168,61 @@ export default {
       console.log("[mounted] : this.cartItems",this.cartItems);
       console.log("[mounted] : this.cartItems",this.cartItems[0]);
       console.log("[mounted] : this.cartItems length ",this.cartItems.length);
-
       
     }
+
+    this.stripe = await loadStripe(
+    'pk_test_XXXXXXXXXXXXXXXX'
+     );
+
+    this.elements = this.stripe.elements();
+
+    this.cardElement = this.elements.create('card');
+    this.cardElement.mount('#card-element');
+    console.log("Card number: 4242 4242 4242 4242 Expiry date: Any future date (12 / 34) CVC: Any 3 digits (123) ZIP: Any (12345)")
   },
   methods: {
+    async payWithStripe() {
+    try {
+      // 1️⃣ Call backend
+      const res = await api.post(
+        'http://localhost:3000/create-payment-intent',
+        {
+          amount: 30,
+          orderId : oderdId || 1
+        }
+      );
+
+      const clientSecret = res.data.clientSecret;
+
+      // 2️⃣ Confirm card payment
+      const result = await this.stripe.confirmCardPayment(
+        clientSecret,
+        {
+          payment_method: {
+            card: this.cardElement,
+            billing_details: {
+              name: this.user.username
+            }
+          }
+        }
+      );
+
+      // 3️⃣ Handle result
+      if (result.error) {
+        document.getElementById('card-errors').textContent =
+          result.error.message;
+      } else {
+        if (result.paymentIntent.status === 'succeeded') {
+          alert('✅ Paiement réussi');
+          this.$router.push('/success');
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      alert('❌ Erreur paiement');
+    }
+  },
     formatPanier(order)
     {
 
@@ -216,7 +272,7 @@ export default {
                 console.log("[Panier] order : ",JSON.stringify(order))
                 this.setCart(order);
 
-                this.getTotal()     
+                this.setTotal()     
                 this.getUser()
                 console.log("[getPanier] user found :", this.user)
 
@@ -363,6 +419,20 @@ export default {
   background: #fafafa;
   border: 1px solid #e6e6e6;
 }
+
+.card-box {
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  background: white;
+}
+
+.error-text {
+  color: red;
+  margin-bottom: 10px;
+}
+
 
 /* ==============================
    CART ITEM
