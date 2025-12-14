@@ -238,11 +238,11 @@ export default {
       
       console.log(" cartiem :",this.getPanier())
     }else { 
-      this.cartItems =this.formatPanier( this.tempCart)
-      console.log("[mounted] :  this.tempCart", this.tempCart);
+      this.cartItems = this.formatPanier( this.tempCart)
+      console.log("[mounted] :  this.tempCart", this.tempCart[0]);
 
       console.log("[mounted] : this.cartItems",this.cartItems);
-      console.log("[mounted] : this.cartItems",this.cartItems[0]);
+      console.log("[mounted] : this.cartItems",JSON.stringify(this.cartItems));
       console.log("[mounted] : this.cartItems length ",this.cartItems.length);
 
       
@@ -255,6 +255,7 @@ export default {
   methods: {
     formatPanier(order)
     {
+      console.log("[formatPanier] : order",order);
 
       // to make orderiten id 
       let producIndex = 0 

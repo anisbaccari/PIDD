@@ -9,7 +9,7 @@ export default {
   
   data() {
     return { 
-      user: {id:'', username:'', password:'',is_admin : true},
+      user: {id:'', username:'', password:'',is_admin : true,email:''},
       tempCart : []
     };
   },

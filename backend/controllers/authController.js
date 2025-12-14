@@ -5,22 +5,22 @@ import { generateToken } from '../security/jwt.js';
 
 export  async function login (request, reply) {
   try {
-      const { username, password } = request.body;
+      const { email, password } = request.body;
 
       console.log('================================================');
       console.log('[PROFIL] receive request : ', request.body);
       console.log('================================================');
 
 
-      if (!username || !password) {
-        return reply.status(400).send({ error: 'Username and password required' });
+      if (!email || !password) {
+        return reply.status(400).send({ error: 'email and password required' });
       }
-      console.log('\x1b[32m%s\x1b[0m','[PROFIL]user ',username,password);
+      console.log('\x1b[32m%s\x1b[0m','[PROFIL]user ',email,password);
 
       const rows = await sequelize.query(
-          'SELECT * FROM users WHERE username = :username',
+          'SELECT * FROM users WHERE email = :email',
           {
-            replacements: { username },
+            replacements: { email },
             type: sequelize.QueryTypes.SELECT,
           }
         );
@@ -54,7 +54,7 @@ export  async function login (request, reply) {
 
 
 export async function register(request, reply) {
-  const { nom, prenom, username, password } = request.body;
+  const { name, lastName,email, username, password } = request.body;
 
   if (!username || !password) {
     return reply.status(400).send({ error: 'Username and password required' });
@@ -72,10 +72,10 @@ export async function register(request, reply) {
 
     const hashed = await hash(password, 10);
     const result = await sequelize.query(
-      `INSERT INTO users (nom, prenom, username, passwordHash) 
-       VALUES (:nom, :prenom, :username, :hashed)`,
+      `INSERT INTO users (name, lastName,email,  username, passwordHash) 
+       VALUES (:name, :lastName, :email,  :username, :hashed)`,
       {
-        replacements: { nom, prenom, username, hashed },
+        replacements: { name, lastName,email, username, hashed },
         type: sequelize.QueryTypes.INSERT
       }
     );
@@ -84,7 +84,7 @@ export async function register(request, reply) {
     reply.send({
       success: true,
       message: 'User created successfully',
-      user: { nom, prenom, username },
+      user: { name, lastName, username },
       userId: result[0]
     });
   } catch (err) {

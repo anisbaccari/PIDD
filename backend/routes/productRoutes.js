@@ -3,6 +3,7 @@ import {getAllProducts,getProductByCategory,addProductToOrder,deleteProduct ,del
 
 export default async function productRoutes(fastify, opts) {
   fastify.get('/all', getProductByCategory);
+  fastify.get('/allProduct', getAllProducts);
   fastify.post('/add', addProductToOrder);
   fastify.delete("/removeFromCart", deleteFromCart);
   fastify.delete("/deleteProduct", deleteProduct);

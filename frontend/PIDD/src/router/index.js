@@ -12,6 +12,8 @@ import CheckoutPage from '../views/CheckoutPage.vue'
 import LoginForm from '../components/LoginForm.vue'
 import RegisterForm from '../components/RegisterForm.vue'
 import AdminProducts from '../views/AdminProducts.vue'
+import AdminOrder from '../views/AdminOrder.vue'
+
 const routes = [
   { 
     path: '/', 
@@ -35,6 +37,12 @@ const routes = [
     path: '/admin', 
     name: 'AdminProducts', 
     component: AdminProducts,
+    props: true
+  },
+  { 
+    path: '/adminOrder', 
+    name: 'AdminOrder', 
+    component: AdminOrder,
     props: true
   },
   { 

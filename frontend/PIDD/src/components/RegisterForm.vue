@@ -1,25 +1,26 @@
 <template>
   <div class="register-container">
     <!-- Si l'utilisateur est déjà connecté -->
-    <div v-if="user && user.username" class="registered">
-      <p>Bienvenue, <strong>{{ user.username }}</strong> 🎉</p>
-      <p>Votre compte est déjà créé.</p>
-    </div>
+    
 
     <!-- Si l'utilisateur n'est pas encore inscrit -->
-    <div v-else class="register-card">
+    <div class="register-card">
       <h2>Créer un compte</h2>
-      <form @submit.prevent="register" class="register-form">
+      <form  class="register-form">
         <div class="form-group">
           <label for="nom">Nom</label>
-          <input id="nom" v-model="DataUser.nom" placeholder="Entrez votre nom" required />
+          <input id="nom" v-model="DataUser.name" placeholder="Entrez votre nom" required />
         </div>
 
         <div class="form-group">
           <label for="prenom">Prénom</label>
-          <input id="prenom" v-model="DataUser.prenom" placeholder="Entrez votre prénom" required />
+          <input id="prenom" v-model="DataUser.lastName" placeholder="Entrez votre prénom" required />
         </div>
 
+        <div class="form-group">
+          <label for="Email">Email</label>
+          <input id="Email" v-model="DataUser.email" placeholder="Entrez votre eamil" required />
+        </div>
         <div class="form-group">
           <label for="username">Nom d'utilisateur</label>
           <input id="username" v-model="DataUser.username" placeholder="Choisissez un nom d'utilisateur" required />
@@ -30,7 +31,7 @@
           <input id="password" v-model="DataUser.password" type="password" placeholder="Entrez un mot de passe" required />
         </div>
 
-        <button type="submit" class="register-btn">S'inscrire</button>
+        <button type="button" @click="register" class="register-btn">S'inscrire</button>
       </form>
 
       <p class="login-text">
@@ -38,7 +39,7 @@
         <router-link to="/login" class="login-link">Se connecter</router-link>
       </p>
 
-      <p v-if="message" class="response-message">{{ message }}</p>
+    
     </div>
   </div>
 </template>
@@ -50,16 +51,18 @@ export default {
   props: ['user', 'getUser', 'setUser'],
   data() {
     return {
-      DataUser: this?.getUser() || { nom: '', prenom: '', username: '', password: '' },
+      DataUser: { name: '', lastName: '', username: '', password: '' },
       message: ''
     }
   },
   methods: {
     async register() {
       try {
+        console.log("[register] called")
         const res = await api.post('/auth/register', {
-          nom: this.DataUser.nom,
-          prenom: this.DataUser.prenom,
+          name: this.DataUser.name,
+          lastName: this.DataUser.lastName,
+          email: this.DataUser.email,
           username: this.DataUser.username,
           password: this.DataUser.password
         })
@@ -67,7 +70,8 @@ export default {
         if (res.data.token) {
           localStorage.setItem('token', res.data.token)
         }
-        this.setUser(res.data.user || this.DataUser)
+        this.$router.push('/')
+      //  this.setUser(res.data.user || this.DataUser)
       } catch (err) {
         this.message = err.response?.data?.error || '❌ Échec de l’inscription'
       }

@@ -17,7 +17,7 @@
       <h2 class="section-title">Catégories populaires</h2>
       <div class="categories-grid">
         <router-link 
-          v-for="category in categories" 
+          v-for="category in this.product.category" 
           :key="category.id"
           :to="`/category/${category.id}`" 
           class="category-card"
@@ -71,14 +71,17 @@ import grisImg from '../assets/gris.png'
 import noirImg from '../assets/noir.png'
 import noirfemmeImg from '../assets/noirfemme.png'
 import rosefemmeImg from '../assets/rosefemme.png'
+import api from '../api';
 
 export default {
 
   name: 'HomePage',
   // ✅ CORRECTION : Ajouter toutes les props nécessaires
-  props: ['user', 'setUser', 'addToCartGlobal'],
+  props: ['user', 'setUser','getUser', 'tempCart','getFirstPanier','addToCartGlobal','id'],
   data() {
     return {
+      dataUser: this.getUser() || { id:"", username: "", password : "",is_admin : true},
+      product :{},
       categories: [
         { id: 1, name: "T-shirts Homme", image: hommeImg },
         { id: 2, name: "T-shirts Femme", image: femmeImg },
@@ -157,7 +160,74 @@ export default {
       ]
     }
   },
+  async mounted(){
+    this.initProduct()
+  },
   methods: {
+    async initProduct(){
+      console.log("[initProduct]")
+      const productList =  await api.get(`http://localhost:3000/product/allProduct`)
+      const products = JSON.stringify(productList)
+      this.setProduct(productList.data)
+      console.log(' [initProduct] All productList : ',this.products);
+    },
+    setProduct(productList){
+      this.products = productList;
+    },
+    getProductImage(imgName) {
+      if (!imgName) return '';
+      return this.imageMap[imgName] || '';
+    },
+    async addToCart(product) {
+     try {
+         console.log("my id ",this.dataUser.id)
+         if(this.dataUser.id)
+         {
+
+         
+          console.log("[addToCart] product : ",JSON.stringify(product.id));
+        // const prodData = JSON.stringify(product);
+          const res = await api.post("http://localhost:3000/product/add", {
+                userId:this.dataUser.id,
+                productId: product.id,   // no need JSON.stringify
+                quantity: 1
+              });
+          }else 
+          {
+          this.addToTmpCart(product)
+          console.log("[addToCart] product - no user : ",this.tempCart);
+
+          }
+     } catch (error) {
+      console.log('[addToCart] error : ',error);
+      
+     }
+     }
+     ,
+     addToTmpCart(product){
+      console.log('[addToTmpCart] added product : ',product);
+
+      const orderItem =  {
+        id : this.tempCart.length,
+        quantity : product.quantity,
+        unitPrice:product.unitPrice,
+        product : product
+      }
+      
+      const order = { 
+        id : 1,
+        totalPrice :  product.quantity * product.unitPrice,
+        status : 'pending',
+        user : { id : 0},
+        orderItem : orderItem
+      }
+      this.tempCart.push(order)
+      console.log('[addToTmpCart]  this.tempCart[0] : ', this.tempCart);
+
+     },
+     getTmpCart(){
+      return this.tempCart;
+     },
     logout() {
       // Appeler la méthode de déconnexion du parent
       if (this.setUser) {
@@ -174,7 +244,7 @@ export default {
     },
     
     // ✅ AJOUT: Méthode pour ajouter au panier
-    addToCart(product) {
+    addToCartx(product) {
       const productToAdd = {
         ...product,
         quantity: 1

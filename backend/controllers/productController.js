@@ -17,8 +17,9 @@ export async function getAllProducts(request, reply) {
           return reply.status(404).send({ error: 'Product not found' });
         }
         //  console.log("[getAllProducts] product : ",products)
-
-          return products
+        const productList = products.map(o => o.get({ plain: true }));
+        return productList
+         
   } catch (err) {
     console.log(" [getAllProducts] err :",err);
 

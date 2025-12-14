@@ -11,10 +11,10 @@
       <h2>Connexion</h2>
       <form @submit.prevent="login" class="login-form">
         <div class="form-group">
-          <label for="username">Nom d'utilisateur</label>
+          <label for="email">email</label>
           <input
-            id="username"
-            v-model="DataUser.username"
+            id="email"
+            v-model="DataUser.email"
             placeholder="Entrez votre nom d'utilisateur"
             required
           />
@@ -52,7 +52,7 @@ export default {
   props: ['user', 'setUser', 'getUser'],
   data() {
     return {
-      DataUser: this?.getUser() || { id: "", username: '', password: '' },
+      DataUser: this?.getUser() || { id: "", username: '', password: '',email:'' },
       message: ''
     }
   },
@@ -60,7 +60,7 @@ export default {
     async login() {
       try {
         const res = await api.post('/auth/login', {
-          username: this.DataUser.username,
+          email: this.DataUser.email,
           password: this.DataUser.password
         })
         localStorage.setItem('token', res.data.token)

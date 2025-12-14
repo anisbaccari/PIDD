@@ -236,3 +236,66 @@ export async function updateOrder(orderId)
     
   }
 }
+
+/*  ADMIN  */
+
+export async function getAllOrder()
+{
+
+  try {
+    console.log('\x1b[31m%s\x1b[0m',"======================== [getAllOrder] ========================");
+    const order = await Order.findAll({ // Panier (Commandes)
+      include: [
+        {
+          model: User,
+          as: "user"
+        },
+        {
+          model: OrderItem,//Produits commandees 
+          as: "items",
+          include: [
+            {
+              model: Product,
+              as: "product"
+            }
+          ]
+        }
+      ]
+})
+    if(!order)
+      {
+        console.log('\x1b[31m%s\x1b[0m',' ORDER empty')
+        return null
+      }
+    console.log('\x1b[31m%s\x1b[0m',' [getAllOrder] order',order)
+
+    const orderArray = getDataOrder(order)
+    console.log('\x1b[31m%s\x1b[0m',' [getAllOrder] orderArray',orderArray)
+
+    return orderArray
+
+  } catch (error) {
+    console.log(" [getAllOrder] error :",error);
+    
+  }
+}
+
+
+export async function DeleteOrder(orderId){
+  
+  try {
+    console.log('\x1b[31m%s\x1b[0m',"======================== [getAllOrder] ========================");
+    console.log(" [getAllOrder] orderId :",orderId);
+    
+    await Order.destroy({
+      where: { id: orderId }
+    })
+    console.log('\x1b[31m%s\x1b[0m',' [DeleteOrder] deleted')
+
+
+  } catch (error) {
+    console.log(" [getAllOrder] error :",error);
+    
+  }
+}
+
