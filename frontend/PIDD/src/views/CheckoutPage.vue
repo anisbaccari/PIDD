@@ -187,7 +187,7 @@ export default {
     async payWithStripe() {
     try {
 
-      console.log("[payWithStripe] : this.cartItems id ",this.cartItems[0].id);
+     // console.log("[payWithStripe] : this.cartItems id ",this.cartItems);
 
       // 1️⃣ Call backend
       const res = await api.post(
@@ -273,7 +273,7 @@ export default {
                   headers: { Authorization: `Bearer ${token}` }
                   });
 
-                const order =res.data;  
+                const order =res.data.pendingOrder;  
                 console.log("[Panier] order : ",JSON.stringify(order))
                 this.setCart(order);
 

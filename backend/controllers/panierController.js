@@ -10,12 +10,14 @@ export async function getPanier(request, reply) {
       let id = request.user.id; 
       const idByToken = request.user?.id;
       console.log(" [getPanier] idByToken :",idByToken);
-      const panier =  await getOrder(idByToken)
+      const pendingOrder =  await getPendingOrder(idByToken)
+      const paidOrder =  await getPaidOrder(idByToken)
      
+      console.log('\x1b[32m%s\x1b[0m'," [getPanier] paidOrder :",paidOrder);
 
-      console.log(" [getPanier] panier :",panier);
+      console.log(" [getPanier] pendingOrder :",pendingOrder);
 
-      reply.send(panier);
+      reply.send({pendingOrder:pendingOrder,paidOrder:paidOrder});
   } catch (err) {
     console.log(" [getPanier] err :",err);
     reply.status(500).send({ error: err.message });
@@ -48,7 +50,12 @@ export async function getOrder(id)
                   }
                 ]
           });
+          if(!order)
+          {
+           console.log(" [getOrder] orderList (panier) : vide");
+            return 
 
+          }
           const panier = getDataOrder(order);
           console.log(" [getOrder] orderList (panier) :", panier);
           console.log(" [getOrder] orderItem (Produits Commandees) :", panier.map( o => o.orderItem));
@@ -62,6 +69,100 @@ export async function getOrder(id)
     
   }
 }
+
+
+export async function getPaidOrder(id)
+{
+  try {
+    
+        console.log('\x1b[31m%s\x1b[0m',"======================== [getPaidOrder] ========================");
+        const idByToken = id;
+
+       const order = await Order.findAll({ // Panier (Commandes)
+                where: { userId:idByToken , status:'paid' },
+                include: [
+                  {
+                    model: User,
+                    as: "user"
+                  },
+                  {
+                    model: OrderItem,//Produits commandees 
+                    as: "items",
+                    include: [
+                      {
+                        model: Product,
+                        as: "product"
+                      }
+                    ]
+                  }
+                ]
+          });
+          if(!order)
+            {
+             console.log(" [getOrder] orderList (panier) : vide");
+              return 
+  
+            }
+          const panier = getDataOrder(order);
+          console.log(" [getPaidOrder] orderList (panier) :", panier);
+          console.log(" [getPaidOrder] orderItem (Produits Commandees) :", panier.map( o => o.orderItem));
+          console.log(" [getPaidOrder] productList  :",  panier.map( o => o.productList));
+          return  panier ;
+
+
+  } catch (error) {
+    console.log(" [getPaidOrder] error :",error);
+   
+    
+  }
+}
+
+export async function getPendingOrder(id)
+{
+  try {
+    
+        console.log('\x1b[31m%s\x1b[0m',"======================== [getPendingOrder] ========================");
+        const idByToken = id;
+
+       const order = await Order.findAll({ // Panier (Commandes)
+                where: { userId:idByToken , status:'pending' },
+                include: [
+                  {
+                    model: User,
+                    as: "user"
+                  },
+                  {
+                    model: OrderItem,//Produits commandees 
+                    as: "items",
+                    include: [
+                      {
+                        model: Product,
+                        as: "product"
+                      }
+                    ]
+                  }
+                ]
+          });
+          if(!order)
+            {
+             console.log(" [getOrder] orderList (panier) : vide");
+              return 
+  
+            }
+          const panier = getDataOrder(order);
+          console.log(" [getPendingOrder] orderList (panier) :", panier);
+          console.log(" [getPendingOrder] orderItem (Produits Commandees) :", panier.map( o => o.orderItem));
+          console.log(" [getPendingOrder] productList  :",  panier.map( o => o.productList));
+          return  panier ;
+
+
+  } catch (error) {
+    console.log(" [getPendingOrder] error :",error);
+   
+    
+  }
+}
+
 
 export async function getOrderById(id)
 {

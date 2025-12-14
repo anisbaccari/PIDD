@@ -1,4 +1,6 @@
 <template>
+
+
   <div class="ProfilBox">
     <h2>Mes informations</h2>
 
@@ -30,6 +32,7 @@
       <p v-if="message" :class="['message', messageType]">{{ message }}</p>
     </form>
   </div>
+  <div class="panierBox" > </div>
 </template>
 
 <script>
