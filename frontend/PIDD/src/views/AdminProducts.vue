@@ -6,7 +6,7 @@
 
       <!-- Barre d'actions -->
       <div class="admin-actions">
-        <button @click="showAddForm = true" class="btn-primary">
+        <button @click="openCreateModal" class="btn-primary">
           + Ajouter un produit
         </button>
         <div class="search-bar">
@@ -71,6 +71,7 @@
     </div>
 
     <!-- Modal d'édition/ajout -->
+
     <div v-if="showModal" class="modal-overlay" @click="closeModal">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
@@ -162,6 +163,112 @@
         </form>
       </div>
     </div>
+
+    <!--  MODEL CREATINO PRODUIT  -->
+
+    <div v-if="showAddForm" class="modal-overlay" @click="closeModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h2>{{ editingProduct ? 'Modifier le produit' : 'Ajouter un produit' }}</h2>
+          <button @click="closeModal" class="close-btn">×</button>
+        </div>
+
+        <form @submit.prevent="createProduct" class="product-form">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="name">Nom du produit *</label>
+              <input 
+                id="name"
+                v-model="form.name" 
+                type="text" 
+                required 
+                placeholder="Ex: T-shirt Noir Classique"
+              />
+            </div>
+
+<!--             <div class="form-group">
+              <label for="brand">Marque *</label>
+              <input 
+                id="brand"
+                v-model="form.brand" 
+                type="text" 
+                required 
+                placeholder="Ex: Nike"
+              />
+            </div>
+ -->
+            <div class="form-group">
+              <label for="price">Prix (€) *</label>
+              <input 
+                id="price"
+                v-model="form.price" 
+                type="number" 
+                step="0.01" 
+                min="0" 
+                required 
+                placeholder="Ex: 29.99"
+              />
+            </div>
+            <div class="form-group">
+              <label for="price">Quantity  *</label>
+              <input 
+                id="quantity"
+                v-model="form.quantity" 
+                type="number" 
+                step="1" 
+                min="1" 
+                required 
+                placeholder="Ex: 1"
+              />
+            </div>
+            <div class="form-group">
+              <label for="categoryId">Catégorie *</label>
+              <select id="categoryId" v-model="form.category" required>
+                <option value="">Sélectionnez une catégorie</option>
+                <option value="1">Homme</option>
+                <option value="2">Femme</option>
+                <option value="3">Enfant</option>
+              </select>
+            </div>
+
+            <div class="form-group full-width">
+              <label for="image">Image</label>
+              <select id="image" v-model="form.img">
+                <option value="">Sélectionnez une image</option>
+                <option value="noir.png">T-shirt Noir</option>
+                <option value="blanc.png">T-shirt Blanc</option>
+                <option value="gris.png">T-shirt Gris</option>
+                <option value="rosefemme.png">T-shirt Rose Femme</option>
+                <option value="blancfemme.png">T-shirt Blanc Femme</option>
+                <option value="noirfemme.png">T-shirt Noir Femme</option>
+                <option value="enfantbleu.png">T-shirt Bleu Enfant</option>
+                <option value="enfantrouge.png">T-shirt Rouge Enfant</option>
+              </select>
+            </div>
+
+            <div class="form-group full-width">
+              <label for="description">Description</label>
+              <textarea 
+                id="description"
+                v-model="form.description" 
+                rows="4" 
+                placeholder="Description du produit..."
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" @click="closeModal" class="btn-cancel">
+              Annuler
+            </button>
+            <button type="submit" class="btn-save" :disabled="loading">
+              {{ loading ? 'Enregistrement...' : 'Enregistrer' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
 
     <!-- Notifications -->
     <div v-if="notification.show" :class="['notification', notification.type]">
@@ -312,7 +419,7 @@ export default {
          // await this.editProduct(this.editingProduct)
           await this.updateProduct(this.form);
           this.showNotification('Produit mis à jour avec succès', 'success');
-            this.editingProduct = false;
+          this.editingProduct = false;
 
         } else {
           // Création d'un nouveau produit
@@ -343,11 +450,27 @@ export default {
       
 
     },
-
+    openCreateModal(){
+      this.showAddForm = true;
+      this.editingProduct = true;
+    },
     async createProduct(productData) {
+     
       // Simulation d'appel API - À remplacer par POST /api/products
       console.log('🆕 Création produit:', productData);
-      
+      console.log('🆕 produit:', this.form);
+      const payload = JSON.parse(JSON.stringify(this.form))
+      console.log('🆕 produit:', payload);
+
+      const res = await api.post('/product/addAdmin',{
+         product : payload
+        });
+      console.log("Updated: product ", res.data);
+
+        await this.loadProducts();
+        this.closeModal();
+
+/*       
       const newProduct = {
         ...productData,
         id: this.generateProductId()
@@ -355,6 +478,8 @@ export default {
       
       this.products.push(newProduct);
       this.saveToLocalStorage();
+ */
+
     },
 
     async deleteProduct(productId) {
@@ -365,7 +490,7 @@ export default {
         console.log('🗑️ Suppression produit:', productId);
         const res = await api.delete(`/product/deleteProduct`,
           {
-            productId:productId
+            data : {productId:productId}
           }
         );
         console.log("[DELETEPRODCT] res ",res )
@@ -392,7 +517,7 @@ export default {
         this.showNotification('Le prix doit être positif', 'error');
         return false;
       }
-      if (!this.form.category) {
+      if (!this.form.category && !this.form.categoryId) {
         this.showNotification('La catégorie est obligatoire', 'error');
         return false;
       }
@@ -414,6 +539,8 @@ export default {
 
     closeModal() {
       this.showModal = false;
+      this.showAddForm = false;
+
       this.editingProduct = null;
       this.form = {
         name: '',

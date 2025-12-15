@@ -13,6 +13,10 @@ import LoginForm from '../components/LoginForm.vue'
 import RegisterForm from '../components/RegisterForm.vue'
 import AdminProducts from '../views/AdminProducts.vue'
 import AdminOrder from '../views/AdminOrder.vue'
+import Adminview from '../views/Adminview.vue'
+import AdminStat from '../views/AdminStat.vue'
+
+
 
 const routes = [
   { 
@@ -35,12 +39,24 @@ const routes = [
   },
   { 
     path: '/admin', 
+    name: 'Adminview', 
+    component: Adminview,
+    props: true
+  },
+  { 
+    path: '/adminStatView', 
+    name: 'AdminStat', 
+    component: AdminStat,
+    props: true
+  },
+  { 
+    path: '/adminProductView', 
     name: 'AdminProducts', 
     component: AdminProducts,
     props: true
   },
   { 
-    path: '/adminOrder', 
+    path: '/adminOrderView', 
     name: 'AdminOrder', 
     component: AdminOrder,
     props: true

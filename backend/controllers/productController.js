@@ -100,7 +100,40 @@ function getDataProduct(order)
 
 /* ============= MODIF DE PRODUCT ================ */
 
+export async function addProductByAdmin(request,reply){
 
+  try {
+        console.log("========================  [addProductByAdmin] ========================");
+        const {product} = request.body 
+        console.log(" [addProductByAdmin]  product :", product);
+
+        if(!product.name || !product.category || product.price < 0 || product.quantity < 0 )
+        {
+          if(!product.name)
+            console.log("!product.name",product.name)
+          if(!product.category)
+            console.log("!product.category",product.category)
+          if(product.price < 0)
+            console.log(" product.price", product.price)
+          if(product.quantity < 0)
+            console.log("product.quantity",product.quantity)
+
+          console.log(" [addProductByAdmin] err : product attribut missing  ",product);
+
+        }
+
+
+        const createdProduct = Product.create({name : product.name, category: product.category,
+          price:product.price,quantity:product.quantity,description:product.description,img:product.img})
+          console.log(" [addProductByAdmin] created ",product);
+
+  
+  } catch (error) {
+    console.log(" [addProductByAdmin] err : ",err);
+    request.log.error(err);
+    return reply.status(500).send({ error: 'Internal server error' });
+  }
+}
 
 export async function addProductToOrder(request, reply) {
   try {

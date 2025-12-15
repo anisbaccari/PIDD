@@ -203,189 +203,72 @@ export default {
   }
 }
 </script>
+
 <style scoped>
-  .admin-orders {
-    max-width: 1000px;
-    margin: 40px auto;
-    padding: 0 20px;
-    font-family: 'Arial', sans-serif;
-  }
-  
-  .admin-orders h2 {
-    font-size: 28px;
-    margin-bottom: 20px;
-    text-align: center;
-    font-weight: bold;
-    color: #333;
-  }
-  
-  .reload {
-    display: block;
-    margin: 0 auto 25px;
-    padding: 10px 20px;
-    font-size: 16px;
-    font-weight: bold;
-    background: #2575fc;
-    color: #fff;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: background 0.3s, transform 0.2s;
-  }
-  
-  .reload:disabled {
-    background: #aaa;
-    cursor: not-allowed;
-  }
-  
-  .reload:hover:not(:disabled) {
-    background: #6a11cb;
-    transform: translateY(-2px);
-  }
-  
-  .empty {
-    text-align: center;
-    color: #777;
-    font-size: 16px;
-    margin-top: 30px;
-  }
-  
-  /* ORDER CARD */
-  .order-card {
-    background: #fff;
-    border-radius: 16px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 6px 15px rgba(0,0,0,0.08);
-    transition: transform 0.3s, box-shadow 0.3s;
-  }
-  
-  .order-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 25px rgba(0,0,0,0.15);
-  }
-  
-  .order-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 15px;
-    font-weight: bold;
-  }
-  
-  .status {
-    text-transform: capitalize;
-    padding: 3px 10px;
-    border-radius: 12px;
-    font-size: 14px;
-    color: #fff;
-  }
-  
-  .status.pending {
-    background: #f7971e;
-  }
-  
-  .status.paid {
-    background: #43cea2;
-  }
-  
-  .status.cancelled {
-    background: #ff6b6b;
-  }
-  
-  .status.fulfilled {
-    background: #2575fc;
-  }
-  
-  .order-body p {
-    margin: 5px 0;
-  }
-  
-  .order-items {
-    margin-top: 15px;
-  }
-  
-  .order-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #f9f9f9;
-    border-radius: 12px;
-    padding: 10px;
-    margin-bottom: 10px;
-    transition: transform 0.2s, box-shadow 0.2s;
-  }
-  
-  .order-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(0,0,0,0.1);
-  }
-  
-  .order-item img {
-    width: 50px;
-    height: 50px;
-    object-fit: cover;
-    border-radius: 8px;
-    margin-right: 10px;
-  }
-  
-  .order-item div {
-    flex: 1;
-    text-align: left;
-  }
-  
-  .order-item p {
-    margin: 0;
-    font-weight: 500;
-  }
-  
-  .order-item small {
-    color: #555;
-  }
-  
-  .order-item span {
-    font-weight: bold;
-    color: #111;
-  }
-  
-  .item-btn {
-    margin-left: 10px;
-    padding: 6px 12px;
-    font-size: 14px;
-    font-weight: bold;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: transform 0.2s, opacity 0.2s;
-  }
-  
-  .item-btn:hover {
-    transform: translateY(-2px);
-    opacity: 0.9;
-  }
-  
-  .item-btn:first-of-type {
-    background: #ff6b6b;
-    color: #fff;
-  }
-  
-  .item-btn:last-of-type {
-    background: #43cea2;
-    color: #fff;
-  }
-  
-  /* Responsive */
-  @media(max-width: 600px) {
-    .order-header,
-    .order-body {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-    .order-item {
-      flex-direction: column;
-      align-items: flex-start;
-    }
     .item-btn {
-      margin: 5px 0 0 0;
+  margin-top: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  border: none;
+  border-radius: 4px;
+  background: #222;
+  color: #fff;
+  cursor: pointer;
+}
+
+.item-btn:hover {
+  background: #000;
+}
+
+    .admin-orders {
+      max-width: 900px;
+      margin: auto;
+      padding: 20px;
     }
-  }
-  </style>
+    
+    .reload {
+      margin-bottom: 15px;
+    }
+    
+    .order-card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 6px rgba(0,0,0,.08);
+    }
+    
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      font-weight: bold;
+    }
+    
+    .status {
+      text-transform: capitalize;
+    }
+    
+    .status.paid { color: green; }
+    .status.pending { color: orange; }
+    .status.cancelled { color: red; }
+    
+    .order-item {
+      display: grid;
+      grid-template-columns: 60px 1fr auto;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    
+    .order-item img {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 6px;
+    }
+    
+    .empty {
+      text-align: center;
+      color: #777;
+    }
+    </style>
+    
