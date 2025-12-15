@@ -17,7 +17,7 @@
       <h2 class="section-title">Catégories populaires</h2>
       <div class="categories-grid">
         <router-link 
-          v-for="category in this.product.category" 
+          v-for="category in this.products.category" 
           :key="category.id"
           :to="`/category/${category.id}`" 
           class="category-card"
@@ -33,11 +33,11 @@
       <h2 class="section-title">Produits populaires</h2>
       <div class="products-preview">
         <div
-          v-for="product in popularProducts" 
+          v-for="product in products" 
           :key="product.id"
           class="product-preview-card"
         >
-          <img :src="product.image" :alt="product.name" class="product-preview-img" />
+          <img :src="getProductImage(product.img)" :alt="product.name" class="product-preview-img" />
           <div class="product-preview-info">
             <p class="product-preview-name">{{ product.name }}</p>
             <p class="product-preview-price">{{ product.price }} €</p>
@@ -63,14 +63,14 @@ import femmeImg from '../assets/femme.png'
 import hommeImg from '../assets/homme.png'
 
 // Import des images des produits
-import blancImg from '../assets/blanc.png'
-import blancfemmeImg from '../assets/blancfemme.png'
-import enfantbleuImg from '../assets/enfantbleu.png'
-import enfantrougeImg from '../assets/enfantrouge.png'
-import grisImg from '../assets/gris.png'
-import noirImg from '../assets/noir.png'
-import noirfemmeImg from '../assets/noirfemme.png'
-import rosefemmeImg from '../assets/rosefemme.png'
+import noir from '../assets/noir.png'
+import blanc from '../assets/blanc.png'
+import rosefemme from '../assets/rosefemme.png'
+import blancfemme from '../assets/blancfemme.png'
+import noirfemme from '../assets/noirfemme.png'
+import enfantbleu from '../assets/enfantbleu.png'
+import enfantrouge from '../assets/enfantrouge.png'
+import gris from '../assets/gris.png'
 import api from '../api';
 
 export default {
@@ -80,90 +80,35 @@ export default {
   props: ['user', 'setUser','getUser', 'tempCart','getFirstPanier','addToCartGlobal','id'],
   data() {
     return {
+           imageMap: {
+        'noir.png': noir,
+        'blanc.png': blanc,
+        'rosefemme.png': rosefemme,
+        'gris.png': gris,
+        'blancfemme.png': blancfemme,
+        'noirfemme.png': noirfemme,
+        'enfantbleu.png': enfantbleu,
+        'enfantrouge.png': enfantrouge
+      },
       dataUser: this.getUser() || { id:"", username: "", password : "",is_admin : true},
-      product :{},
+      products :{},
       categories: [
         { id: 1, name: "T-shirts Homme", image: hommeImg },
         { id: 2, name: "T-shirts Femme", image: femmeImg },
         { id: 3, name: "T-shirts Enfants", image: enfantImg }
       ],
-      popularProducts: [
-        // Produits Homme
-        { 
-          id: 101, 
-          name: "T-shirt Noir Classique", 
-          price: 20, 
-          image: noirImg,
-          img: 'noir.png',
-          brand: "Nike"
-        },
-        { 
-          id: 102, 
-          name: "T-shirt Blanc Sport", 
-          price: 25, 
-          image: blancImg,
-          img: 'blanc.png',
-          brand: "Adidas"
-        },
-        { 
-          id: 103, 
-          name: "T-shirt Gris Urban", 
-          price: 23, 
-          image: grisImg,
-          img: 'gris.png',
-          brand: "Puma"
-        },
-        
-        // Produits Femme
-        { 
-          id: 201, 
-          name: "T-shirt Rose Élégant", 
-          price: 22, 
-          image: rosefemmeImg,
-          img: 'rosefemme.png',
-          brand: "Zara"
-        },
-        { 
-          id: 202, 
-          name: "T-shirt Blanc Femme", 
-          price: 24, 
-          image: blancfemmeImg,
-          img: 'blancfemme.png',
-          brand: "H&M"
-        },
-        { 
-          id: 203, 
-          name: "T-shirt Noir Femme", 
-          price: 21, 
-          image: noirfemmeImg,
-          img: 'noirfemme.png',
-          brand: "Mango"
-        },
-        
-        // Produits Enfants
-        { 
-          id: 301, 
-          name: "T-shirt Bleu Enfant", 
-          price: 15, 
-          image: enfantbleuImg,
-          img: 'enfantbleu.png',
-          brand: "Disney"
-        },
-        { 
-          id: 302, 
-          name: "T-shirt Rouge Enfant", 
-          price: 16, 
-          image: enfantrougeImg,
-          img: 'enfantrouge.png',
-          brand: "Marvel"
-        }
-      ]
+  
+ 
     }
   },
   async mounted(){
     this.initProduct()
   },
   methods: {
+       getProductImage(imgName) {
+      if (!imgName) return '';
+      return this.imageMap[imgName] || '';
+    },
     async initProduct(){
       console.log("[initProduct]")
       const productList =  await api.get(`http://localhost:3000/product/allProduct`)
@@ -206,23 +151,25 @@ export default {
      ,
      addToTmpCart(product){
       console.log('[addToTmpCart] added product : ',product);
-
+      const  productQuantity = 1 
       const orderItem =  {
         id : this.tempCart.length,
-        quantity : product.quantity,
-        unitPrice:product.unitPrice,
+        quantity :productQuantity, // one time par click
+        unitPrice:product.price,
         product : product
       }
       
       const order = { 
         id : 1,
-        totalPrice :  product.quantity * product.unitPrice,
+        totalPrice :  productQuantity * product.price,
         status : 'pending',
         user : { id : 0},
         orderItem : orderItem
       }
-      this.tempCart.push(order)
+      this.tempCart.push(product)
       console.log('[addToTmpCart]  this.tempCart[0] : ', this.tempCart);
+      console.log('[addToTmpCart]  order : ', order);
+
 
      },
      getTmpCart(){

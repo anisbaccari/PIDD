@@ -22,14 +22,14 @@
           <div class="cart-items-section">
             <div class="section-header">
               <!-- <h2>Articles ({{ getTotalItems() }})</h2> -->
-              <button @click="clearCart" class="clear-cart-btn" v-if="this.cartItems.length > 0">
+              <button @click="clearCart" class="clear-cart-btn" v-if="cartItems.length > 0">
                 Vider le panier
               </button>
             </div>
             
             <div  class="cart-items"  >
               <div 
-                v-for="order in this.cartItems" 
+                v-for="order in cartItems" 
                 :key="order.id" 
                 class="cart-item"
               >
@@ -37,15 +37,16 @@
               <!-- PAR PANIER  -->
                   <div class="cart-orderItem">
                     <p>Commandes </p>
-
+                        
                       <!-- PAR PRODUITS COMMANDEES  -->
                     <div class="itemList"
                       v-for = "itemList in order.orderItem"
                       :key=" order.orderItem.id" 
                     >
-
+                  
 
                       <div class="item-details">
+        
                   <h3 class="product-name">{{ itemList.product.name }}</h3>
                   <p class="product-brand">{{ itemList.product.brand }}</p>
              
@@ -105,7 +106,7 @@
                <!--  <span class="total-price">{{ formatPrice(getCartTotal()) }}</span> -->
               </div>
               
-              <button class="checkout-btn" @click="proceedToCheckout">
+              <button v-if="dataUser.id"  class="checkout-btn"  @click="proceedToCheckout">
                 Procéder au paiement
               </button>
               
@@ -120,7 +121,7 @@
     
     
     </div>
-    <div v-if=" this.paidItems && this.paidItems.length != 0" class="paidItems">
+    <div v-if=" this.paidItems && this.paidItems.length > 0" class="paidItems">
         <div  class="cart-with-items">
           <h3 class="title">Commandes payees</h3>
         <div class="cart-layout">
@@ -241,11 +242,9 @@ export default {
       this.cartItems = this.formatPanier( this.tempCart)
       console.log("[mounted] :  this.tempCart", this.tempCart[0]);
 
-      console.log("[mounted] : this.cartItems",this.cartItems);
-      console.log("[mounted] : this.cartItems",JSON.stringify(this.cartItems));
-      console.log("[mounted] : this.cartItems length ",this.cartItems.length);
-
-      
+      console.log("[mounted] :[TMP] this.cartItems",this.cartItems);
+      console.log("[mounted] :[TMP] this.cartItems",JSON.stringify(this.cartItems));
+      console.log("[mounted] :[TMP] this.cartItems length ",this.cartItems.length);
     }
   },
   computed: {
@@ -253,43 +252,40 @@ export default {
     // totalItems() et subtotal() sont déjà dans App.vue
   },
   methods: {
-    formatPanier(order)
+    formatPanier(products)
     {
-      console.log("[formatPanier] : order",order);
+      console.log("[formatPanier] : products", JSON.stringify(products));
 
-      // to make orderiten id 
-      let producIndex = 0 
-      const productOrderItems  = order.map( o => ({
-          id :producIndex++,
-          product : o
-      }))
+      if (!products || products.length === 0) return [];
 
-      let orderItemIndex = 0 
-      const orderItemList = productOrderItems.map( o => ({
-        id :orderItemIndex++,
-        itemList : o
-      }))
+      // Create orderItems from products
+      const orderItems = products.map((product, index) => ({
+        id: index,
+        quantity: 1, // Default quantity for temp cart
+        unitPrice: parseFloat(product.price),
+        product: product
+      }));
+      console.log("[formatPanier] : formatted orderItems", orderItems);
 
-      let  productOrderIndex = 0 
-      const productOrder = orderItemList.map( o =>( {
-        id :productOrderIndex++,
-        orderItem:o
-      }))
+      // Calculate total price
+      const totalPrice = orderItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+      console.log("[formatPanier] : formatted totalPrice", totalPrice);
 
-      let  orderListIndex = 0 
-      const orderList = productOrder.map( o =>( {
-        id :orderListIndex++,
-        order: productOrder
-      }))
+      // Create a single pending order
+      const order = {
+        id: 0,
+        status: "pending",
+        totalPrice: totalPrice,
+        orderItem: orderItems
+      };
 
-      return orderList
+      console.log("[formatPanier] : formatted order", JSON.stringify([order]));
+
+      return [order];
     },
   async  getPanier(){
           try {
-
-                
                   console.log("[getPanier]============");
-
                   const token = localStorage.getItem("token");
                   if (token) {
                   const res = await api.get(`http://localhost:3000/panier`, {

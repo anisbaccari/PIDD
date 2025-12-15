@@ -1,7 +1,8 @@
 import {getAllProducts} from '../controllers/productController.js'
 import {getAllOrder,DeleteOrder,updateOrder} from '../controllers/panierController.js'
 import {} from '../controllers/categorieController.js'
-
+import { User } from '../models/User.js';
+import { Order } from '../models/Order.js';
 export async function getAdmin  (request, reply) {
   try {
     console.log(" ======[getAdmin]====");
@@ -16,6 +17,26 @@ export async function getAdmin  (request, reply) {
   }
 
 };
+
+export async function getAdminStat(request,reply){
+
+  try {
+    console.log(" ======[getAdminStat]====");
+    const userCount = await User.findAndCountAll();
+    const orderCount = await Order.findAndCountAll();
+    const orderPendingCount = await Order.findAndCountAll({where: {status: 'pending' }})
+    const revenue = 1000
+    const stats = {userCount : userCount.count, orderCount:orderCount.count,
+                    orderPendingCount:orderPendingCount.count,revenue:revenue}
+    console.log("[getAdminStat] stats :",stats)
+    reply.send(stats)
+    
+  } catch (error) {
+    console.log(" [getAdminStat] error :",error);
+    
+  }
+}
+
 
 export async function getAllOrderAdmin(request,reply)
 {

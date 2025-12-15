@@ -34,10 +34,11 @@
     async mounted() {
       try {
         const res = await api.get('/admin/stats'); // replace with your API endpoint
-        this.stats = [
-          { label: 'Total Users', value: res.data.totalUsers, color: 'linear-gradient(135deg, #6a11cb, #2575fc)', icon: '👤' },
-          { label: 'Total Orders', value: res.data.totalOrders, color: 'linear-gradient(135deg, #ff7e5f, #feb47b)', icon: '📦' },
-          { label: 'Pending Orders', value: res.data.pendingOrders, color: 'linear-gradient(135deg, #f7971e, #ffd200)', icon: '⏳' },
+        console.log("res",res.data)
+          this.stats = [
+          { label: 'Total Users', value: res.data.userCount, color: 'linear-gradient(135deg, #6a11cb, #2575fc)', icon: '👤' },
+          { label: 'Total Orders', value: res.data.orderCount, color: 'linear-gradient(135deg, #ff7e5f, #feb47b)', icon: '📦' },
+          { label: 'Pending Orders', value: res.data.orderPendingCount, color: 'linear-gradient(135deg, #f7971e, #ffd200)', icon: '⏳' },
           { label: 'Revenue', value: `${res.data.revenue} €`, color: 'linear-gradient(135deg, #43cea2, #185a9d)', icon: '💰' },
         ];
       } catch (err) {

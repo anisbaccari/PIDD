@@ -192,7 +192,7 @@ export default {
       )
       const products = JSON.stringify(productList)
       this.setProduct(productList.data)
-      console.log(' [initProduct] All productList : ',this.products);
+      console.log(' [initProduct] category PAge All productList : ',this.products);
     },
     setProduct(productList){
       this.products = productList;

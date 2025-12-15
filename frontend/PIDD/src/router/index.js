@@ -110,6 +110,7 @@ const routes = [
   }
 ]
 
+
 const router = createRouter({
   history: createWebHistory(),
   routes,
@@ -122,5 +123,33 @@ const router = createRouter({
     }
   }
 })
+router.beforeEach((to, from, next) => {
+// Define routes that require authentication
+const requiresAuth = [
+'/admin',
+'/adminStatView',
+'/adminProductView',
+'/adminOrderView',
+'/profilview',
+'/checkout'
+];
+
+// Check if current route requires auth
+const routeRequiresAuth = requiresAuth.some(route => to.path.startsWith(route));
+
+// Check if user is logged in (adjust based on your auth method)
+const isLoggedIn = localStorage.getItem('token') !== null;
+
+if (routeRequiresAuth && !isLoggedIn) {
+// Redirect to login if trying to access protected route without auth
+next('/login');
+} else if (to.path === '/login' && isLoggedIn) {
+// Redirect to home if already logged in and trying to access login
+next('/');
+} else {
+// Allow navigation
+next();
+}
+});
 
 export default router
