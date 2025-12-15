@@ -15,7 +15,7 @@ export const getProfile = async (request, reply) => {
       
       reply.send({
         user : {id:res.id, username: res.username, name : res.name, 
-          lastName: res.lastName,is_admin:res.is_admin
+          lastName: res.lastName,is_admin:res.is_admin,address:res.address
         }
       })
   } catch (error) {
@@ -27,7 +27,7 @@ export async function updateUserProfile(request, reply) {
   try {
     console.log("====== [updateUserProfile] ");
 
-    const { id, username, isAdmin,name,lastName } = request.body;
+    const { id, username, isAdmin,name,lastName,email,address } = request.body;
     console.log("[updateUserProfile] : id, username, isAdmin,name,lastName",id, username, isAdmin,name,lastName);
 
     if (!id) {
@@ -47,8 +47,12 @@ export async function updateUserProfile(request, reply) {
     // Update allowed fields
     if (username) user.username = username;
     if (isAdmin !== undefined) user.isAdmin = isAdmin;
+    if (email) user.email = email;
+    if (address) user.address = address;
+
     user.name = name;
     user.lastName = lastName;
+
     await user.save();
 
     return reply.send({ success: true, user });

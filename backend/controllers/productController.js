@@ -7,7 +7,7 @@ import { getOrder} from './panierController.js';
 
 export async function getAllProducts(request, reply) {
   try {
-        console.log("========================  [getAllProducts] ========================");
+     //   console.log("========================  [getAllProducts] ========================");
        
         const products =  await Product.findAll()
 
@@ -16,7 +16,7 @@ export async function getAllProducts(request, reply) {
 
           return reply.status(404).send({ error: 'Product not found' });
         }
-          console.log("[getAllProducts] product : ",products)
+   //       console.log("[getAllProducts] product : ",products)
         const productList = products.map(o => o.get({ plain: true }));
         return productList
          
@@ -30,11 +30,12 @@ export async function getAllProducts(request, reply) {
 // Example for finding one product by ID
 export async function getProductById(request, reply) {
   try {
-    const { id } = request.params;
-    const product = await Product.findOne({ where: { id } });
+    
+    const { productId } = request.body;
+    const product = await Product.findByPk(productId);
+    console.log(" [getProductById] productId :",productId);
     if (!product) {
     console.log(" [getProductById] Product not found :");
-
       return reply.status(404).send({ error: 'Product not found' });
     }
     reply.send(product);

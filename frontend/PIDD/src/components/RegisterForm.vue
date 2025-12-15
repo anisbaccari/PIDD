@@ -17,9 +17,14 @@
           <input id="prenom" v-model="DataUser.lastName" placeholder="Entrez votre prénom" required />
         </div>
 
+          <div class="form-group">
+          <label for="address">adress</label>
+          <input id="address" v-model="DataUser.address" placeholder="Entrez votre adress" required />
+        </div>
+
         <div class="form-group">
           <label for="Email">Email</label>
-          <input id="Email" v-model="DataUser.email" placeholder="Entrez votre eamil" required />
+          <input id="Email" v-model="DataUser.email" placeholder="Entrez votre email" required />
         </div>
         <div class="form-group">
           <label for="username">Nom d'utilisateur</label>
@@ -51,7 +56,7 @@ export default {
   props: ['user', 'getUser', 'setUser'],
   data() {
     return {
-      DataUser: { name: '', lastName: '', username: '', password: '' },
+      DataUser: { name: '', lastName: '', username: '', password: '',address:'' },
       message: ''
     }
   },
@@ -59,10 +64,13 @@ export default {
     async register() {
       try {
         console.log("[register] called")
+        console.log("[register] this.DataUser.address",this.DataUser)
+
         const res = await api.post('/auth/register', {
           name: this.DataUser.name,
           lastName: this.DataUser.lastName,
           email: this.DataUser.email,
+          address: this.DataUser.address,
           username: this.DataUser.username,
           password: this.DataUser.password
         })

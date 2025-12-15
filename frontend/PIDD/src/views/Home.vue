@@ -44,8 +44,10 @@
           </div>
           <div class="product-preview-actions">
             <router-link :to="`/product/${product.id}`" class="view-details-btn">
-              Voir détails
+               Voir Details
             </router-link>
+           
+
             <button @click="addToCart(product)" class="add-to-cart-btn" title="Ajouter au panier">
               🛒
             </button>
@@ -80,6 +82,7 @@ export default {
   props: ['user', 'setUser','getUser', 'tempCart','getFirstPanier','addToCartGlobal','id'],
   data() {
     return {
+
            imageMap: {
         'noir.png': noir,
         'blanc.png': blanc,
@@ -90,13 +93,15 @@ export default {
         'enfantbleu.png': enfantbleu,
         'enfantrouge.png': enfantrouge
       },
-      dataUser: this.getUser() || { id:"", username: "", password : "",is_admin : true},
+      dataUser: this.getUser() || { id:"", username: "", password : "",is_admin : false},
       products :{},
       categories: [
         { id: 1, name: "T-shirts Homme", image: hommeImg },
         { id: 2, name: "T-shirts Femme", image: femmeImg },
         { id: 3, name: "T-shirts Enfants", image: enfantImg }
       ],
+      showModal : false,
+       cartItems : {},
   
  
     }
@@ -105,6 +110,9 @@ export default {
     this.initProduct()
   },
   methods: {
+    showDetail(product){
+      this.showModal = true
+    },
        getProductImage(imgName) {
       if (!imgName) return '';
       return this.imageMap[imgName] || '';
@@ -233,6 +241,53 @@ export default {
   min-height: 100vh;
 }
 
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #1f2937;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #6b7280;
+}
+
+.close-btn:hover {
+  color: #374151;
+}
 /* Navigation */
 .navigation {
   display: flex;

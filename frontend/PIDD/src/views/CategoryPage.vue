@@ -303,7 +303,11 @@ export default {
       // Simple alert pour l'instant
       alert(message)
     }
-     */
+     */,
+     showSuccess(message) {
+      // Simple alert pour l'instant
+      alert(message)
+    }
   }
 }
 </script>

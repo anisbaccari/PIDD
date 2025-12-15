@@ -20,7 +20,7 @@
 
       <div v-if="product" class="product-details">
         <div class="product-image-section">
-          <img :src="product.image" :alt="product.name" class="product-image" />
+          <img :src="getProductImage(product.img)" :alt="product.name" class="product-image" />
         </div>
         
         <div class="product-info-section">
@@ -49,7 +49,7 @@
             </div>
           </div>
           <div class="product-actions">
-            <button  @click="addToCart" class="add-to-cart-btn">Ajouter au panier</button>
+            <button  @click="addToCart(product)" class="add-to-cart-btn">Ajouter au panier</button>
             <button class="buy-now-btn">Acheter maintenant</button>
           </div>
           
@@ -86,14 +86,40 @@ import gris from '../assets/gris.png'
 import noir from '../assets/noir.png'
 import noirfemme from '../assets/noirfemme.png'
 import rosefemme from '../assets/rosefemme.png'
-
+import api from '../api.js'
 export default {
   name: 'ProductPage',
   // ✅ AJOUT: Props pour recevoir la méthode addToCart
-  props: ['addToCartGlobal'],
+   props: [
+    'user', 
+    'setUser',
+    'getUser',
+    'setPanier',
+    'getFirstPanier',
+    'tempCart'
+
+    
+/*     'addToCartGlobal', 
+    'updateCartQuantity', 
+    'removeFromCart', 
+    'getCartTotal', 
+    'getTotalItems' */
+  ],
   data() {
     return {
       product: null,
+      dataUser:  this?.getUser() || { id:"", username: "", password : ""},
+       cartItems : {},
+      imageMap: {
+        'noir.png': noir,
+        'blanc.png': blanc,
+        'rosefemme.png': rosefemme,
+        'gris.png': gris,
+        'blancfemme.png': blancfemme,
+        'noirfemme.png': noirfemme,
+        'enfantbleu.png': enfantbleu,
+        'enfantrouge.png': enfantrouge
+      },
       quantity: 1 // ✅ AJOUT: Quantité par défaut
     }
   },
@@ -120,7 +146,12 @@ export default {
     }
   },
   methods: {
-    loadProduct() {
+        getProductImage(imgName) {
+      if (!imgName) return '';
+      return this.imageMap[imgName] || '';
+    },
+   async loadProduct() {
+      console.log("this.$route.params.id",this.$route.params.id)
       const productId = parseInt(this.$route.params.id)
       const allProducts = [
         // Produits Homme
@@ -196,7 +227,49 @@ export default {
       
       this.product = allProducts.find(p => p.id === productId)
       this.quantity = 1 // Reset quantity quand le produit change
-    },
+
+          const res = await api.post('/product/getProduct',{
+         productId : this.$route.params.id
+        });
+      console.log("res",res.data)
+      this.product = res.data
+
+    }, async addToCart(product) {
+     try {
+         console.log("my id ",this.dataUser.id)
+         if(this.dataUser.id)
+         {
+
+         
+          console.log("[addToCart] product : ",JSON.stringify(product.id));
+        // const prodData = JSON.stringify(product);
+          const res = await api.post("http://localhost:3000/product/add", {
+                userId:this.dataUser.id,
+                productId: product.id,   // no need JSON.stringify
+                quantity: 1
+              });
+          }else 
+          {
+          this.addToTmpCart(product)
+          console.log("[addToCart] product - no user : ",this.tempCart);
+
+          }
+     } catch (error) {
+      console.log('[addToCart] error : ',error);
+      
+     }
+     }
+     ,
+     addToTmpCart(product){
+      console.log('[addToTmpCart] added product : ',product);
+
+      this.tempCart.push(product)
+      console.log('[addToTmpCart]  this.tempCart[0] : ', this.tempCart[0]);
+
+     },
+     getTmpCart(){
+      return this.tempCart;
+     },
      
     // ✅ AJOUT: Méthodes pour gérer la quantité
     increaseQuantity() {
@@ -218,26 +291,11 @@ export default {
       return categories[categoryId] || "Catégorie"
     },
     // ✅ AJOUT: Méthode pour ajouter au panier
-    addToCart() {
-      if (!this.product) return
-      
-      const productToAdd = {
-        ...this.product,
-        quantity: this.quantity
-      }
-      
-      // Utilise la méthode globale passée en prop
-      if (this.addToCartGlobal) {
-        this.addToCartGlobal(productToAdd)
-      } else {
-        // Fallback: gestion locale
-        this.addToCartLocal(productToAdd)
-      }
-      
-      this.showSuccess(`✅ ${this.quantity} ${this.product.name} ajouté(s) au panier !`)
-      this.quantity = 1 // Reset après ajout
+ 
+     showSuccess(message) {
+      // Simple alert pour l'instant
+      alert(message)
     },
-    
     // Fallback si la méthode globale n'est pas disponible
     addToCartLocal(product) {
       const existingCart = JSON.parse(localStorage.getItem('monShop_cart') || '[]')

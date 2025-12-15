@@ -7,6 +7,7 @@ export const User = sequelize.define('User', {
   username: { type: DataTypes.STRING(100), allowNull: false, unique: true },
   name: { type: DataTypes.STRING(100), allowNull: false, unique: true },
   lastName: { type: DataTypes.STRING(100), allowNull: false },
+  address: { type: DataTypes.STRING(100), allowNull: true },
   email: { type: DataTypes.STRING(200), allowNull: false },
   passwordHash: { type: DataTypes.STRING(200), allowNull: false },
   is_admin: { type: DataTypes.BOOLEAN, allowNull: false }

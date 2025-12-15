@@ -130,8 +130,7 @@ const requiresAuth = [
 '/adminStatView',
 '/adminProductView',
 '/adminOrderView',
-'/profilview',
-'/checkout'
+'/profilview'
 ];
 
 // Check if current route requires auth

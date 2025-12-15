@@ -11,40 +11,40 @@
       :key="order.id"
       class="order-block"
     >
-      
-      <!-- Only pending orders -->
-      <div v-if="order.status === 'pending'">
 
+      <!-- Only pending orders -->
+      <div v-if="order">
+      {{ order.order[0].orderItem.itemList.product }}
         <!-- ====================== -->
         <!-- Loop each Order Item   -->
         <!-- ====================== -->
         <div 
-          v-for="item in order.orderItem"
-          :key="item.id"
+          v-for="itemList in order.orderItem"
+          :key="itemList.id"
           class="cart-item"
         >
 
           <img 
-            :src="getProductImage(item.product.img)" 
+            :src="getProductImage(itemList.product.img)" 
             class="product-image"
           />
 
           <div class="product-info">
-            <h3>{{ item.product.name }}</h3>
+            <h3>{{ itemList.product.name }}</h3>
 
-            <p>Quantité : {{ item.quantity }}</p>
+            <p>Quantité : {{ itemList.quantity }}</p>
 
             <p>Prix unitaire :  
-              {{ formatPrice(item.unitPrice) }}
+              {{ formatPrice(itemList.unitPrice) }}
             </p>
 
             <p>Sous-total :  
-              {{ formatPrice(item.quantity * item.unitPrice) }}
+              {{ formatPrice(itemList.quantity * itemList.unitPrice) }}
             </p>
           </div>
 
           <button 
-            @click="removeItem(item.product.id)"
+            @click="removeitem(itemList.product.id)"
             class="remove-btn"
           >
             ✖
@@ -78,7 +78,6 @@
       </div>
 
       <hr />
-
       <!-- Total final -->
       <div class="summary-total">
         <span>Total à payer :</span>
@@ -95,9 +94,28 @@
         Procéder au paiement
       </button>
 
+
     </div>
+    
 
   </div>
+  <div v-if="showModal && !dataUser.id " class="modal-overlay" @click="closeModal">
+  <p> {{ dataUser }}</p>
+  <div class="modal-content" @click.stop>
+    <h3>Entrez vos informations</h3>
+    <form @submit.prevent="submitInfo">
+    
+
+      <label for="address">Adresse :</label>
+      <textarea id="address" v-model="formData.address" required></textarea>
+
+      <!-- Ajoutez d'autres champs selon vos besoins -->
+
+      <button type="submit">Soumettre</button>
+      <button type="button" @click="closeModal">Annuler</button>
+    </form>
+  </div>
+</div>
 
 </template>
 
@@ -149,6 +167,10 @@ export default {
         'enfantbleu.png': enfantbleu,
         'enfantrouge.png': enfantrouge
       },
+       formData: {
+        address: ''
+      },
+      showModal: false,
       cartItems : {},
       total : 0,
       stripe: null,
@@ -184,6 +206,20 @@ export default {
     console.log("Card number: 4242 4242 4242 4242 Expiry date: Any future date (12 / 34) CVC: Any 3 digits (123) ZIP: Any (12345)")
   },
   methods: {
+      openModal() {
+     // this.showModal = true;
+    },
+    closeModal() {
+      this.showModal = false;
+      this.formData = {  address: '' }; // Réinitialiser
+    },
+    async submitInfo() {
+      // Traitez les données ici (par exemple, envoyer à l'API)
+      console.log('Informations soumises :', this.formData);
+
+      this.closeModal();
+      // Vous pouvez ajouter une logique pour passer à l'étape suivante du checkout
+    },
     async payWithStripe() {
     try {
 
@@ -207,7 +243,7 @@ export default {
           payment_method: {
             card: this.cardElement,
             billing_details: {
-              name: this.user.username
+              name: this.user.username || "testUser"
             }
           }
         }
@@ -220,7 +256,7 @@ export default {
       } else {
         if (result.paymentIntent.status === 'succeeded') {
           alert('✅ Paiement réussi');
-          this.$router.push('/success');
+          this.showModal=true
         }
       }
     } catch (err) {
@@ -241,7 +277,8 @@ export default {
       let orderItemIndex = 0 
       const orderItemList = productOrderItems.map( o => ({
         id :orderItemIndex++,
-        itemList : o
+        itemList : o,
+        status:'pending'
       }))
 
       let  productOrderIndex = 0 
@@ -249,12 +286,14 @@ export default {
         id :productOrderIndex++,
         orderItem:o
       }))
+      console.log("[CHECKOUT formatPanier] productOrder",productOrder);
 
       let  orderListIndex = 0 
       const orderList = productOrder.map( o =>( {
         id :orderListIndex++,
         order: productOrder
       }))
+      console.log("[CHECKOUT formatPanier] orderList",orderList);
 
       return orderList
     },
@@ -407,6 +446,7 @@ export default {
   /* ==============================
    GLOBAL CONTAINER
    ============================== */
+  
 .cart-page {
   max-width: 950px;
   margin: 40px auto;
@@ -424,7 +464,7 @@ export default {
   background: #fafafa;
   border: 1px solid #e6e6e6;
 }
-
+/* Card container */
 .card-box {
   padding: 12px;
   border: 1px solid #ccc;
@@ -436,6 +476,36 @@ export default {
 .error-text {
   color: red;
   margin-bottom: 10px;
+}
+
+/* Checkout button */
+.checkout-btn {
+  width: 100%;
+  padding: 12px 0;
+  border-radius: 10px;
+  border: none;
+
+  background: #2563eb;
+  color: white;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.checkout-btn:hover {
+  background: #1e40af;
+}
+
+.checkout-btn:active {
+  transform: scale(0.98);
+}
+
+/* Disabled (optional) */
+.checkout-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
 }
 
 

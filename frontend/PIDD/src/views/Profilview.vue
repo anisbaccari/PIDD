@@ -17,6 +17,11 @@
         <input v-model="form.name" type="text" placeholder="Votre prénom" />
       </div>
 
+         <div class="form-group">
+        <label>Addresse <span v-if="this.dataUser.id">({{ this.dataUser.address }}) </span></label>
+        <input v-model="form.address" type="text" placeholder="Votre addresse" />
+      </div>
+
       <div class="form-group">
         <label>Nom d'utilisateur <span v-if="this.dataUser.id">({{ this.dataUser.username }}) </span></label>
         <input v-model="form.username" type="text" placeholder="Votre username" />
@@ -51,9 +56,10 @@ export default {
         lastName: "",
         name: "",
         username: "",
-        password: ""
+        password: "",
+        address:""
       },
-      dataUser: this.getUser() || { id:"", username: "", password : "",name : "",lastName : ""},
+      dataUser: this.getUser() || { id:"", username: "", password : "",name : "",lastName : "",address:""},
 
     };
   },

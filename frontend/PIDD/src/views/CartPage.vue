@@ -106,7 +106,7 @@
                <!--  <span class="total-price">{{ formatPrice(getCartTotal()) }}</span> -->
               </div>
               
-              <button v-if="dataUser.id"  class="checkout-btn"  @click="proceedToCheckout">
+              <button class="checkout-btn"  @click="proceedToCheckout">
                 Procéder au paiement
               </button>
               
@@ -237,7 +237,7 @@ export default {
     {
     await this.getPanier()
       
-      console.log(" cartiem :",this.getPanier())
+      console.log(" cartiem has panier ")
     }else { 
       this.cartItems = this.formatPanier( this.tempCart)
       console.log("[mounted] :  this.tempCart", this.tempCart[0]);

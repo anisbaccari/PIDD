@@ -54,7 +54,7 @@ export  async function login (request, reply) {
 
 
 export async function register(request, reply) {
-  const { name, lastName,email, username, password } = request.body;
+  const { name, lastName,email, username, password,address } = request.body;
 
   if (!username || !password) {
     return reply.status(400).send({ error: 'Username and password required' });
@@ -70,12 +70,14 @@ export async function register(request, reply) {
       return reply.status(400).send({ error: 'User already exists' });
     }
 
+      console.log("[register] :address ",address);
+
     const hashed = await hash(password, 10);
     const result = await sequelize.query(
-      `INSERT INTO users (name, lastName,email,  username, passwordHash) 
-       VALUES (:name, :lastName, :email,  :username, :hashed)`,
+      `INSERT INTO users (name, lastName,email,  username,address, passwordHash) 
+       VALUES (:name, :lastName, :email,  :username, :address, :hashed)`,
       {
-        replacements: { name, lastName,email, username, hashed },
+        replacements: { name, lastName,email, username, address, hashed },
         type: sequelize.QueryTypes.INSERT
       }
     );
