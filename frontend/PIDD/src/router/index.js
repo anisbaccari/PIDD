@@ -11,6 +11,8 @@ import CartPage from '../views/CartPage.vue'
 
 // Import des nouvelles vues de paiement
 import CheckoutPage from '../views/CheckoutPage.vue'
+
+import CheckoutPage1 from '../views/CheckoutPage1.vue'
 //import PaymentSuccess from '../views/PaymentSuccess.vue'
 
 // Import des composants d'authentification
@@ -113,6 +115,16 @@ const routes = [
     path: '/checkout',
     name: 'Checkout',
     component: CheckoutPage,
+    props: true,
+    meta: { 
+      requiresAuth: true,
+      title: 'Finaliser votre commande'
+    }
+  },
+  {
+   path: '/checkout',
+    name: 'Checkout1',
+    component: CheckoutPage1,
     props: true,
     meta: { 
       requiresAuth: true,
