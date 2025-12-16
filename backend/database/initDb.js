@@ -46,9 +46,9 @@ console.log(' ** * DATABASE created : ',process.env.DB_NAME);
 
 
 const adminList = [
-  { username: 'Anis',name: 'Anis',lastName: 's',adress:'rue de la bourse n1 , 1000 bruxelles', email: 'Anis@example.com', password: 'Anis',is_admin:true },
-  { username: 'Hermann',name: 'Hermann',lastName: 's',adress:'rue de la fontaine n10 , 1000 bruxelles', email: 'Hermann@example.com', password: 'Hermann',is_admin:true },
-  { username: 'Franklin',name: 'Franklin',lastName: 'x',adress:'rue du pont  n45 , 1000 bruxelles', email: 'Franklin@example.com', password: 'Franklin' ,is_admin:true},
+  { username: 'Anis',name: 'Anis',lastName: 's',address:'rue de la bourse n1 , 1000 bruxelles', email: 'Anis@example.com', password: 'Anis',is_admin:true },
+  { username: 'Hermann',name: 'Hermann',lastName: 's',address:'rue de la fontaine n10 , 1000 bruxelles', email: 'Hermann@example.com', password: 'Hermann',is_admin:true },
+  { username: 'Franklin',name: 'Franklin',lastName: 'x',address:'rue du pont  n45 , 1000 bruxelles', email: 'Franklin@example.com', password: 'Franklin' ,is_admin:true},
 
   // Add more admins as needed
 ];

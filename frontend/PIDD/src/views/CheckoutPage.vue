@@ -14,7 +14,7 @@
 
       <!-- Only pending orders -->
       <div v-if="order">
-      {{ order.order[0].orderItem.itemList.product }}
+     
         <!-- ====================== -->
         <!-- Loop each Order Item   -->
         <!-- ====================== -->
@@ -44,7 +44,7 @@
           </div>
 
           <button 
-            @click="removeitem(itemList.product.id)"
+            @click="removeItem(itemList.product.id)"
             class="remove-btn"
           >
             ✖
@@ -235,7 +235,7 @@ export default {
       );
 
       const clientSecret = res.data.clientSecret;
-
+        console.log("data user ",this.dataUser.username)
       // 2️⃣ Confirm card payment
       const result = await this.stripe.confirmCardPayment(
         clientSecret,
@@ -256,7 +256,8 @@ export default {
       } else {
         if (result.paymentIntent.status === 'succeeded') {
           alert('✅ Paiement réussi');
-          this.showModal=true
+          this.$router.push('/deliveryPage')
+         // this.showModal=true
         }
       }
     } catch (err) {

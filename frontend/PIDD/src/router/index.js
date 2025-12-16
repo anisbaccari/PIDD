@@ -15,7 +15,7 @@ import AdminProducts from '../views/AdminProducts.vue'
 import AdminOrder from '../views/AdminOrder.vue'
 import Adminview from '../views/Adminview.vue'
 import AdminStat from '../views/AdminStat.vue'
-
+import deliveryPage from '../views/deliveryView.vue'
 
 
 const routes = [
@@ -29,6 +29,12 @@ const routes = [
     path: '/Checkout', 
     name: 'CheckoutPage', 
     component: CheckoutPage,
+    props: true
+  },
+    { 
+    path: '/deliveryPage', 
+    name: 'deliveryPage', 
+    component: deliveryPage,
     props: true
   },
   { 
