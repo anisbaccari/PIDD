@@ -22,10 +22,10 @@ export async function getAllCategorie(request, reply) {
 
 
 
-export async function getCategorie(request, reply) {
+export async function getCategorieById(request, reply) {
     try {
         const categoryId = request.params.id; // ✅ Récupérer l'ID de l'URL
-        console.log("[getCategorie] : categoryId", categoryId);
+        console.log("[getCategorieById] : categoryId", categoryId);
         
         // ✅ Convertir l'ID en nom de catégorie
         const categoryNames = {
@@ -48,12 +48,12 @@ export async function getCategorie(request, reply) {
         });
         
         if (products.length === 0) {
-            console.log('[getCategorie] : aucun produit trouvé');
+            console.log('[getCategorieById] : aucun produit trouvé');
             reply.send([]); // ✅ Renvoyer un tableau vide au lieu de 401
             return;
         }
                 
-        console.log('[getCategorie] : produits trouvés : ', products.length);
+        console.log('[getCategorieById] : produits trouvés : ', products.length);
         reply.send(products);
 
     } catch (error) {

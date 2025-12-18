@@ -4,25 +4,18 @@ import { Product } from '../models/Product.js';
 import { Order } from '../models/Order.js';
 import { OrderItem } from '../models/OrderItem.js';
 
-export async function getAllProducts(request, reply) {
+export async function getAllProducts(req, reply) {
   try {
-        console.log("========================  [getAllProducts] ========================");
-       
-        const products =  await Product.findAll()
+    const products = await Product.findAll();
+    reply.send({ success: true, data: products });
+  } catch (error) {
+  console.error("[getAdminDashboard] error:", error);
+  reply.status(500).send({ 
+    success: false, 
+    message: "Erreur serveur" 
+  });
+}
 
-        if (!products) {
-        console.log(" [getAllProducts] product empty :");
-
-          return reply.status(404).send({ error: 'Product not found' });
-        }
-        //  console.log("[getAllProducts] product : ",products)
-
-          return products
-  } catch (err) {
-    console.log(" [getAllProducts] err :",err);
-
-    reply.status(500).send({ error: err.message });
-  }
 }
 
 // Example for finding one product by ID
@@ -42,31 +35,34 @@ export async function getProductById(request, reply) {
   }
 }
 
+export async function getProductByCategory(request, reply) {
+  try {
+    console.log("========== [getProductByCategory] ==========");
 
-export async function getProductByCategory(request, reply)
-{
-    try {
-          // id = 1 home, id = 2 femme , id = 3 kid
-          console.log("========================  [getProductByCategory] ========================");
-          console.log("  [getProductByCategory] id ",request.query?.id);
-          
-          const id  = request.query?.id
-          console.log("  [getProductByCategory] id ",id);
-          const products = await Product.findAll({ where: { category : id } });
-          
-          if (!products) {
-              console.log(" [getProductByCategory] empty ");
-              return reply.status(404).send({ error: 'Product not found' });
-            }
-          const productList = products.map(o => o.get({ plain: true }));
-          return productList
+    const { id } = request.params; // id = "1", "2", "3"
+    console.log("[getProductByCategory] category id:", id);
 
-    } catch (error) {
-        console.log(" [getProductByCategory] err :",error);
-        reply.status(500).send({ error: err.message });
-
+    const categoryId = parseInt(id); // converti en nombre
+    if (![1, 2, 3].includes(categoryId)) {
+      return reply.code(404).send({ error: "Catégorie invalide" });
     }
+
+    // Filtrer par ID numérique de catégorie
+    const products = await Product.findAll({
+      where: { category: categoryId }
+    });
+
+    return reply.send({
+      success: true,
+      data: products
+    });
+
+  } catch (error) {
+    console.error("[getProductByCategory] error:", error);
+    return reply.code(500).send({ error: "Internal server error" });
+  }
 }
+
 
 function getDataProduct(order)
 {

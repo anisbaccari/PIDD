@@ -38,7 +38,7 @@ const fastify = Fastify({
 
 // ========== CONFIGURATION CORS ==========
 await fastify.register(cors, {
-  origin: ['http://localhost:5173', 'http://localhost:3001'],
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   credentials: true,
@@ -53,33 +53,8 @@ await fastify.register(categorieRoutes, { prefix: '/categories' });
 await fastify.register(productRoutes, { prefix: '/product' });
 await fastify.register(panierRoutes, { prefix: '/panier' });
 await fastify.register(adminRoutes, { prefix: '/admin' });
-await fastify.register(orderRoutes, { prefix: '/api/orders' }); // Enregistrez les routes d'orders
+await fastify.register(orderRoutes, { prefix: '/orders' }); // Enregistrez les routes d'orders
 await fastify.register(homeRoute, { prefix: '/hello' })
-// ========== HEALTH CHECK ==========
-fastify.get('/health', async () => {
-  return { 
-    status: 'OK', 
-    timestamp: new Date().toISOString(),
-    service: 'PIDD API'
-  };
-});
-
-// ========== API INFO ==========
-fastify.get('/api', async () => {
-  return {
-    name: 'PIDD API',
-    version: '1.0.0',
-    endpoints: {
-      auth: '/auth',
-      profile: '/profil',
-      products: '/product',
-      categories: '/categories',
-      cart: '/panier',
-      orders: '/api/orders',
-      admin: '/admin'
-    }
-  };
-});
 
 // ========== DÉMARRAGE ==========
 const start = async () => {
