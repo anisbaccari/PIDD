@@ -201,7 +201,7 @@ export default {
 
     goToAdminPanel() {
       this.showAdminChoice = false;
-      this.$router.push('/admin/products');
+      this.$router.push('/admin');
     },
 
     goToHomepage() {

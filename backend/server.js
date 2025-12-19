@@ -10,6 +10,7 @@ import categorieRoutes from './routes/categorieRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import orderRoutes from './routes/orderRoutes.js'; // Importez le nouveau fichier ES6
 import homeRoute from './routes/homeRoute.js';
+import userRoutes from './routes/userRoutes.js';
 
 import {initDatabase} from './database/initDb.js';
 import { sequelize } from './database/mysql.js';
@@ -48,6 +49,7 @@ await fastify.register(cors, {
 // ========== ENREGISTREMENT DES ROUTES ==========
 await fastify.register(homeRoute);
 await fastify.register(authRoutes, { prefix: '/auth' });
+await fastify.register(userRoutes);
 await fastify.register(profileRoutes, { prefix: '/profil' });
 await fastify.register(categorieRoutes, { prefix: '/categories' });
 await fastify.register(productRoutes, { prefix: '/product' });
@@ -57,30 +59,32 @@ await fastify.register(orderRoutes, { prefix: '/orders' }); // Enregistrez les r
 await fastify.register(homeRoute, { prefix: '/hello' })
 
 // ========== DÉMARRAGE ==========
+// Dans la fonction start(), ajoutez après await fastify.listen():
+const PORT = parseInt(process.env.PORT, 10) || 3000;
+
 const start = async () => {
   try {
-    console.log('\x1b[36m%s\x1b[0m', '🚀 Initialisation du serveur PIDD...');
-    
-    await initDatabase();
-    console.log('\x1b[32m%s\x1b[0m', '✅ Base de données initialisée');
-    
-    await sequelize.authenticate();
-    console.log('\x1b[32m%s\x1b[0m', '✅ Connexion DB établie');
-    
+       await initDatabase();
+    await fastify.listen({ port: PORT, host: '0.0.0.0' });
+    // sync all models (create or alter tables to match models)
     await sequelize.sync({ alter: true });
-    console.log('\x1b[32m%s\x1b[0m', '✅ Modèles synchronisés');
-    
-    const port = process.env.PORT || 3000;
-    await fastify.listen({ port: parseInt(port), host: '0.0.0.0' });
-    
-    console.log('\x1b[32m%s\x1b[0m', `✅ Serveur démarré sur http://localhost:${port}`);
-    console.log('\x1b[36m%s\x1b[0m', '📋 Routes disponibles:');
-    console.log('\x1b[33m%s\x1b[0m', `   GET  http://localhost:${port}/health`);
-    console.log('\x1b[33m%s\x1b[0m', `   GET  http://localhost:${port}/api`);
-    console.log('\x1b[33m%s\x1b[0m', `   GET  http://localhost:${port}/admin/dashboard`);
-    console.log('\x1b[33m%s\x1b[0m', `   GET  http://localhost:${port}/api/orders/admin`);
-    console.log('\x1b[33m%s\x1b[0m', `   GET  http://localhost:${port}/api/orders/test`);
-    
+    fastify.log.info('✅ DB synced');
+
+    console.log('\x1b[32m%s\x1b[0m', `✅ Serveur démarré sur http://localhost:${PORT}`);
+
+    console.log('\x1b[36m%s\x1b[0m', '\n📋 📋 📋 TOUTES LES ROUTES DISPONIBLES:');
+
+    fastify.ready(() => {
+      console.log(fastify.printRoutes());
+    });
+
+    console.log('\x1b[33m%s\x1b[0m', '\n🔍 Routes principales:');
+    console.log('\x1b[33m%s\x1b[0m', `   GET  http://localhost:${PORT}/profil`);
+    console.log('\x1b[33m%s\x1b[0m', `   PUT  http://localhost:${PORT}/profil`);
+    console.log('\x1b[33m%s\x1b[0m', `   POST http://localhost:${PORT}/auth/login`);
+    console.log('\x1b[33m%s\x1b[0m', `   GET  http://localhost:${PORT}/product`);
+    console.log('\x1b[33m%s\x1b[0m', `   GET  http://localhost:${PORT}/categories`);
+
   } catch (err) {
     console.error('\x1b[31m%s\x1b[0m', '❌ Erreur démarrage:', err.message);
     process.exit(1);

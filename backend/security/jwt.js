@@ -5,22 +5,22 @@ const JWT_SECRET = process.env.JWT_SECRET || 'supersecret'; // fallback if not i
 // 🔹 Generate a JWT token for a user
 export function generateToken(user) {
   return jwt.sign(
-    { id: user.id, email: user.email}, // payload
+    { 
+      id: user.id, 
+      email: user.email || user.username // Fallback si pas d'email
+    },
     JWT_SECRET,
-    { expiresIn: '1h' } // token validity
+    { expiresIn: '7d' } // Augmenté à 7 jours
   );
 }
-
 // 🔹 Verify a JWT token
 export function verifyToken(token) {
   try {
     return jwt.verify(token, JWT_SECRET);
   } catch (err) {
-    return reply.code(401).send({ error: 'Unauthorized: ' + err.message });
-// invalid or expired token
+    throw new Error('Token invalide ou expiré');
   }
 }
-
 // 🔹 Middleware for protected routes
 
 export async function authenticate(request, reply) {

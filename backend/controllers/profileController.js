@@ -1,59 +1,74 @@
 import { User } from "../models/User.js";
 
 export const getProfile = async (request, reply) => {
-  
   try {
-    const idByToken = request.user?.id;
-    console.log("====== [getPRofile] : params ",request.params);
-    console.log("====== [getPRofile] : idByToken ",idByToken);
+    const userId = request.user?.id;
 
-   const res = await User.findOne({where : {id:idByToken}});
-
-    console.log("====== [getPRofile] : user : ",res);
-
-
-      
-      reply.send({
-        user : {id:res.id, username: res.username, name : res.name, 
-          lastName: res.lastName,is_admin:res.is_admin
-        }
-      })
-  } catch (error) {
-    console.log("[getProfil] catch error : ",error);
-  }
-};
-
-export async function updateProfile(request, reply) {
-  try {
-    console.log("====== [updateUserProfile] ");
-
-    const { id, username, isAdmin,name,lastName } = request.body;
-    console.log("[updateProfile] : id, username, isAdmin,name,lastName",id, username, isAdmin,name,lastName);
-
-    if (!id) {
-    console.log(" [updateProfile]  no id",);
-
-      return reply.code(400).send({ error: "Missing user id" });
+    if (!userId) {
+      return reply.code(401).send({ error: "Unauthorized" });
     }
 
-    // Find user
-    const user = await User.findByPk(id);
-    if (!user) {
-    console.log(" [updateProfile]  no user",);
+    const user = await User.findByPk(userId);
 
+    if (!user) {
       return reply.code(404).send({ error: "User not found" });
     }
 
-    // Update allowed fields
+    reply.send({
+      user: {
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        lastName: user.lastName,
+        address: user.address,
+        is_admin: user.is_admin
+      }
+    });
+  } catch (error) {
+    console.error("[getProfile]", error);
+    reply.code(500).send({ error: "Server error" });
+  }
+};
+export async function updateUserProfile(request, reply) {
+  try {
+    console.log("🔐 request.user =", request.user);
+
+    const userId = request.user?.id || request.user?.userId;
+    console.log("🆔 userId =", userId);
+
+    if (!userId) {
+      return reply.code(401).send({ error: "Unauthorized" });
+    }
+
+    const { username, name, lastName, password } = request.body;
+
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return reply.code(404).send({ error: "User not found" });
+    }
+
     if (username) user.username = username;
-    if (isAdmin !== undefined) user.isAdmin = isAdmin;
-    user.name = name;
-    user.lastName = lastName;
+    if (name) user.name = name;
+    if (lastName) user.lastName = lastName;
+
+    if (password) {
+      user.password = await user.hashPassword(password);
+    }
+
     await user.save();
 
-    return reply.send({ success: true, user });
+    return reply.send({
+      success: true,
+      user: {
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        lastName: user.lastName
+       
+      }
+    });
   } catch (err) {
-    console.error(err);
+    console.error("UPDATE PROFILE ERROR:", err);
     return reply.code(500).send({ error: "Server error" });
   }
 }

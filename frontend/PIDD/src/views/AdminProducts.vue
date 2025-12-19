@@ -21,13 +21,7 @@
       </div>
 
       <nav class="sidebar-nav">
-        <div class="nav-section">
-          <h4 class="section-title">Tableau de bord</h4>
-          <router-link to="/admin/dashboard" class="nav-item" active-class="active">
-            <span class="nav-icon">📊</span>
-            <span class="nav-text">Vue d'ensemble</span>
-          </router-link>
-        </div>
+       
 
         <div class="nav-section">
           <h4 class="section-title">Gestion</h4>
@@ -105,6 +99,13 @@
 
       <!-- Stats Cards -->
       <div class="stats-grid">
+        <div class="stat-card add-product-card" @click="showAddModal">
+  <div class="stat-icon add">➕</div>
+  <div class="stat-content">
+    <h3>Ajouter un produit</h3>
+  </div>
+</div>
+
         <div class="stat-card">
           <div class="stat-icon total">📦</div>
           <div class="stat-content">
@@ -424,17 +425,17 @@
 <script>
 import axios from 'axios';
 
-// URL de l'API - utilisez une variable d'environnement ou une URL directe
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-// Import des images
-import noir from '../assets/noir.png'
-import blanc from '../assets/blanc.png'
-import rosefemme from '../assets/rosefemme.png'
-import blancfemme from '../assets/blancfemme.png'
-import noirfemme from '../assets/noirfemme.png'
-import enfantbleu from '../assets/enfantbleu.png'
-import enfantrouge from '../assets/enfantrouge.png'
-import gris from '../assets/gris.png'
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_PREFIX = '/product'; // Préfixe de vos routes produits
+
+import noir from '../assets/noir.png';
+import blanc from '../assets/blanc.png';
+import rosefemme from '../assets/rosefemme.png';
+import blancfemme from '../assets/blancfemme.png';
+import noirfemme from '../assets/noirfemme.png';
+import enfantbleu from '../assets/enfantbleu.png';
+import enfantrouge from '../assets/enfantrouge.png';
+import gris from '../assets/gris.png';
 
 export default {
   name: 'AdminProducts',
@@ -480,22 +481,19 @@ export default {
       currentPage: 1,
       itemsPerPage: 10,
       sidebarCollapsed: false
-    }
+    };
   },
   computed: {
     filteredProducts() {
       if (!this.searchQuery) return this.products;
-      
       const query = this.searchQuery.toLowerCase();
       return this.products.filter(product => 
         product.name.toLowerCase().includes(query) ||
         product.description.toLowerCase().includes(query)
       );
     },
-    
     sortedProducts() {
       const sorted = [...this.filteredProducts];
-      
       switch (this.sortBy) {
         case 'name':
           return sorted.sort((a, b) => a.name.localeCompare(b.name));
@@ -507,27 +505,22 @@ export default {
           return sorted;
       }
     },
-    
     lowStockCount() {
       return this.products.filter(p => p.quantity < 10).length;
     },
-    
     totalStockValue() {
       return this.products.reduce((total, product) => {
         return total + (product.price * product.quantity);
       }, 0);
     },
-    
     pendingOrdersCount() {
       return this.orders.filter(order => order.status === 'pending').length;
     },
-    
     paginatedProducts() {
       const start = (this.currentPage - 1) * this.itemsPerPage;
       const end = start + this.itemsPerPage;
       return this.sortedProducts.slice(start, end);
     },
-    
     totalPages() {
       return Math.ceil(this.filteredProducts.length / this.itemsPerPage);
     }
@@ -541,123 +534,83 @@ export default {
       await this.loadOrders();
       await this.loadUsers();
     },
-    
     async loadProducts() {
-      try {
-        this.loading = true;
-        const response = await axios.get(`${API_URL}/products`, {
-          headers: this.getAuthHeaders()
-        });
-        this.products = response.data;
-      } catch (error) {
-        console.error('Erreur chargement produits:', error);
-          // Fallback vers des données mockées si l'API n'est pas disponible
-        this.products = this.getMockProducts();
-         this.showNotification('Chargement des données mockées (API non disponible)', 'warning');
-      } finally {
-        this.loading = false;
-      }
-    },
+  try {
+    this.loading = true;
+    console.log('🔄 Chargement des produits depuis /product/allproduct...');
     
+    const response = await axios.get('http://localhost:3000/product/allproduct', {
+      headers: this.getAuthHeaders()
+    });
+    
+    console.log('✅ Réponse API:', response.data);
+    
+    // CORRECTION: Votre contrôleur retourne {success: true, data: [...]}
+    if (response.data && response.data.success === true) {
+      this.products = response.data.data || [];
+      console.log(`✅ ${this.products.length} produits chargés`);
+    } else {
+      this.products = [];
+      console.warn('⚠️ Réponse API sans success:true', response.data);
+    }
+  } catch (error) {
+    console.error('❌ Erreur chargement produits:', error);
+    
+    // Debug détaillé
+    if (error.response) {
+      console.error('📊 Détails erreur:');
+      console.error('- Status:', error.response.status);
+      console.error('- Data:', error.response.data);
+      console.error('- URL:', error.config?.url);
+    }
+    
+    this.products = [];
+    this.showNotification(`Erreur: ${error.message}`, 'error');
+  } finally {
+    this.loading = false;
+  }
+},
     async loadOrders() {
       try {
         const response = await axios.get(`${API_URL}/orders`, {
           headers: this.getAuthHeaders()
         });
-        this.orders = response.data;
+        this.orders = response.data || [];
       } catch (error) {
         console.error('Erreur chargement commandes:', error);
         this.orders = [];
       }
-
     },
+   // Dans AdminProducts.vue, corrigez la méthode loadUsers :
+async loadUsers() {
+  try {
+    console.log('Chargement des utilisateurs...');
     
-    async loadUsers() {
-      try {
-        const response = await axios.get(`${API_URL}/users`, {
-          headers: this.getAuthHeaders()
-        });
-        this.users = response.data;
-      } catch (error) {
-        console.error('Erreur chargement utilisateurs:', error);
-          this.users = [];
-      }
-    },
-     
-    getMockProducts() {
-      return [
-        {
-          id: '1',
-          name: 'T-Shirt Homme Noir',
-          price: 20,
-          quantity: 30,
-          category: '1',
-          img: 'noir.png',
-          description: 'Cotton classic tee'
-        },
-        {
-          id: '2',
-          name: 'T-Shirt Homme Blanc',
-          price: 25,
-          quantity: 50,
-          category: '1',
-          img: 'blanc.png',
-          description: 'Cotton classic tee'
-        },
-        {
-          id: '3',
-          name: 'T-Shirt Homme Gris',
-          price: 23,
-          quantity: 50,
-          category: '1',
-          img: 'gris.png',
-          description: 'Cotton classic tee'
-        },
-        {
-          id: '4',
-          name: 'T-Shirt Femme Rose',
-          price: 22,
-          quantity: 30,
-          category: '2',
-          img: 'rosefemme.png',
-          description: 'Cotton classic tee'
-        },
-        {
-          id: '5',
-          name: 'T-Shirt Femme Blanc',
-          price: 24,
-          quantity: 30,
-          category: '2',
-          img: 'blancfemme.png',
-          description: 'Cotton classic tee'
-        },
-        {id: '6', name: "T-shirt Noir Femme",
-         price: 21,
-         quantity: 30,
-         category: '2',
-         img : 'noirfemme.png',
-         description: 'Cotton classic tee' 
-        },
-        { id:'7',
-        name: "T-shirt Bleu Enfant",
-        price: 15,
-        quantity: 30,
-        category: 3, 
-        img : 'enfantbleu.png',
-        description: 'Cool kid' 
-       },
-        { id: '8',
-        name: "T-shirt Rouge Enfant",
-          price: 16,
-          quantity: 30,
-          category: 3,
-          img : 'enfantrouge.png',
-           description: 'Cool kid' 
-          }
-      ];
-    },
+    // Assurez-vous que la route /users existe dans votre backend
+    const response = await axios.get(`${API_URL}/users`, {
+      headers: this.getAuthHeaders()
+    });
     
-   getAuthHeaders() {
+    console.log('Réponse utilisateurs:', response.data);
+    
+    if (response.data && response.data.success) {
+      this.users = response.data.data || [];
+      console.log(`${this.users.length} utilisateurs chargés`);
+    } else {
+      this.users = [];
+      console.warn('Aucun utilisateur trouvé');
+    }
+  } catch (error) {
+    console.error('Erreur chargement utilisateurs:', error);
+    this.users = [];
+    
+    // Ne montrez pas d'erreur si c'est juste que la route n'existe pas encore
+    if (error.response && error.response.status === 404) {
+      console.log('Route /users non implémentée pour le moment');
+    }
+  }
+},
+    getAuthHeaders() {
       const token = localStorage.getItem('token');
       return token ? {
         'Authorization': `Bearer ${token}`,
@@ -666,12 +619,9 @@ export default {
         'Content-Type': 'application/json'
       };
     },
-    
-    
     getProductImageUrl(imgName) {
       return this.imageMap[imgName] || '';
     },
-    
     getCategoryName(category) {
       const categories = {
         1: 'Homme',
@@ -680,23 +630,19 @@ export default {
       };
       return categories[category] || 'Non catégorisé';
     },
-    
     formatPrice(price) {
       return new Intl.NumberFormat('fr-FR', {
         style: 'currency',
         currency: 'EUR'
       }).format(price);
     },
-    
     getStockPercentage(product) {
       const maxStock = 100;
       return Math.min((product.quantity / maxStock) * 100, 100);
     },
-    
     getProductStatus(product) {
       return product.quantity > 0 ? 'active' : 'inactive';
     },
-    
     showAddModal() {
       this.editingProduct = null;
       this.form = {
@@ -710,176 +656,200 @@ export default {
       this.formErrors = {};
       this.showModal = true;
     },
-    
     editProduct(product) {
       this.editingProduct = product;
       this.form = { ...product };
       this.formErrors = {};
       this.showModal = true;
     },
-    
-    async saveProduct() {
+ async saveProduct() {
+  console.log('💾 saveProduct appelé');
+  console.log('✏️ Édition:', this.editingProduct ? `ID: ${this.editingProduct.id}` : 'Nouveau produit');
+  console.log('📝 Données formulaire:', this.form);
+  
   // Validation
-  if (!this.validateForm()) return;
+  if (!this.validateForm()) {
+    console.log('❌ Validation échouée:', this.formErrors);
+    return;
+  }
   
   try {
     this.loading = true;
     
     if (this.editingProduct) {
-      // Mise à jour
-      try {
-        const response = await axios.put(
-          `${API_URL}/products/${this.editingProduct.id}`,
-          this.form,
-          { headers: this.getAuthHeaders() }
-        );
-        
-        // Mise à jour locale avec les données de la réponse
+      console.log(`🔄 Mise à jour du produit ${this.editingProduct.id}`);
+      
+      // Mise à jour - formatage des données
+      const updateData = {
+        name: this.form.name,
+        price: parseFloat(this.form.price),
+        quantity: parseInt(this.form.quantity),
+        category: parseInt(this.form.category),
+        img: this.form.img,
+        description: this.form.description
+      };
+      
+      console.log('📤 Données envoyées pour update:', updateData);
+      
+      const response = await axios.put(
+        `http://localhost:3000/product/update/${this.editingProduct.id}`,
+        updateData,
+        { 
+          headers: this.getAuthHeaders(),
+          timeout: 10000 // 10 secondes timeout
+        }
+      );
+      
+      console.log('📥 Réponse update:', response.data);
+      
+      if (response.data && response.data.success === true) {
+        // Mettre à jour localement avec les données de la réponse
         const index = this.products.findIndex(p => p.id === this.editingProduct.id);
         if (index !== -1) {
-          // Force la réactivité en créant un nouveau tableau
-          this.products = [
-            ...this.products.slice(0, index),
-            response.data,
-            ...this.products.slice(index + 1)
-          ];
+          this.products[index] = response.data.data;
+          console.log('✅ Produit mis à jour localement');
         }
-        
         this.showNotification('Produit mis à jour avec succès', 'success');
-      } catch (error) {
-        console.error('Erreur API:', error);
-        // Mode démo si API non disponible
-        const index = this.products.findIndex(p => p.id === this.editingProduct.id);
-        if (index !== -1) {
-          // Force la réactivité
-          this.products = [
-            ...this.products.slice(0, index),
-            { ...this.form, id: this.editingProduct.id },
-            ...this.products.slice(index + 1)
-          ];
-        }
-        this.showNotification('Produit mis à jour ', 'warning');
+      } else {
+        throw new Error(response.data?.error || 'Erreur lors de la mise à jour');
       }
+      
     } else {
-      // Ajout
-      try {
-        const response = await axios.post(
-          `${API_URL}/products`,
-          this.form,
-          { headers: this.getAuthHeaders() }
-        );
-        
-        // Ajout au début du tableau pour le voir immédiatement
-        this.products = [response.data, ...this.products];
+      console.log('🔄 Création d\'un nouveau produit');
+      
+      // Création - formatage des données
+      const createData = {
+        name: this.form.name,
+        price: parseFloat(this.form.price),
+        quantity: parseInt(this.form.quantity),
+        category: parseInt(this.form.category),
+        img: this.form.img,
+        description: this.form.description
+      };
+      
+      console.log('📤 Données envoyées pour création:', createData);
+      
+      const response = await axios.post(
+        'http://localhost:3000/product/addAdmin',
+        createData,
+        { 
+          headers: this.getAuthHeaders(),
+          timeout: 10000
+        }
+      );
+      
+      console.log('📥 Réponse création:', response.data);
+      
+      if (response.data && response.data.success === true) {
+        // Ajouter le nouveau produit au début de la liste
+        this.products = [response.data.data, ...this.products];
+        console.log('✅ Produit ajouté localement');
         this.showNotification('Produit ajouté avec succès', 'success');
-      } catch (error) {
-        console.error('Erreur API:', error);
-        // Mode démo si API non disponible
-        const newProduct = {
-          ...this.form,
-          id: Date.now().toString(),
-          category: this.form.category.toString(),
-          price: parseFloat(this.form.price),
-          quantity: parseInt(this.form.quantity)
-        };
-        this.products = [newProduct, ...this.products];
-        this.showNotification('Produit ajouté (mode démo)', 'warning');
+      } else {
+        throw new Error(response.data?.error || 'Erreur lors de la création');
       }
     }
     
+    // Fermer le modal et réinitialiser
     this.showModal = false;
     this.resetForm();
+    
   } catch (error) {
-    console.error('Erreur sauvegarde produit:', error);
-    this.showNotification('Erreur lors de la sauvegarde', 'error');
+    console.error('❌ Erreur saveProduct:', error);
+    
+    // Debug détaillé
+    if (error.response) {
+      console.error('📊 Détails erreur:');
+      console.error('- Status:', error.response.status);
+      console.error('- Data:', error.response.data);
+      console.error('- URL:', error.config?.url);
+    }
+    
+    this.showNotification(`Erreur: ${error.response?.data?.error || error.message}`, 'error');
   } finally {
     this.loading = false;
   }
 },
-   async deleteProduct(id) {
-  if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) return;
+
+async deleteProduct(id) {
+  console.log(`🗑️ deleteProduct(${id}) appelé`);
+  
+  if (!confirm('Supprimer ce produit ?')) return;
   
   try {
-    await axios.delete(`${API_URL}/products/${id}`, {
-      headers: this.getAuthHeaders()
-    });
+    console.log(`📤 Envoi DELETE pour produit ${id}`);
     
-    // Force la réactivité en créant un nouveau tableau
-    this.products = this.products.filter(p => p.id !== id);
-    this.showNotification('Produit supprimé avec succès', 'success');
-  } catch (error) {
-    console.error('Erreur suppression produit:', error);
+    const response = await axios.delete(
+      'http://localhost:3000/product/deleteProduct',
+      { 
+        data: { productId: id },
+        headers: this.getAuthHeaders()
+      }
+    );
     
-    // Mode démo si erreur
-    this.products = this.products.filter(p => p.id !== id);
-    this.showNotification('Produit supprimé (mode démo)', 'warning');
-  }
-},
-   async duplicateProduct(product) {
-  try {
-    const duplicatedProduct = {
-      name: product.name + ' (Copie)',
-      price: product.price,
-      quantity: product.quantity,
-      category: product.category,
-      img: product.img,
-      description: product.description
-    };
+    console.log('📥 Réponse DELETE:', response.data);
     
-    try {
-      const response = await axios.post(
-        `${API_URL}/products`,
-        duplicatedProduct,
-        { headers: this.getAuthHeaders() }
-      );
-      
-      this.products = [response.data, ...this.products];
-      this.showNotification('Produit dupliqué avec succès', 'success');
-    } catch (error) {
-      console.error('Erreur API:', error);
-      // Mode démo
-      const newProduct = {
-        ...duplicatedProduct,
-        id: Date.now().toString()
-      };
-      this.products = [newProduct, ...this.products];
-      this.showNotification('Produit dupliqué (mode démo)', 'warning');
+    if (response.data && response.data.success) {
+      console.log('✅ Suppression réussie');
+      this.products = this.products.filter(p => p.id !== id);
+      this.showNotification('Produit supprimé', 'success');
     }
   } catch (error) {
-    console.error('Erreur duplication produit:', error);
-    this.showNotification('Erreur lors de la duplication', 'error');
+    console.error('❌ Erreur DELETE:', error.response?.data || error.message);
+    this.showNotification(`Erreur: ${error.message}`, 'error');
   }
 },
+
+    async duplicateProduct(product) {
+      try {
+        const duplicatedProduct = {
+          name: product.name + ' (Copie)',
+          price: product.price,
+          quantity: product.quantity,
+          category: product.category,
+          img: product.img,
+          description: product.description
+        };
+        
+        const response = await axios.post(
+          `${API_URL}/product/addAdmin`,
+          duplicatedProduct,
+          { headers: this.getAuthHeaders() }
+        );
+        
+        if (response.data && response.data.success) {
+          this.products = [response.data.data, ...this.products];
+          this.showNotification('Produit dupliqué avec succès', 'success');
+        } else {
+          throw new Error(response.data?.message || 'Erreur lors de la duplication');
+        }
+      } catch (error) {
+        console.error('Erreur duplication produit:', error);
+        this.showNotification(`Erreur: ${error.message}`, 'error');
+      }
+    },
     validateForm() {
       this.formErrors = {};
-      
       if (!this.form.name.trim()) {
         this.formErrors.name = 'Le nom est requis';
       }
-      
       if (!this.form.price || this.form.price <= 0) {
         this.formErrors.price = 'Le prix doit être supérieur à 0';
       }
-      
       if (!this.form.quantity || this.form.quantity < 0) {
         this.formErrors.quantity = 'La quantité est requise';
       }
-      
       if (!this.form.category) {
         this.formErrors.category = 'La catégorie est requise';
       }
-      
       if (!this.form.img) {
         this.formErrors.img = "L'image est requise";
       }
-      
       if (!this.form.description.trim()) {
         this.formErrors.description = 'La description est requise';
       }
-      
       return Object.keys(this.formErrors).length === 0;
     },
-    
     showNotification(message, type = 'success') {
       this.notification = {
         show: true,
@@ -890,18 +860,15 @@ export default {
         this.notification.show = false;
       }, 3000);
     },
-    
     getUserInitials() {
       if (!this.user) return 'AD';
       const first = (this.user.name || this.user.username || 'A')[0] || '';
       const last = (this.user.lastName || '')[0] || '';
       return (first + last).toUpperCase();
     },
-    
     toggleSidebar() {
       this.sidebarCollapsed = !this.sidebarCollapsed;
     },
-    
     toggleSelectAll() {
       if (this.selectAll) {
         this.selectedProducts = this.filteredProducts.map(p => p.id);
@@ -910,124 +877,88 @@ export default {
       }
     },
     resetForm() {
-  this.form = {
-    name: '',
-    price: 0,
-    quantity: 0,
-    category: '',
-    img: '',
-    description: ''
-  };
-  this.editingProduct = null;
-  this.formErrors = {};
-},
-  async updateStockBulk() {
-  if (this.selectedProducts.length === 0) {
-    this.showNotification('Veuillez sélectionner au moins un produit', 'error');
-    return;
-  }
-  
-  const newStock = prompt(`Mettre à jour le stock pour ${this.selectedProducts.length} produit(s).\nEntrez la nouvelle quantité:`);
-  if (newStock === null) return;
-  
-  const quantity = parseInt(newStock);
-  
-  if (isNaN(quantity) || quantity < 0) {
-    this.showNotification('Veuillez entrer un nombre valide (≥ 0)', 'error');
-    return;
-  }
-  
-  try {
-    const updatePromises = this.selectedProducts.map(async (productId) => {
-      const product = this.products.find(p => p.id === productId);
-      if (!product) return null;
+      this.form = {
+        name: '',
+        price: 0,
+        quantity: 0,
+        category: '',
+        img: '',
+        description: ''
+      };
+      this.editingProduct = null;
+      this.formErrors = {};
+    },
+    async updateStockBulk() {
+      if (this.selectedProducts.length === 0) {
+        this.showNotification('Veuillez sélectionner au moins un produit', 'error');
+        return;
+      }
+      
+      const newStock = prompt(`Mettre à jour le stock pour ${this.selectedProducts.length} produit(s).\nEntrez la nouvelle quantité:`);
+      if (newStock === null) return;
+      
+      const quantity = parseInt(newStock);
+      
+      if (isNaN(quantity) || quantity < 0) {
+        this.showNotification('Veuillez entrer un nombre valide (≥ 0)', 'error');
+        return;
+      }
       
       try {
-        return await axios.put(
-          `${API_URL}/products/${productId}`,
-          {
-            ...product,
-            quantity: quantity
-          },
-          { headers: this.getAuthHeaders() }
-        );
-      } catch (error) {
-        console.error(`Erreur mise à jour produit ${productId}:`, error);
-        return null;
-      }
-    });
-    
-    await Promise.all(updatePromises);
-    
-    // Force la réactivité en créant un nouveau tableau
-    this.products = this.products.map(product => {
-      if (this.selectedProducts.includes(product.id)) {
-        return { ...product, quantity: quantity };
-      }
-      return product;
-    });
-    
-    this.showNotification(`Stock mis à jour pour ${this.selectedProducts.length} produit(s)`, 'success');
-    
-    // Réinitialiser la sélection
-    this.selectedProducts = [];
-    this.selectAll = false;
-    
-  } catch (error) {
-    console.error('Erreur mise à jour stock:', error);
-    
-    // Mode démo - mise à jour locale quand même
-    this.products = this.products.map(product => {
-      if (this.selectedProducts.includes(product.id)) {
-        return { ...product, quantity: quantity };
-      }
-      return product;
-    });
-    
-    this.showNotification('Stock mis à jour (mode démo)', 'warning');
-    this.selectedProducts = [];
-    this.selectAll = false;
-  }
-},
-   async deleteSelected() {
-  if (this.selectedProducts.length === 0) {
-    this.showNotification('Veuillez sélectionner au moins un produit', 'error');
-    return;
-  }
-  
-  if (!confirm(`Êtes-vous sûr de vouloir supprimer ${this.selectedProducts.length} produit(s) ?`)) return;
-  
-  try {
-    const deletions = this.selectedProducts.map(async (productId) => {
-      try {
-        return await axios.delete(`${API_URL}/products/${productId}`, {
-          headers: this.getAuthHeaders()
+        for (const productId of this.selectedProducts) {
+          const product = this.products.find(p => p.id === productId);
+          if (product) {
+            await axios.put(
+              `${API_URL}/product/update/${productId}`,
+              { ...product, quantity },
+              { headers: this.getAuthHeaders() }
+            );
+          }
+        }
+        
+        this.products = this.products.map(product => {
+          if (this.selectedProducts.includes(product.id)) {
+            return { ...product, quantity: quantity };
+          }
+          return product;
         });
+        
+        this.showNotification(`Stock mis à jour pour ${this.selectedProducts.length} produit(s)`, 'success');
+        this.selectedProducts = [];
+        this.selectAll = false;
       } catch (error) {
-        console.error(`Erreur suppression produit ${productId}:`, error);
-        return null;
+        console.error('Erreur mise à jour stock:', error);
+        this.showNotification(`Erreur: ${error.message}`, 'error');
       }
-    });
-    
-    await Promise.all(deletions);
-    
-    // Force la réactivité en créant un nouveau tableau
-    this.products = this.products.filter(p => !this.selectedProducts.includes(p.id));
-    
-    this.showNotification('Produits supprimés avec succès', 'success');
-    this.selectedProducts = [];
-    this.selectAll = false;
-  } catch (error) {
-    console.error('Erreur suppression produits:', error);
-    
-    // Mode démo - suppression locale quand même
-    this.products = this.products.filter(p => !this.selectedProducts.includes(p.id));
-    this.showNotification('Produits supprimés (mode démo)', 'warning');
-    this.selectedProducts = [];
-    this.selectAll = false;
-  }
-},
-    
+    },
+    async deleteSelected() {
+      if (this.selectedProducts.length === 0) {
+        this.showNotification('Veuillez sélectionner au moins un produit', 'error');
+        return;
+      }
+      
+      if (!confirm(`Êtes-vous sûr de vouloir supprimer ${this.selectedProducts.length} produit(s) ?`)) return;
+      
+      try {
+        for (const productId of this.selectedProducts) {
+          await axios.delete(
+            `${API_URL}/product/deleteProduct`,
+            {
+              data: { id: productId },
+              headers: this.getAuthHeaders()
+            }
+          );
+        }
+        
+        this.products = this.products.filter(p => !this.selectedProducts.includes(p.id));
+        this.showNotification('Produits supprimés avec succès', 'success');
+        this.selectedProducts = [];
+        this.selectAll = false;
+      } catch (error) {
+        console.error('Erreur suppression produits:', error);
+        this.showNotification(`Erreur: ${error.message}`, 'error');
+      }
+    },
     logout() {
       this.setUser(null);
       localStorage.removeItem('token');
@@ -1040,7 +971,7 @@ export default {
       this.selectAll = newVal.length === this.filteredProducts.length && this.filteredProducts.length > 0;
     }
   }
-}
+};
 </script>
 
 <style scoped>

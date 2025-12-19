@@ -3,29 +3,51 @@ import { User } from '../models/User.js';
 import { Product } from '../models/Product.js';
 import { Order } from '../models/Order.js';
 import { OrderItem } from '../models/OrderItem.js';
+import { getOrder} from './panierController.js';
 
-export async function getAllProducts(req, reply) {
+export async function getAllProducts(request, reply) {
   try {
-    const products = await Product.findAll();
-    reply.send({ success: true, data: products });
-  } catch (error) {
-  console.error("[getAdminDashboard] error:", error);
-  reply.status(500).send({ 
-    success: false, 
-    message: "Erreur serveur" 
-  });
-}
+    console.log("========== [getAllProducts] ==========");
+       
+    const products = await Product.findAll({
+      order: [['createdAt', 'DESC']]
+    });
 
+    if (!products || products.length === 0) {
+      console.log("[getAllProducts] Aucun produit trouvé");
+      return reply.send({ 
+        success: true, 
+        data: [],
+        message: "Aucun produit trouvé" 
+      });
+    }
+    
+    console.log(`[getAllProducts] ${products.length} produits trouvés`);
+    
+    // CORRECTION: Utilisez reply.send() au lieu de return
+    reply.send({ 
+      success: true, 
+      data: products 
+    });
+    
+  } catch (err) {
+    console.error("[getAllProducts] err:", err);
+    reply.status(500).send({ 
+      success: false,
+      error: err.message 
+    });
+  }
 }
 
 // Example for finding one product by ID
 export async function getProductById(request, reply) {
   try {
-    const { id } = request.params;
-    const product = await Product.findOne({ where: { id } });
+    
+    const { productId } = request.body;
+    const product = await Product.findByPk(productId);
+    console.log(" [getProductById] productId :",productId);
     if (!product) {
     console.log(" [getProductById] Product not found :");
-
       return reply.status(404).send({ error: 'Product not found' });
     }
     reply.send(product);
@@ -34,68 +56,113 @@ export async function getProductById(request, reply) {
     reply.status(500).send({ error: err.message });
   }
 }
-
 export async function getProductByCategory(request, reply) {
   try {
     console.log("========== [getProductByCategory] ==========");
-
-    const { id } = request.params; // id = "1", "2", "3"
-    console.log("[getProductByCategory] category id:", id);
-
-    const categoryId = parseInt(id); // converti en nombre
-    if (![1, 2, 3].includes(categoryId)) {
-      return reply.code(404).send({ error: "Catégorie invalide" });
+    console.log("[getProductByCategory] params:", request.params);
+    
+    const { id } = request.params; // ID de catégorie numérique (1, 2, 3)
+    
+    if (!id) {
+      console.log("[getProductByCategory] Pas d'ID fourni");
+      return reply.send({ 
+        success: true, 
+        data: [] 
+      });
     }
 
-    // Filtrer par ID numérique de catégorie
-    const products = await Product.findAll({
-      where: { category: categoryId }
-    });
+    const categoryId = parseInt(id);
+    
+    // Validation
+    if (![1, 2, 3].includes(categoryId)) {
+      console.log("[getProductByCategory] Catégorie invalide:", categoryId);
+      return reply.status(400).send({ 
+        success: false,
+        error: "Catégorie invalide (1, 2 ou 3 seulement)" 
+      });
+    }
 
-    return reply.send({
+    console.log(`[getProductByCategory] Recherche produits catégorie ${categoryId}`);
+    
+    // ✅ CORRECTION: Recherche par ID numérique, pas par nom
+    const products = await Product.findAll({ 
+      where: { category: categoryId }, // category est un nombre dans la BD
+      order: [['createdAt', 'DESC']]
+    });
+    
+    console.log(`[getProductByCategory] ${products.length} produits trouvés`);
+    
+    // Debug: affichez les produits trouvés
+    if (products.length > 0) {
+      console.log("📦 Produits trouvés:", products.map(p => ({
+        id: p.id,
+        name: p.name,
+        category: p.category,
+        price: p.price
+      })));
+    }
+    
+    reply.send({
       success: true,
       data: products
     });
 
   } catch (error) {
     console.error("[getProductByCategory] error:", error);
-    return reply.code(500).send({ error: "Internal server error" });
+    reply.status(500).send({ 
+      success: false,
+      error: "Erreur serveur" 
+    });
   }
 }
-
-
-function getDataProduct(order)
-{
-    try {
-          console.log("========================  [getDataOrder] ========================");
-
-          const ordersPlain = order.map(o => o.get({ plain: true }));
-         /*  const userArray = ordersPlain.map(o => o.user);
-          const itemsArray = ordersPlain.map(o => o.items); // Produits Commandees 
-          const productList =  ordersPlain.flatMap(o => o.items).map( i => i.product);
-          
-          const panier = ordersPlain.map(o => ({
-                                id: o.id,
-                                totalPrice: o.totalPrice,
-                                status: o.status,
-                                createdAt: o.createdAt,
-                                orderItem: o.items || [],
-                                productList: (o.items || []).map(i => i.product)
-                                // add any order fields you want
-                              })); */
-          
-         
-          return ordersPlain; 
-    } catch (error) {
-    console.log(" [getDataProduct] error :",error);
-      
-    }
-
-}
-
 /* ============= MODIF DE PRODUCT ================ */
 
+export async function addProductByAdmin(request, reply) {
+  try {
+    console.log("========== [addProductByAdmin] ==========");
+    console.log("[addProductByAdmin] request.body:", request.body);
+    
+    // CORRECTION: Le produit est direct dans request.body, pas dans un objet product
+    const productData = request.body;
+    console.log("[addProductByAdmin] productData:", productData);
 
+    // Validation
+    if (!productData.name || !productData.category || productData.price < 0 || productData.quantity < 0) {
+      console.log("[addProductByAdmin] Validation failed:", productData);
+      return reply.status(400).send({ 
+        success: false,
+        error: 'Données produit invalides' 
+      });
+    }
+
+    // Création du produit
+    const createdProduct = await Product.create({
+      name: productData.name, 
+      category: productData.category,
+      price: productData.price,
+      quantity: productData.quantity,
+      description: productData.description || '',
+      img: productData.img || 'default.png'
+    });
+    
+    console.log("[addProductByAdmin] Produit créé:", createdProduct.id);
+
+    // CORRECTION: Répondre avec le produit créé
+    reply.status(201).send({ 
+      success: true, 
+      data: createdProduct,
+      message: "Produit créé avec succès" 
+    });
+    
+  } catch (error) {
+    // CORRECTION: Utilisez 'error' au lieu de 'err'
+    console.error("[addProductByAdmin] error:", error);
+    reply.status(500).send({ 
+      success: false,
+      error: 'Internal server error' 
+    });
+  }
+}
 
 export async function addProductToOrder(request, reply) {
   try {
@@ -192,74 +259,77 @@ export async function addProductToOrder(request, reply) {
   }
 }
 
+
+/* ================== NOT THE ROMVE ONE  */
 export async function deleteFromCart(request, reply) {
   try {
     
 
-          console.log("========================  [deleteFromCart] ========================");
+        console.log("========================  [deleteFromCart] ========================");
        
-    const { userId, productId } = request.body;
-      console.log("[removeItem] userId, productId ",userId, productId)
+        const { userId, productId } = request.body;
+        console.log("[removeItem] userId, productId ",userId, productId)
 
-    if (!userId || !productId) {
-      console.log("[removeItem]Missing userId or productId ")
+        if (!userId || !productId) {
+          console.log("[removeItem]Missing userId or productId ")
+          return reply.code(400).send({ error: "Missing userId or productId" });
+        }
 
-      return reply.code(400).send({ error: "Missing userId or productId" });
-    }
+        // Find the pending order of this user
+        const order = await Order.findOne({
+          where: { userId, status: "pending" }
+        });
 
-    // Find the pending order of this user
-    const order = await Order.findOne({
-      where: { userId, status: "pending" }
-    });
+        if (!order) {
+          console.log("[removeItem] No active order found for user ")
+          return reply.code(404).send({ error: "No active order found for user" });
+        }
+        console.log("[removeItem]order ",order)
 
-    if (!order) {
-      console.log("[removeItem] No active order found for user ")
+        // Find the matching order item
+        const item = await OrderItem.findOne({
+          where: {
+            orderId: order.id,
+            productId
+          }
+        });
 
-      return reply.code(404).send({ error: "No active order found for user" });
-    }
-      console.log("[removeItem]order ",order)
+        if (!item) {
+          console.log("[removeItem]OrderItem not found in cart")
+          
+          return reply.code(404).send({ error: "Product not found in cart" });
+        }
 
-    // Find the matching order item
-    const item = await OrderItem.findOne({
-      where: {
-        orderId: order.id,
-        productId
+        // Delete the order item
+        await item.destroy();
+
+        // Check if order is now empty
+        const remaining = await OrderItem.count({
+          where: { orderId: order.id }
+        });
+          console.log("[removeItem] order.id : ",order.id)
+
+        // If no items left, remove the order too
+      if (remaining === 0) {
+        await order.destroy();
+        return reply.send({
+          success: true,
+          message: "Product removed and empty order deleted"
+        });
       }
-    });
 
-    if (!item) {
-      console.log("[removeItem]OrderItem not found in cart")
-      
-      return reply.code(404).send({ error: "Product not found in cart" });
-    }
-
-    // Delete the order item
-    await item.destroy();
-
-    // Check if order is now empty
-    const remaining = await OrderItem.count({
-      where: { orderId: order.id }
-    });
-      console.log("[removeItem] order.id : ",order.id)
-
-    // If no items left, remove the order too
-    if (remaining === 0) {
-      await order.destroy();
-      return reply.send({
-        success: true,
-        message: "Product removed and empty order deleted"
+      // Otherwise update order price
+      order.totalPrice = await OrderItem.sum("unitPrice", {
+        where: { orderId: order.id }
       });
-    }
 
-    // Otherwise update order price
-    order.totalPrice = await OrderItem.sum("unitPrice", {
-      where: { orderId: order.id }
-    });
+      await order.save();
 
-    await order.save();
-    console.log("======================== END  [deleteFromCart] ========================");
+      const panier = getOrder(userId)
+      console.log("[removeItem] panier : ",panier)
 
-    reply.send({ success: true, message: "Product removed from cart" });
+      console.log("======================== END  [deleteFromCart] ========================");
+      reply.send(panier);
 
   } catch (err) {
     console.log(err);
@@ -268,102 +338,119 @@ export async function deleteFromCart(request, reply) {
 }
 
 
-// backend/controllers/productController.js
+/// DELETE A PRODUCT (ADMIN)
 
-// ... votre code existant ...
-
-// Fonction pour ajouter un produit (manquante)
-export async function addProduct(productData) {
+  export async function updateProduct(request, reply) {
   try {
-    console.log("========== [addProduct] ==========");
-    console.log("[addProduct] productData:", productData);
+    console.log("========== [updateProduct] ==========");
+    console.log("[updateProduct] params:", request.params);
+    console.log("[updateProduct] body:", request.body);
+
+    const { id } = request.params;
+    const payload = request.body;
+
+    console.log("[updateProduct] id:", id);
+    console.log("[updateProduct] payload:", payload);
+
+    // Vérifier que l'ID existe
+    if (!id) {
+      return reply.status(400).send({ 
+        success: false,
+        error: "ID manquant dans les paramètres" 
+      });
+    }
+
+    const product = await Product.findByPk(id);
+
+    if (!product) {
+      console.log("[updateProduct] Produit non trouvé, id:", id);
+      return reply.status(404).send({ 
+        success: false,
+        error: "Product not found" 
+      });
+    }
+
+    // Validation des données
+    if (payload.price !== undefined && payload.price < 0) {
+      return reply.status(400).send({
+        success: false,
+        error: "Le prix ne peut pas être négatif"
+      });
+    }
+
+    if (payload.quantity !== undefined && payload.quantity < 0) {
+      return reply.status(400).send({
+        success: false,
+        error: "La quantité ne peut pas être négative"
+      });
+    }
+
+    // Mettre à jour le produit
+    const updatedProduct = await product.update(payload);
     
-    const newProduct = await Product.create(productData);
-    return newProduct;
+    console.log("[updateProduct] SUCCÈS - Produit mis à jour:", updatedProduct.id);
+
+    // Répondre avec le produit mis à jour
+    reply.send({ 
+      success: true,
+      data: updatedProduct,
+      message: "Product updated successfully" 
+    });
+
   } catch (error) {
-    console.error("[addProduct] Error:", error);
-    throw new Error("Erreur lors de la création du produit");
+    console.error("[updateProduct] error:", error);
+    reply.status(500).send({ 
+      success: false,
+      error: error.message || "Internal server error" 
+    });
   }
 }
 
-// Fonction pour supprimer un produit par ID (manquante)
-export async function deleteProductById(id) {
+export async function deleteProduct(request, reply) {
   try {
-    console.log("========== [deleteProductById] ==========");
-    console.log("[deleteProductById] ID:", id);
+    console.log("========== [deleteProduct] ==========");
+    console.log("[deleteProduct] body:", request.body);
+
+    const { productId } = request.body;
     
-    const deletedCount = await Product.destroy({
-      where: { id }
+    // Validation
+    if (!productId) {
+      return reply.status(400).send({ 
+        success: false,
+        error: "ID manquant (productId requis)" 
+      });
+    }
+
+    console.log("[deleteProduct] Suppression du produit ID:", productId);
+
+    // Vérifier d'abord si le produit existe
+    const product = await Product.findByPk(productId);
+    
+    if (!product) {
+      console.log("[deleteProduct] Produit non trouvé, id:", productId);
+      return reply.status(404).send({ 
+        success: false,
+        error: "Product not found" 
+      });
+    }
+
+    // Supprimer le produit
+    await product.destroy();
+    
+    console.log("[deleteProduct] SUCCÈS - Produit supprimé, id:", productId);
+    
+    // Répondre avec succès
+    reply.send({ 
+      success: true, 
+      message: "Product deleted successfully",
+      deletedId: productId
     });
     
-    // Retourne true si au moins un produit a été supprimé
-    return deletedCount > 0;
   } catch (error) {
-    console.error("[deleteProductById] Error:", error);
-    throw new Error("Erreur lors de la suppression du produit");
+    console.error("[deleteProduct] error:", error);
+    reply.status(500).send({ 
+      success: false,
+      error: error.message || "Internal server error" 
+    });
   }
 }
-
-  export async function deleteProduct(request,reply){
-    
-      console.log("========== [updateProduct] ==========");
-      console.log("params:", request.params);
-      const { id } = request.params;
-
-      try {
-        const deleted = await Product.destroy({
-          where: { id }
-        });
-
-        if (!deleted) {
-        console.log(" [updateProduct]  Product not found");
-
-          return reply.code(404).send({ error: "Product not found" });
-        }
-      console.log(" [updateProduct]  SUCCCED");
-
-        return reply.send({ success: true, message: "Product deleted" });
-      } catch (err) {
-        console.error(err);
-        return reply.code(500).send({ error: "Internal server error" });
-      }
-  }
-export async function updateProduct(request, reply) {
-  
-  try {
-          console.log("========== [updateProduct] ==========");
-          console.log("params:", request.params);
-          console.log("body:", request.body);
-
-          const id = request.params.id;
-          const payload = request.body;
-
-          console.log("[updateProduct] id:", id);
-          console.log("[updateProduct] payload:", payload);
-
-          const product = await Product.findByPk(id);
-
-          if (!product) {
-          console.log("========== [updateProduct]no product ");
-            
-            return reply.status(404).send({ error: "Product not found" });
-          }
-
-          const res = await product.update(payload);
-          console.log("========== [updateProduct] SUCCES VUPDATE  ",res);
-
-          reply.send({ message: "Product updated", product });
-
-
-  } catch (error) {
-          console.log("  [getProductByCategory] error ",error);
-    
-  }
-  
-}
-
-
-// Example Fastify route registration (e.g., in routes.js)
-/* export default async function (fastify) {
-  fastify.post('/orders/add-item', addProductToOrder);
-} */

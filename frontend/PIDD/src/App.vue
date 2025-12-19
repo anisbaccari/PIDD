@@ -1,7 +1,9 @@
 <script>
 import api from './api';
 import AppFooter from './components/AppFooter.vue';
-import UserAvatar from './components/UserAvatar.vue';
+
+import UserMenu from './components/UserMenu.vue';
+
 
 // Créer un Event Bus simple pour Vue 3 (remplace $root.$on)
 const EventBus = {
@@ -31,7 +33,7 @@ const EventBus = {
 window.EventBus = EventBus;
 
 export default {
-  components: { AppFooter, UserAvatar },
+  components: { AppFooter, UserMenu },
 
   data() {
     return {
@@ -414,23 +416,18 @@ export default {
 
       <div class="nav-links">
         <router-link to="/" class="nav-link">Accueil</router-link>
+         <router-link v-if="this.user && this.user.is_admin" to="/admin" class="nav-link">Admin</router-link>
         <router-link to="/category/1" class="nav-link">Homme</router-link>
         <router-link to="/category/2" class="nav-link">Femme</router-link>
         <router-link to="/category/3" class="nav-link">Enfants</router-link>
         <router-link to="/cart" class="nav-link">Panier ({{ getTotalItems() }})</router-link>
-        <router-link to="/categories" class="nav-link">Catégories</router-link>
+        
       </div>
 
       <div class="nav-login">
-        <router-link v-if="!user" to="/login" class="login-button nav-link">
-          Se connecter
-        </router-link>
+  <UserMenu :user="user" />
+</div>
 
-        <div v-else class="user-info">
-          <span class="welcome">Bonjour, {{ user.username || 'Utilisateur' }}</span>
-          <button @click="logoutUser" class="logout-btn">Déconnexion</button>
-        </div>
-      </div>
     </nav>
 
     <!-- Contenu principal -->

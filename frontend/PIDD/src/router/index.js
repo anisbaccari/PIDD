@@ -5,7 +5,9 @@ import Home from '../views/Home.vue'
 import CategoryPage from '../views/CategoryPage.vue'
 import ProductPage from '../views/ProductPage.vue'
 import Profilview from '../views/Profilview.vue'
-import AllCategories from '../views/AllCategories.vue'
+import Detailsproduit from '../views/Detailsproduit.vue'
+import Adminview from '../views/Adminview.vue'
+
 import AdminProducts from '../views/AdminProducts.vue'
 import CartPage from '../views/CartPage.vue'
 
@@ -45,6 +47,17 @@ const routes = [
     component: AdminProducts,
     props: true 
   },
+  {
+    path: '/product/:id/details',
+    name: 'Detailsproduit',
+    component: Detailsproduit
+  },
+   { 
+    path: '/admin', 
+    name: 'Adminview', 
+    component: Adminview,
+    props: true
+  },
   { 
     path: '/profil', 
     name: 'Profilview', 
@@ -77,12 +90,7 @@ const routes = [
       estimatedDelivery: route.query.estimatedDelivery
     })
   },
-  {
-    path: '/categories',
-    name: 'AllCategories',
-    component: AllCategories,
-    props: true
-  },
+
   {
     path: '/cart',
     name: 'Cart',

@@ -1,7 +1,5 @@
 <template>
   <div class="category-page">
-   
-
     <div class="category-content">
       <!-- Fil d'Ariane -->
       <nav class="breadcrumb">
@@ -12,31 +10,47 @@
 
       <h1 class="title">{{ categoryName }}</h1>
 
-      <div v-if="products.length" class="products-grid">
-        <div
-          v-for="p in products"
-          :key="p.id"
-          class="product-card"
-        >
-          <img :src="p.image" :alt="p.name" class="product-img" />
+      <!-- Loading state -->
+      <div v-if="loading" class="loading-state">
+        <div class="spinner"></div>
+        <p>Chargement des produits...</p>
+      </div>
+
+      <!-- Products grid -->
+      <div v-else-if="products.length" class="products-grid">
+        <div v-for="p in products" :key="p.id" class="product-card">
+          <!-- ✅ CORRECTION: Utilisez getProductImageUrl() -->
+          <img :src="getProductImageUrl(p.img)" :alt="p.name" class="product-img" />
+
           <div class="product-info">
-            <p class="product-name">{{ p.name }}</p>
-            <p class="product-brand">{{ p.brand }}</p>
-            <p class="product-price">{{ p.price }} €</p>
+            <h3 class="product-name">{{ p.name }}</h3>
+            <p class="product-price">{{ formatPrice(p.price) }}</p>
+            <div class="stock-info">
+              <span :class="{ 'low-stock': p.quantity < 5, 'in-stock': p.quantity >= 5 }">
+                {{ p.quantity > 0 ? `${p.quantity} en stock` : 'Rupture' }}
+              </span>
+            </div>
           </div>
-          
+
           <div class="product-card-actions">
             <router-link :to="`/product/${p.id}`" class="view-details-btn">
-              Voir détails
+              Voir le produit
             </router-link>
-            <!-- ✅ BOUTON AJOUTER AU PANIER -->
-            <button @click="addToCart(p)" class="add-to-cart-quick-btn" title="Ajouter au panier">
+
+            <button 
+              @click="addToCart(p)" 
+              class="add-to-cart-quick-btn" 
+              title="Ajouter au panier"
+              :disabled="p.quantity <= 0"
+              :class="{ 'disabled': p.quantity <= 0 }"
+            >
               🛒
             </button>
           </div>
         </div>
       </div>
 
+      <!-- Empty state -->
       <div v-else class="empty-state">
         <p class="empty-text">Aucun produit dans cette catégorie</p>
         <router-link to="/categories" class="back-to-home">Voir toutes les collections</router-link>
@@ -46,220 +60,174 @@
 </template>
 
 <script>
+import axios from 'axios';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
 // Import des images
-import noir from '../assets/noir.png'
-import blanc from '../assets/blanc.png'
-import rosefemme from '../assets/rosefemme.png'
-import blancfemme from '../assets/blancfemme.png'
-import noirfemme from '../assets/noirfemme.png'
-import enfantbleu from '../assets/enfantbleu.png'
-import enfantrouge from '../assets/enfantrouge.png'
-import gris from '../assets/gris.png'
+import noir from '../assets/noir.png';
+import blanc from '../assets/blanc.png';
+import rosefemme from '../assets/rosefemme.png';
+import blancfemme from '../assets/blancfemme.png';
+import noirfemme from '../assets/noirfemme.png';
+import enfantbleu from '../assets/enfantbleu.png';
+import enfantrouge from '../assets/enfantrouge.png';
+import gris from '../assets/gris.png';
 
 export default {
   name: 'CategoryPage',
-  // ✅ AJOUT: Props pour la méthode globale d'ajout au panier
   props: ['user', 'setUser', 'addToCartGlobal'],
   data() {
     return {
       products: [],
       categoryName: "",
-      // ✅ AJOUT: Champ img manquant dans les produits
-      allProducts: [
-        // Produits Homme
-        { 
-          id: 101, 
-          name: "T-shirt Noir Classique", 
-          brand: "Nike", 
-          price: 20, 
-          image: noir,
-          img: 'noir.png', // ✅ AJOUT: champ img manquant
-          categoryId: 1,
-          description: "T-shirt en coton 100% biologique, coupe classique, confortable et durable."
-        },
-        { 
-          id: 102, 
-          name: "T-shirt Blanc Sport", 
-          brand: "Adidas", 
-          price: 25, 
-          image: blanc,
-          img: 'blanc.png', // ✅ AJOUT: champ img manquant
-          categoryId: 1,
-          description: "T-shirt technique en matière respirante, parfait pour le sport."
-        },
-        { 
-          id: 103, 
-          name: "T-shirt Gris Urban", 
-          brand: "Puma", 
-          price: 23, 
-          image: gris,
-          img: 'gris.png', // ✅ AJOUT: champ img manquant
-          categoryId: 1,
-          description: "T-shirt streetwear en coton premium, design urbain et moderne."
-        },
-        
-        // Produits Femme
-        { 
-          id: 201, 
-          name: "T-shirt Rose Élégant", 
-          brand: "Zara", 
-          price: 22, 
-          image: rosefemme,
-          img: 'rosefemme.png', // ✅ AJOUT: champ img manquant
-          categoryId: 2,
-          description: "T-shirt féminin en coton stretch, coupe ajustée, couleur rose pastel."
-        },
-        { 
-          id: 202, 
-          name: "T-shirt Blanc Femme", 
-          brand: "H&M", 
-          price: 18, 
-          image: blancfemme,
-          img: 'blancfemme.png', // ✅ AJOUT: champ img manquant
-          categoryId: 2,
-          description: "T-shirt basique femme, coupe standard, matière douce et agréable."
-        },
-        { 
-          id: 203, 
-          name: "T-shirt Noir Femme", 
-          brand: "Mango", 
-          price: 21, 
-          image: noirfemme,
-          img: 'noirfemme.png', // ✅ AJOUT: champ img manquant
-          categoryId: 2,
-          description: "T-shirt femme en coton bio, coupe ajustée, idéal pour toutes les occasions."
-        },
-        
-        // Produits Enfants
-        { 
-          id: 301, 
-          name: "T-shirt Bleu Enfant", 
-          brand: "Disney", 
-          price: 15, 
-          image: enfantbleu,
-          img: 'enfantbleu.png', // ✅ AJOUT: champ img manquant
-          categoryId: 3,
-          description: "T-shirt pour enfant avec motif Disney, coton doux, lavage facile."
-        },
-        { 
-          id: 302, 
-          name: "T-shirt Rouge Super-héros", 
-          brand: "Marvel", 
-          price: 16, 
-          image: enfantrouge,
-          img: 'enfantrouge.png', // ✅ AJOUT: champ img manquant
-          categoryId: 3,
-          description: "T-shirt enfant avec impression Marvel, parfait pour les fans de super-héros."
-        }
-      ]
-    }
-  },
-  mounted() {
-    this.loadCategoryProducts()
+      loading: false,
+      imageMap: {
+        'noir.png': noir,
+        'blanc.png': blanc,
+        'rosefemme.png': rosefemme,
+        'gris.png': gris,
+        'blancfemme.png': blancfemme,
+        'noirfemme.png': noirfemme,
+        'enfantbleu.png': enfantbleu,
+        'enfantrouge.png': enfantrouge
+      }
+    };
   },
   watch: {
     '$route.params.id': {
-      handler() {
-        this.loadCategoryProducts()
-      },
+      handler: 'loadCategoryProducts',
       immediate: true
     }
   },
   methods: {
-    loadCategoryProducts() {
+    async loadCategoryProducts() {
       const categoryId = parseInt(this.$route.params.id);
-      console.log("🔄 Filtrage pour catégorie:", categoryId);
-      
-      // ✅ FILTRAGE LOCAL SIMPLE
-      this.products = this.allProducts.filter(product => 
-        product.categoryId === categoryId
-      );
-      
-      // Définir le nom de la catégorie
-      this.setCategoryName(categoryId);
-      
-      console.log("✅ Produits trouvés:", this.products.length);
+      console.log(`🔄 Chargement catégorie ${categoryId}...`);
+
+      this.loading = true;
+      this.products = [];
+
+      try {
+        const response = await axios.get(
+          `${API_URL}/product/category/${categoryId}`
+        );
+
+        console.log('📊 Réponse API:', response.data);
+
+        if (response.data?.success) {
+          this.products = response.data.data || [];
+          console.log(`✅ ${this.products.length} produits chargés`);
+          
+          // Debug: Afficher les produits chargés
+          if (this.products.length > 0) {
+            console.log('📦 Premier produit:', {
+              id: this.products[0].id,
+              name: this.products[0].name,
+              img: this.products[0].img,
+              price: this.products[0].price
+            });
+          }
+        } else {
+          console.warn('⚠️ Réponse sans success:true', response.data);
+        }
+
+      } catch (error) {
+        console.error('❌ Erreur chargement catégorie:', error);
+        
+        if (error.response) {
+          console.error('📊 Détails erreur:', {
+            status: error.response.status,
+            data: error.response.data,
+            url: error.config?.url
+          });
+        }
+        
+        this.products = [];
+      } finally {
+        this.loading = false;
+        this.setCategoryName(categoryId);
+      }
     },
     
     setCategoryName(categoryId) {
-      const categoryNames = {
+      const categories = {
         1: 'T-shirts Homme',
         2: 'T-shirts Femme', 
         3: 'T-shirts Enfants'
       };
-      
-      this.categoryName = categoryNames[categoryId] || 'Catégorie';
+      this.categoryName = categories[categoryId] || 'Catégorie';
     },
     
-    // ✅ AJOUT: Méthode pour ajouter au panier
+    getProductImageUrl(imgName) {
+      // ✅ Retourne l'image importée localement
+      return this.imageMap[imgName] || '';
+    },
+    
+    formatPrice(price) {
+      return new Intl.NumberFormat('fr-FR', {
+        style: 'currency',
+        currency: 'EUR'
+      }).format(price);
+    },
+    
     addToCart(product) {
-  const productToAdd = {
-    ...product,
-    quantity: 1
-  };
-  
-  if (this.addToCartGlobal) {
-    this.addToCartGlobal(productToAdd);
-    this.showSuccessNotification(`✅ ${product.name} ajouté au panier !`);
-  } else {
-    this.addToCartLocal(productToAdd);
-    this.showSuccessNotification(`✅ ${product.name} ajouté au panier !`);
-  }
-},
-    // ✅ AJOUT: Méthode de fallback
+      if (product.quantity <= 0) {
+        this.showNotification('Produit en rupture de stock', 'error');
+        return;
+      }
+      
+      const productToAdd = { 
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        quantity: 1,
+        img: product.img
+      };
+      
+      if (this.addToCartGlobal) {
+        this.addToCartGlobal(productToAdd);
+      } else {
+        this.addToCartLocal(productToAdd);
+      }
+      
+      this.showNotification(`✅ ${product.name} ajouté au panier !`, 'success');
+    },
+    
     addToCartLocal(product) {
-      const existingCart = JSON.parse(localStorage.getItem('monShop_cart') || '[]')
-      const existingItem = existingCart.find(item => item.id === product.id)
+      const existingCart = JSON.parse(localStorage.getItem('monShop_cart') || '[]');
+      const existingItem = existingCart.find(item => item.id === product.id);
       
       if (existingItem) {
-        existingItem.quantity += 1
+        existingItem.quantity += product.quantity || 1;
       } else {
-        existingCart.push(product)
+        existingCart.push({ ...product, quantity: product.quantity || 1 });
       }
       
-      localStorage.setItem('monShop_cart', JSON.stringify(existingCart))
+      localStorage.setItem('monShop_cart', JSON.stringify(existingCart));
     },
     
-    // ✅ AJOUT: Méthode de déconnexion
-    logout() {
-      if (this.setUser) {
-        this.setUser(null);
-      }
-      localStorage.removeItem('token');
-      this.$router.push('/');
-    },
-    
-    showSuccess(message) {
-      // Simple alert pour l'instant
-      alert(message)
+    showNotification(message, type = 'success') {
+      alert(message);
     }
   }
-}
+};
 </script>
 
 <style scoped>
 .category-page {
-  min-height: 100vh;
-  background: #f8fafc;
-}
-
-.category-content {
+  padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem;
 }
 
-/* Breadcrumb */
 .breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 2rem;
-  font-size: 0.9rem;
+  margin-bottom: 20px;
+  font-size: 14px;
 }
 
 .breadcrumb-link {
-  color: #3b82f6;
+  color: #666;
   text-decoration: none;
 }
 
@@ -268,256 +236,157 @@ export default {
 }
 
 .breadcrumb-separator {
-  color: #9ca3af;
+  margin: 0 8px;
+  color: #999;
 }
 
 .breadcrumb-current {
-  color: #6b7280;
+  color: #333;
   font-weight: 500;
 }
 
 .title {
-  font-size: 2.5rem;
-  font-weight: 700;
+  margin-bottom: 30px;
+  color: #333;
+}
+
+.loading-state {
   text-align: center;
-  margin-bottom: 3rem;
-  color: #1f2937;
+  padding: 40px;
+}
+
+.spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .products-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 2rem;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 30px;
 }
 
-/* ✅ CORRECTION: Changé de router-link à div pour contenir plusieurs éléments */
 .product-card {
-  background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  color: inherit;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
-  display: flex;
-  flex-direction: column;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .product-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
 }
 
 .product-img {
   width: 100%;
   height: 200px;
-  object-fit: contain;
-  border-radius: 8px;
-  margin-bottom: 1rem;
+  object-fit: cover;
 }
 
 .product-info {
-  flex-grow: 1;
-  margin-bottom: 1rem;
+  padding: 15px;
 }
 
 .product-name {
   font-weight: 600;
-  font-size: 1.1rem;
-  margin-bottom: 0.5rem;
-  color: #1f2937;
-}
-
-.product-brand {
-  color: #6b7280;
-  font-size: 0.9rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 8px;
+  color: #333;
 }
 
 .product-price {
-  color: #3b82f6;
+  font-size: 18px;
   font-weight: 700;
-  font-size: 1.2rem;
+  color: #e44d26;
+  margin-bottom: 10px;
 }
 
-/* ✅ AJOUT: Styles pour les actions des cartes produits */
+.stock-info {
+  font-size: 14px;
+}
+
+.in-stock {
+  color: #27ae60;
+}
+
+.low-stock {
+  color: #e74c3c;
+}
+
 .product-card-actions {
+  padding: 15px;
+  border-top: 1px solid #e0e0e0;
   display: flex;
-  gap: 0.5rem;
+  justify-content: space-between;
   align-items: center;
-  margin-top: auto;
 }
 
 .view-details-btn {
-  flex: 1;
-  padding: 0.75rem;
-  background: #3b82f6;
+  background: #3498db;
   color: white;
+  padding: 8px 16px;
+  border-radius: 4px;
   text-decoration: none;
-  border-radius: 8px;
-  font-weight: 600;
-  text-align: center;
-  transition: background 0.3s ease;
-  font-size: 0.9rem;
+  font-size: 14px;
+  transition: background 0.2s;
 }
 
 .view-details-btn:hover {
-  background: #2563eb;
+  background: #2980b9;
 }
 
 .add-to-cart-quick-btn {
-  padding: 0.75rem;
-  background: #10b981;
+  background: #2ecc71;
   color: white;
   border: none;
-  border-radius: 8px;
-  font-weight: 600;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 18px;
   cursor: pointer;
-  transition: background 0.3s ease;
-  font-size: 1.1rem;
+  transition: background 0.2s;
 }
 
-.add-to-cart-quick-btn:hover {
-  background: #059669;
-  transform: scale(1.05);
+.add-to-cart-quick-btn:hover:not(.disabled) {
+  background: #27ae60;
+}
+
+.add-to-cart-quick-btn.disabled {
+  background: #95a5a6;
+  cursor: not-allowed;
 }
 
 .empty-state {
   text-align: center;
-  padding: 4rem 2rem;
+  padding: 60px 20px;
 }
 
 .empty-text {
-  color: #6b7280;
-  font-size: 1.1rem;
-  margin-bottom: 1.5rem;
+  font-size: 18px;
+  color: #666;
+  margin-bottom: 20px;
 }
 
 .back-to-home {
-  display: inline-block;
-  padding: 0.75rem 1.5rem;
-  background: #3b82f6;
+  background: #3498db;
   color: white;
+  padding: 10px 20px;
+  border-radius: 4px;
   text-decoration: none;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: background 0.3s ease;
+  display: inline-block;
 }
 
 .back-to-home:hover {
-  background: #2563eb;
-}
-
-/* Navigation */
-.navigation {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 2rem;
-  background: white;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-.nav-logo {
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #3b82f6;
-  text-decoration: none;
-}
-
-.nav-links {
-  display: flex;
-  gap: 2rem;
-}
-
-.nav-link {
-  text-decoration: none;
-  color: #374151;
-  font-weight: 500;
-  transition: color 0.3s ease;
-}
-
-.nav-link:hover,
-.nav-link.router-link-active {
-  color: #3b82f6;
-}
-
-/* ✅ AJOUT: Styles pour la section login */
-.nav-login {
-  display: flex;
-  align-items: center;
-}
-
-.user-menu {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.welcome-message {
-  color: #3b82f6;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.login-button {
-  padding: 0.5rem 1rem;
-  background: #3b82f6;
-  color: white !important;
-  border-radius: 8px;
-  text-decoration: none;
-  transition: all 0.3s ease;
-}
-
-.login-button:hover {
-  background: #2563eb;
-  transform: translateY(-1px);
-}
-
-.logout-button {
-  padding: 0.5rem 1rem;
-  background: #ef4444;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.logout-button:hover {
-  background: #dc2626;
-  transform: translateY(-1px);
-}
-
-@media (max-width: 768px) {
-  .navigation {
-    flex-direction: column;
-    gap: 1rem;
-  }
-  
-  .nav-links {
-    gap: 1rem;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-  
-  .user-menu {
-    flex-direction: column;
-    gap: 0.5rem;
-    text-align: center;
-  }
-  
-  .category-content {
-    padding: 1rem;
-  }
-  
-  .products-grid {
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1rem;
-  }
-  
-  .product-card-actions {
-    flex-direction: column;
-  }
+  background: #2980b9;
 }
 </style>

@@ -1,23 +1,21 @@
-import { 
-  getAllProducts,
+import {authenticate} from '../security/jwt.js';
+import {getAllProducts,
   getProductByCategory,
-  addProductToOrder,
-  deleteProduct,
   getProductById,
-  updateProduct
-} from '../controllers/productController.js';
+  addProductToOrder,
+  deleteProduct ,
+  addProductByAdmin,
+  deleteFromCart,
+  updateProduct} from '../controllers/productController.js';
 
-export default async function productRoutes(fastify) {
+export default async function productRoutes(fastify, opts) {
+   fastify.get('/category/:id', getProductByCategory);
+  fastify.get('/allproduct', getAllProducts);
+  fastify.post('/addAdmin', addProductByAdmin);
+  fastify.post('/getProduct', getProductById);
 
-  // ✅ Routes spécifiques D’ABORD
-  fastify.get('/all', getAllProducts);
-  fastify.get('/category/:id', getProductByCategory);
-
-  // ✅ Routes dynamiques APRÈS
-  fastify.get('/:id', getProductById);
-
-  // ✅ CRUD
   fastify.post('/add', addProductToOrder);
-  fastify.delete('/delete/:id', deleteProduct);
-  fastify.put('/update/:id', updateProduct);
+  fastify.delete("/removeFromCart", deleteFromCart);
+  fastify.delete("/deleteProduct", deleteProduct);
+  fastify.put("/update/:id", updateProduct);
 }

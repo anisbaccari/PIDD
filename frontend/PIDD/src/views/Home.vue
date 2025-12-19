@@ -1,6 +1,6 @@
 <template>
   <div class="home-page">
-     <!-- Bouton Admin flottant (visible uniquement aux admins) -->
+    <!-- Bouton Admin flottant -->
     <router-link 
       v-if="user && user.role === 'admin'"
       to="/admin/dashboard" 
@@ -10,6 +10,7 @@
       <span class="admin-icon">👑</span>
       <span class="admin-text">Admin</span>
     </router-link>
+
     <!-- Hero Section -->
     <section class="hero-section">
       <div class="hero-overlay">
@@ -18,70 +19,12 @@
           <p class="hero-subtitle">Découvrez notre collection exclusive de t-shirts premium</p>
           <div class="hero-actions">
             <router-link to="/categories" class="hero-btn primary">
-              Explorer la collection
-              <span class="btn-icon">→</span>
+              Explorer la collection → 
             </router-link>
             <router-link to="/products" class="hero-btn secondary">
               Voir les promotions
             </router-link>
           </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Features -->
-    <section class="features-section">
-      <div class="container">
-        <div class="features-grid">
-          <div class="feature-card">
-            <div class="feature-icon">🚚</div>
-            <h3>Livraison Rapide</h3>
-            <p>Livraison gratuite en 48h</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">💳</div>
-            <h3>Paiement Sécurisé</h3>
-            <p>Paiement 100% sécurisé</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">🔄</div>
-            <h3>Retour Facile</h3>
-            <p>30 jours pour changer d'avis</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">👕</div>
-            <h3>Qualité Premium</h3>
-            <p>Matériaux de haute qualité</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Catégories -->
-    <section class="categories-section">
-      <div class="container">
-        <div class="section-header">
-          <h2 class="section-title">Nos Collections</h2>
-          <p class="section-subtitle">Des styles pour tous les goûts</p>
-        </div>
-        <div class="categories-grid">
-          <router-link 
-            v-for="category in categories" 
-            :key="category.id"
-            :to="`/category/${category.id}`" 
-            class="category-card"
-          >
-            <div class="category-image">
-              <img :src="category.image" :alt="category.name" />
-              <div class="category-overlay">
-                <span class="category-link">Voir la collection →</span>
-              </div>
-            </div>
-            <div class="category-content">
-              <h3 class="category-name">{{ category.name }}</h3>
-              <p class="category-count">{{ category.count }} produits</p>
-            </div>
-          </router-link>
         </div>
       </div>
     </section>
@@ -94,75 +37,17 @@
           <p class="section-subtitle">Nos best-sellers</p>
         </div>
         <div class="products-grid">
-          <div
-            v-for="product in popularProducts" 
-            :key="product.id"
-            class="product-card"
-          >
-            <div class="product-badge" v-if="product.badge">
-              {{ product.badge }}
-            </div>
+          <div v-for="product in popularProducts" :key="product.id" class="product-card">
             <div class="product-image">
-              <img :src="product.image" :alt="product.name" />
-              <div class="product-actions">
-                <button @click="addToCart(product)" class="action-btn cart-btn" title="Ajouter au panier">
-                  <span class="action-icon">🛒</span>
-                </button>
-                <router-link :to="`/product/${product.id}`" class="action-btn view-btn" title="Voir détails">
-                  <span class="action-icon">👁️</span>
-                </router-link>
-              </div>
+              <img :src="`/images/${product.img}`" :alt="product.name" />
             </div>
-            <div class="product-content">
-              <div class="product-meta">
-                <span class="product-category">{{ product.category }}</span>
-                <span class="product-rating">
-                  <span class="stars">★★★★☆</span>
-                  <span class="rating-text">4.5</span>
-                </span>
-              </div>
-              <h3 class="product-name">{{ product.name }}</h3>
-              <p class="product-brand">{{ product.brand }}</p>
-              <div class="product-footer">
-                <span class="product-price">{{ product.price }} €</span>
-                <button @click="addToCart(product)" class="add-to-cart-btn">
-                  <span class="btn-text">Ajouter</span>
-                  <span class="btn-icon">+</span>
-                </button>
-              </div>
+            <h3 class="product-name">{{ product.name }}</h3>
+            <span class="product-price">{{ product.price }} €</span>
+            <div class="product-actions">
+              <button @click="addToCart(product)" class="action-btn cart-btn">🛒</button>
+              <router-link :to="`/product/${product.id}`" class="action-btn view-btn">👁️</router-link>
             </div>
           </div>
-        </div>
-        <div class="section-footer">
-          <router-link to="/products" class="view-all-btn">
-            Voir tous les produits
-            <span class="btn-arrow">→</span>
-          </router-link>
-        </div>
-      </div>
-    </section>
-
-  
-
-    <!-- Newsletter -->
-    <section class="newsletter-section">
-      <div class="container">
-        <div class="newsletter-content">
-          <div class="newsletter-text">
-            <h2 class="newsletter-title">Restez informés</h2>
-            <p class="newsletter-subtitle">Inscrivez-vous pour recevoir nos offres exclusives</p>
-          </div>
-          <form @submit.prevent="subscribeNewsletter" class="newsletter-form">
-            <input 
-              type="email" 
-              placeholder="Votre adresse email" 
-              class="newsletter-input"
-              required
-            />
-            <button type="submit" class="newsletter-btn">
-              S'abonner
-            </button>
-          </form>
         </div>
       </div>
     </section>
@@ -170,214 +55,55 @@
 </template>
 
 <script>
-// Import des images
-import enfantImg from '../assets/enfant.png'
-import femmeImg from '../assets/femme.png'
-import hommeImg from '../assets/homme.png'
-import blancImg from '../assets/blanc.png'
-import blancfemmeImg from '../assets/blancfemme.png'
-import enfantbleuImg from '../assets/enfantbleu.png'
-import enfantrougeImg from '../assets/enfantrouge.png'
-import grisImg from '../assets/gris.png'
-import noirImg from '../assets/noir.png'
-import noirfemmeImg from '../assets/noirfemme.png'
-import rosefemmeImg from '../assets/rosefemme.png'
+import { productService } from '../services/productServices';
 
 export default {
   name: 'HomePage',
-  props: ['user', 'setUser', 'addToCartGlobal'],
+  props: ['user', 'addToCartGlobal'],
   data() {
     return {
-      categories: [
-        { 
-          id: 1, 
-          name: "Collection Homme", 
-          image: hommeImg,
-          count: 3
-        },
-        { 
-          id: 2, 
-          name: "Collection Femme", 
-          image: femmeImg,
-          count: 3
-        },
-        { 
-          id: 3, 
-          name: "Collection Enfants", 
-          image: enfantImg,
-          count: 2
-        }
-      ],
-      popularProducts: [
-        { 
-          id: 101, 
-          name: "T-shirt Noir classique", 
-          price: 20, 
-          image: noirImg,
-          img: 'noir.png',
-          brand: "Nike",
-          category: "Homme",
-          badge: "Nouveau"
-        },
-        { 
-          id: 102, 
-          name: "T-shirt Sport Blanc", 
-          price: 25, 
-          image: blancImg,
-          img: 'blanc.png',
-          brand: "Adidas",
-          category: "Homme",
-          badge: "-20%"
-        },
-        { 
-          id: 103, 
-          name: "T-shirt Urban Gris", 
-          price: 23, 
-          image: grisImg,
-          img: 'gris.png',
-          brand: "Puma",
-          category: "Homme"
-        },
-        { 
-          id: 201, 
-          name: "T-shirt Rose Élégant", 
-          price: 22, 
-          image: rosefemmeImg,
-          img: 'rosefemme.png',
-          brand: "Zara",
-          category: "Femme",
-          badge: "Best-seller"
-        },
-        { 
-          id: 202, 
-          name: "T-shirt Blanc Femme", 
-          price: 18, 
-          image: blancfemmeImg,
-          img: 'blancfemme.png',
-          brand: "H&M",
-          category: "Femme"
-        },
-        { 
-          id: 301, 
-          name: "T-shirt Marvel Enfant", 
-          price: 15, 
-          image: enfantbleuImg,
-          img: 'enfantbleu.png',
-          brand: "Marvel",
-          category: "Enfants",
-          badge: "Populaire"
-        }
-      ]
-    }
+      popularProducts: [],
+      loading: true
+    };
   },
   methods: {
+    // Dans HomePage.vue, modifiez loadProducts()
+async loadProducts() {
+  try {
+    // Avec la correction du service
+    const products = await productService.getAll();
+    console.log('Produits chargés:', products); // Debug
+    this.popularProducts = products;
+  } catch (error) {
+    console.error('Erreur chargement produits', error);
+  } finally {
+    this.loading = false;
+  }
+},
     addToCart(product) {
-      const productToAdd = {
-        ...product,
-        quantity: 1
-      }
-      
+      const productToAdd = { ...product, quantity: 1 };
       if (this.addToCartGlobal) {
         this.addToCartGlobal(productToAdd);
-        this.showSuccessNotification(`${product.name} a été ajouté au panier !`);
       } else {
         this.addToCartLocal(productToAdd);
       }
+      alert(`${product.name} ajouté au panier`);
     },
-    
     addToCartLocal(product) {
       const existingCart = JSON.parse(localStorage.getItem('monShop_cart') || '[]');
       const existingItem = existingCart.find(item => item.id === product.id);
-      
-      if (existingItem) {
-        existingItem.quantity += 1;
-      } else {
-        existingCart.push(product);
-      }
-      
+      if (existingItem) existingItem.quantity += product.quantity || 1;
+      else existingCart.push(product);
       localStorage.setItem('monShop_cart', JSON.stringify(existingCart));
-      this.showSuccessNotification(`${product.name} a été ajouté au panier !`);
-    },
-    
-    showSuccessNotification(message) {
-      // Créer une notification temporaire
-      const notification = document.createElement('div');
-      notification.className = 'success-notification';
-      notification.innerHTML = `
-        <div class="notification-content">
-          <span class="notification-icon">✅</span>
-          <span class="notification-text">${message}</span>
-        </div>
-      `;
-      
-      document.body.appendChild(notification);
-      
-      setTimeout(() => {
-        notification.classList.add('hide');
-        setTimeout(() => {
-          document.body.removeChild(notification);
-        }, 300);
-      }, 3000);
-    },
-    
-    subscribeNewsletter() {
-      // Simuler l'inscription à la newsletter
-      this.showSuccessNotification('Merci pour votre inscription à notre newsletter !');
     }
   },
   mounted() {
-    // Ajouter les styles pour la notification
-    const style = document.createElement('style');
-    style.textContent = `
-      .success-notification {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: linear-gradient(135deg, #10b981, #059669);
-        color: white;
-        padding: 1rem 1.5rem;
-        border-radius: 12px;
-        box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
-        z-index: 1000;
-        animation: slideIn 0.3s ease;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-      }
-      .success-notification.hide {
-        animation: slideOut 0.3s ease forwards;
-      }
-      .notification-content {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-      }
-      .notification-icon {
-        font-size: 1.2rem;
-      }
-      .notification-text {
-        font-weight: 500;
-      }
-      @keyframes slideIn {
-        from {
-          transform: translateX(100%);
-          opacity: 0;
-        }
-        to {
-          transform: translateX(0);
-          opacity: 1;
-        }
-      }
-      @keyframes slideOut {
-        to {
-          transform: translateX(100%);
-          opacity: 0;
-        }
-      }
-    `;
-    document.head.appendChild(style);
+    this.loadProducts();
   }
-}
+};
 </script>
+
+
 
 <style scoped>
 .home-page {
