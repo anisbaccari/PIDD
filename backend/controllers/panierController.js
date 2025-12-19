@@ -70,6 +70,190 @@ export async function getOrder(id)
   }
 }
 
+// Ajouter un produit au panier
+export async function addProductToCart(request, reply) {
+  try {
+    console.log('======================== [addProductToCart] ========================');
+    const userId = request.user?.id;
+    const { productId, quantity = 1 } = request.body;
+
+    if (!userId) {
+      return reply.code(401).send({ error: 'Unauthorized' });
+    }
+
+    if (!productId) {
+      return reply.code(400).send({ error: 'Product ID required' });
+    }
+
+    // Vérifier que le produit existe
+    const product = await Product.findByPk(productId);
+    if (!product) {
+      return reply.code(404).send({ error: 'Product not found' });
+    }
+
+    // Trouver ou créer une commande pending
+    let order = await Order.findOne({
+      where: { userId, status: 'pending' }
+    });
+
+    if (!order) {
+      order = await Order.create({
+        userId,
+        totalPrice: 0,
+        status: 'pending'
+      });
+    }
+
+    // Vérifier si le produit est déjà dans le panier
+    let orderItem = await OrderItem.findOne({
+      where: { orderId: order.id, productId }
+    });
+
+    if (orderItem) {
+      orderItem.quantity += quantity;
+      await orderItem.save();
+    } else {
+      orderItem = await OrderItem.create({
+        orderId: order.id,
+        productId,
+        quantity,
+        unitPrice: product.price
+      });
+    }
+
+    // Recalculer le total
+    const items = await OrderItem.findAll({ where: { orderId: order.id } });
+    const total = items.reduce((sum, item) => sum + (parseFloat(item.unitPrice) * item.quantity), 0);
+    order.totalPrice = total;
+    await order.save();
+
+    console.log('✅ Produit ajouté au panier');
+    reply.send({ success: true, orderId: order.id });
+
+  } catch (error) {
+    console.error('[addProductToCart] Erreur:', error);
+    reply.code(500).send({ error: 'Server error' });
+  }
+}
+
+// Mettre à jour la quantité d'un produit
+export async function updateCartItemQuantity(request, reply) {
+  try {
+    console.log('======================== [updateCartItemQuantity] ========================');
+    const userId = request.user?.id;
+    const { productId } = request.params;
+    const { quantity } = request.body;
+
+    if (!userId) {
+      return reply.code(401).send({ error: 'Unauthorized' });
+    }
+
+    if (quantity < 1) {
+      return reply.code(400).send({ error: 'Quantity must be at least 1' });
+    }
+
+    // Trouver la commande pending
+    const order = await Order.findOne({
+      where: { userId, status: 'pending' }
+    });
+
+    if (!order) {
+      return reply.code(404).send({ error: 'Cart not found' });
+    }
+
+    // Trouver l'article
+    const orderItem = await OrderItem.findOne({
+      where: { orderId: order.id, productId }
+    });
+
+    if (!orderItem) {
+      return reply.code(404).send({ error: 'Item not found in cart' });
+    }
+
+    // Mettre à jour
+    orderItem.quantity = quantity;
+    await orderItem.save();
+
+    // Recalculer le total
+    const items = await OrderItem.findAll({ where: { orderId: order.id } });
+    const total = items.reduce((sum, item) => sum + (parseFloat(item.unitPrice) * item.quantity), 0);
+    order.totalPrice = total;
+    await order.save();
+
+    console.log('✅ Quantité mise à jour');
+    reply.send({ success: true });
+
+  } catch (error) {
+    console.error('[updateCartItemQuantity] Erreur:', error);
+    reply.code(500).send({ error: 'Server error' });
+  }
+}
+
+// Retirer un produit du panier
+export async function removeProductFromCart(request, reply) {
+  try {
+    console.log('======================== [removeProductFromCart] ========================');
+    const userId = request.user?.id;
+    const { productId } = request.params;
+
+    if (!userId) {
+      return reply.code(401).send({ error: 'Unauthorized' });
+    }
+
+    const order = await Order.findOne({
+      where: { userId, status: 'pending' }
+    });
+
+    if (!order) {
+      return reply.code(404).send({ error: 'Cart not found' });
+    }
+
+    await OrderItem.destroy({
+      where: { orderId: order.id, productId }
+    });
+
+    // Recalculer le total
+    const items = await OrderItem.findAll({ where: { orderId: order.id } });
+    const total = items.reduce((sum, item) => sum + (parseFloat(item.unitPrice) * item.quantity), 0);
+    order.totalPrice = total;
+    await order.save();
+
+    console.log('✅ Produit retiré du panier');
+    reply.send({ success: true });
+
+  } catch (error) {
+    console.error('[removeProductFromCart] Erreur:', error);
+    reply.code(500).send({ error: 'Server error' });
+  }
+}
+
+// Vider le panier
+export async function clearUserCart(request, reply) {
+  try {
+    console.log('======================== [clearUserCart] ========================');
+    const userId = request.user?.id;
+
+    if (!userId) {
+      return reply.code(401).send({ error: 'Unauthorized' });
+    }
+
+    const order = await Order.findOne({
+      where: { userId, status: 'pending' }
+    });
+
+    if (order) {
+      await OrderItem.destroy({ where: { orderId: order.id } });
+      await order.destroy();
+    }
+
+    console.log('✅ Panier vidé');
+    reply.send({ success: true });
+
+  } catch (error) {
+    console.error('[clearUserCart] Erreur:', error);
+    reply.code(500).send({ error: 'Server error' });
+  }
+}
 
 export async function getPaidOrder(id)
 {
