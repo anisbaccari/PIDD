@@ -5,7 +5,6 @@ import {getAllProducts,
   addProductToOrder,
   deleteProduct ,
   addProductByAdmin,
-  deleteFromCart,
   updateProduct} from '../controllers/productController.js';
 
 export default async function productRoutes(fastify, opts) {
@@ -15,7 +14,7 @@ export default async function productRoutes(fastify, opts) {
   fastify.post('/getProduct', getProductById);
 
   fastify.post('/add', addProductToOrder);
-  fastify.delete("/removeFromCart", deleteFromCart);
+  /* fastify.delete("/removeFromCart", deleteFromCart); */
   fastify.delete("/deleteProduct", deleteProduct);
   fastify.put("/update/:id", updateProduct);
 }

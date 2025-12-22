@@ -1,5 +1,5 @@
 import {getAllProducts} from '../controllers/productController.js'
-import {getAllOrder,DeleteOrder,updateOrder} from '../controllers/panierController.js'
+import {getAllOrder,deleteOrder,updateOrder} from './panierController.js'
 import {} from '../controllers/categorieController.js'
 import { User } from '../models/User.js';
 import { Order } from '../models/Order.js';
@@ -71,7 +71,7 @@ export async function DeleteOrderAdmin(request,reply)
           console.log('\x1b[31m%s\x1b[0m',' orderId empty')
           return null
         }
-      DeleteOrder(orderId);
+      deleteOrder(orderId);
      
       reply.send({message:" delete succes"})
     
@@ -80,6 +80,7 @@ export async function DeleteOrderAdmin(request,reply)
     
   }
 }
+
 
 
 export async function PaidOrderAdmin(request,reply){

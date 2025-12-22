@@ -1,398 +1,564 @@
-import { Order } from '../models/Order.js';
-import { User } from '../models/User.js';
-import { OrderItem } from '../models/OrderItem.js';
-import { Product } from '../models/Product.js';
-
-export async function getPanier(request, reply) {
-  try {
-
-      console.log('\x1b[31m%s\x1b[0m',"======================== [getPanier] ========================");
-      let id = request.user.id; 
-      const idByToken = request.user?.id;
-      console.log(" [getPanier] idByToken :",idByToken);
-      const pendingOrder =  await getPendingOrder(idByToken)
-      const paidOrder =  await getPaidOrder(idByToken)
-     
-      console.log('\x1b[32m%s\x1b[0m'," [getPanier] paidOrder :",paidOrder);
-
-      console.log(" [getPanier] pendingOrder :",pendingOrder);
-
-      reply.send({pendingOrder:pendingOrder,paidOrder:paidOrder});
-  } catch (err) {
-    console.log(" [getPanier] err :",err);
-    reply.status(500).send({ error: err.message });
-  }
-}
-
-export async function getOrder(id)
-{
-  try {
-    
-        console.log('\x1b[31m%s\x1b[0m',"======================== [getOrder] ========================");
-        const idByToken = id;
-
-       const order = await Order.findAll({ // Panier (Commandes)
-                where: { userId:idByToken },
-                include: [
-                  {
-                    model: User,
-                    as: "user"
-                  },
-                  {
-                    model: OrderItem,//Produits commandees 
-                    as: "items",
-                    include: [
-                      {
-                        model: Product,
-                        as: "product"
-                      }
-                    ]
-                  }
-                ]
-          });
-          if(!order)
-          {
-           console.log(" [getOrder] orderList (panier) : vide");
-            return 
-
-          }
-          const panier = getDataOrder(order);
-          console.log(" [getOrder] orderList (panier) :", panier);
-          console.log(" [getOrder] orderItem (Produits Commandees) :", panier.map( o => o.orderItem));
-          console.log(" [getOrder] productList  :",  panier.map( o => o.productList));
-          return  panier ;
+// controllers/orderController.js
+import  {  Order}  from '../models/Order.js';
+import  {   OrderItem }  from '../models/OrderItem.js';
+import  {  Product }  from '../models/Product.js';
+import   {  User } from '../models/User.js';
+import { sequelize } from '../database/mysql.js';
+import { Op } from 'sequelize';
 
 
-  } catch (error) {
-    console.log(" [getOrder] error :",error);
-   
-    
-  }
-}
-
-// Ajouter un produit au panier
-export async function addProductToCart(request, reply) {
-  try {
-    console.log('======================== [addProductToCart] ========================');
-    const userId = request.user?.id;
-    const { productId, quantity = 1 } = request.body;
-
-    if (!userId) {
-      return reply.code(401).send({ error: 'Unauthorized' });
-    }
-
-    if (!productId) {
-      return reply.code(400).send({ error: 'Product ID required' });
-    }
-
-    // Vérifier que le produit existe
-    const product = await Product.findByPk(productId);
-    if (!product) {
-      return reply.code(404).send({ error: 'Product not found' });
-    }
-
-    // Trouver ou créer une commande pending
-    let order = await Order.findOne({
-      where: { userId, status: 'pending' }
-    });
-
-    if (!order) {
-      order = await Order.create({
-        userId,
-        totalPrice: 0,
-        status: 'pending'
-      });
-    }
-
-    // Vérifier si le produit est déjà dans le panier
-    let orderItem = await OrderItem.findOne({
-      where: { orderId: order.id, productId }
-    });
-
-    if (orderItem) {
-      orderItem.quantity += quantity;
-      await orderItem.save();
-    } else {
-      orderItem = await OrderItem.create({
-        orderId: order.id,
-        productId,
-        quantity,
-        unitPrice: product.price
-      });
-    }
-
-    // Recalculer le total
-    const items = await OrderItem.findAll({ where: { orderId: order.id } });
-    const total = items.reduce((sum, item) => sum + (parseFloat(item.unitPrice) * item.quantity), 0);
-    order.totalPrice = total;
-    await order.save();
-
-    console.log('✅ Produit ajouté au panier');
-    reply.send({ success: true, orderId: order.id });
-
-  } catch (error) {
-    console.error('[addProductToCart] Erreur:', error);
-    reply.code(500).send({ error: 'Server error' });
-  }
-}
-
-// Mettre à jour la quantité d'un produit
-export async function updateCartItemQuantity(request, reply) {
-  try {
-    console.log('======================== [updateCartItemQuantity] ========================');
-    const userId = request.user?.id;
-    const { productId } = request.params;
-    const { quantity } = request.body;
-
-    if (!userId) {
-      return reply.code(401).send({ error: 'Unauthorized' });
-    }
-
-    if (quantity < 1) {
-      return reply.code(400).send({ error: 'Quantity must be at least 1' });
-    }
-
-    // Trouver la commande pending
-    const order = await Order.findOne({
-      where: { userId, status: 'pending' }
-    });
-
-    if (!order) {
-      return reply.code(404).send({ error: 'Cart not found' });
-    }
-
-    // Trouver l'article
-    const orderItem = await OrderItem.findOne({
-      where: { orderId: order.id, productId }
-    });
-
-    if (!orderItem) {
-      return reply.code(404).send({ error: 'Item not found in cart' });
-    }
-
-    // Mettre à jour
-    orderItem.quantity = quantity;
-    await orderItem.save();
-
-    // Recalculer le total
-    const items = await OrderItem.findAll({ where: { orderId: order.id } });
-    const total = items.reduce((sum, item) => sum + (parseFloat(item.unitPrice) * item.quantity), 0);
-    order.totalPrice = total;
-    await order.save();
-
-    console.log('✅ Quantité mise à jour');
-    reply.send({ success: true });
-
-  } catch (error) {
-    console.error('[updateCartItemQuantity] Erreur:', error);
-    reply.code(500).send({ error: 'Server error' });
-  }
-}
-
-// Retirer un produit du panier
-export async function removeProductFromCart(request, reply) {
-  try {
-    console.log('======================== [removeProductFromCart] ========================');
-    const userId = request.user?.id;
-    const { productId } = request.params;
-
-    if (!userId) {
-      return reply.code(401).send({ error: 'Unauthorized' });
-    }
-
-    const order = await Order.findOne({
-      where: { userId, status: 'pending' }
-    });
-
-    if (!order) {
-      return reply.code(404).send({ error: 'Cart not found' });
-    }
-
-    await OrderItem.destroy({
-      where: { orderId: order.id, productId }
-    });
-
-    // Recalculer le total
-    const items = await OrderItem.findAll({ where: { orderId: order.id } });
-    const total = items.reduce((sum, item) => sum + (parseFloat(item.unitPrice) * item.quantity), 0);
-    order.totalPrice = total;
-    await order.save();
-
-    console.log('✅ Produit retiré du panier');
-    reply.send({ success: true });
-
-  } catch (error) {
-    console.error('[removeProductFromCart] Erreur:', error);
-    reply.code(500).send({ error: 'Server error' });
-  }
-}
-
-// Vider le panier
-export async function clearUserCart(request, reply) {
-  try {
-    console.log('======================== [clearUserCart] ========================');
-    const userId = request.user?.id;
-
-    if (!userId) {
-      return reply.code(401).send({ error: 'Unauthorized' });
-    }
-
-    const order = await Order.findOne({
-      where: { userId, status: 'pending' }
-    });
-
-    if (order) {
-      await OrderItem.destroy({ where: { orderId: order.id } });
-      await order.destroy();
-    }
-
-    console.log('✅ Panier vidé');
-    reply.send({ success: true });
-
-  } catch (error) {
-    console.error('[clearUserCart] Erreur:', error);
-    reply.code(500).send({ error: 'Server error' });
-  }
-}
-
-export async function getPaidOrder(id)
-{
-  try {
-    
-        console.log('\x1b[31m%s\x1b[0m',"======================== [getPaidOrder] ========================");
-        const idByToken = id;
-
-       const order = await Order.findAll({ // Panier (Commandes)
-                where: { userId:idByToken , status:'paid' },
-                include: [
-                  {
-                    model: User,
-                    as: "user"
-                  },
-                  {
-                    model: OrderItem,//Produits commandees 
-                    as: "items",
-                    include: [
-                      {
-                        model: Product,
-                        as: "product"
-                      }
-                    ]
-                  }
-                ]
-          });
-          if(!order)
-            {
-             console.log(" [getOrder] orderList (panier) : vide");
-              return 
+ //* 🔹 POST /api/orders/confirm
+ //* Transforme le panier (Order pending) en commande confirmée
+// * Body: { paymentMethod, shippingAddress }
+ //*/
+export async function confirmCartOrder(request, reply) {
+  const transaction = await sequelize.transaction()
   
-            }
-          const panier = getDataOrder(order);
-          console.log(" [getPaidOrder] orderList (panier) :", panier);
-          console.log(" [getPaidOrder] orderItem (Produits Commandees) :", panier.map( o => o.orderItem));
-          console.log(" [getPaidOrder] productList  :",  panier.map( o => o.productList));
-          return  panier ;
-
-
-  } catch (error) {
-    console.log(" [getPaidOrder] error :",error);
-   
-    
-  }
-}
-
-export async function getPendingOrder(id)
-{
   try {
+    console.log('======================== [confirmCartOrder] ========================')
     
-        console.log('\x1b[31m%s\x1b[0m',"======================== [getPendingOrder] ========================");
-        const idByToken = id;
+    const userId = request.user?.id
+    if (!userId) {
+      await transaction.rollback()
+      return reply.code(401).send({ 
+        success: false,
+        error: 'Non autorisé' 
+      })
+    }
 
-       const order = await Order.findAll({ // Panier (Commandes)
-                where: { userId:idByToken , status:'pending' },
-                include: [
-                  {
-                    model: User,
-                    as: "user"
-                  },
-                  {
-                    model: OrderItem,//Produits commandees 
-                    as: "items",
-                    include: [
-                      {
-                        model: Product,
-                        as: "product"
-                      }
-                    ]
-                  }
-                ]
-          });
-          if(!order)
-            {
-             console.log(" [getOrder] orderList (panier) : vide");
-              return 
-  
-            }
-          const panier = getDataOrder(order);
-          console.log(" [getPendingOrder] orderList (panier) :", panier);
-          console.log(" [getPendingOrder] orderItem (Produits Commandees) :", panier.map( o => o.orderItem));
-          console.log(" [getPendingOrder] productList  :",  panier.map( o => o.productList));
-          return  panier ;
+    const { paymentMethod, shippingAddress } = request.body
 
+    // Validation des données
+    if (!paymentMethod) {
+      await transaction.rollback()
+      return reply.code(400).send({ 
+        success: false,
+        error: 'Méthode de paiement requise' 
+      })
+    }
 
-  } catch (error) {
-    console.log(" [getPendingOrder] error :",error);
-   
-    
-  }
-}
+    if (!shippingAddress) {
+      await transaction.rollback()
+      return reply.code(400).send({ 
+        success: false,
+        error: 'Adresse de livraison requise' 
+      })
+    }
 
+    // 1️⃣ Récupérer la commande pending
+    const order = await Order.findOne({
+      where: { 
+        userId, 
+        status: 'pending' 
+      },
+      include: [{
+        model: OrderItem,
+        as: 'items',
+        include: [{
+          model: Product,
+          as: 'product'
+        }]
+      }],
+      transaction
+    })
 
-export async function getOrderById(id)
-{
-  try {
-    
-        console.log('\x1b[31m%s\x1b[0m',"======================== [getOrderById] ========================");
-        const orderId = id;
+    if (!order) {
+      await transaction.rollback()
+      return reply.code(404).send({ 
+        success: false,
+        error: 'Aucun panier trouvé' 
+      })
+    }
 
-        const order = await Order.findByPk(orderId); // Panier (Commandes)
-        return order
+    if (!order.items || order.items.length === 0) {
+      await transaction.rollback()
+      return reply.code(400).send({ 
+        success: false,
+        error: 'Le panier est vide' 
+      })
+    }
 
+    console.log(`📦 [confirmCartOrder] Commande #${order.id} trouvée avec ${order.items.length} articles`)
 
-  } catch (error) {
-    console.log(" [getOrderById] error :",error);
-   
-    
-  }
-}
-function getDataOrder(order)
-{
-    try {
-          console.log("========================  [getDataOrder] ========================");
-
-          const ordersPlain = order.map(o => o.get({ plain: true }));
-          const userArray = ordersPlain.map(o => o.user);
-          const itemsArray = ordersPlain.map(o => o.items); // Produits Commandees 
-          const productList =  ordersPlain.flatMap(o => o.items).map( i => i.product);
-          
-          const panier = ordersPlain.map(o => ({
-                                id: o.id,
-                                totalPrice: o.totalPrice,
-                                status: o.status,
-                                createdAt: o.createdAt,
-                                orderItem: o.items || [],
-                                productList: (o.items || []).map(i => i.product)
-                                // add any order fields you want
-                              }));
-          
-         
-          return panier 
-    } catch (error) {
-    console.log(" [getDataOrder] error :",error);
+    // 2️⃣ Vérifier le stock et diminuer les quantités
+    for (const item of order.items) {
+      const product = await Product.findByPk(item.productId, { transaction })
       
+      if (!product) {
+        await transaction.rollback()
+        return reply.code(404).send({ 
+          success: false,
+          error: `Produit ${item.productId} non trouvé` 
+        })
+      }
+
+      // Vérifier le stock disponible
+      if (product.quantity < item.quantity) {
+        await transaction.rollback()
+        return reply.code(400).send({ 
+          success: false,
+          error: `Stock insuffisant pour ${product.name}. Disponible: ${product.quantity}, demandé: ${item.quantity}` 
+        })
+      }
+
+      // Diminuer le stock
+      console.log(`📉 [confirmCartOrder] ${product.name}: ${product.quantity} → ${product.quantity - item.quantity}`)
+      product.quantity -= item.quantity
+      await product.save({ transaction })
     }
 
+    // 3️⃣ Mettre à jour la commande
+    order.status = 'paid'
+    order.paymentMethod = paymentMethod
+    
+    // Si shippingAddress est un objet, le convertir en JSON string
+    if (typeof shippingAddress === 'object') {
+      order.shippingAddress = JSON.stringify(shippingAddress)
+    } else {
+      order.shippingAddress = shippingAddress
+    }
+    
+    await order.save({ transaction })
+
+    await transaction.commit()
+
+    console.log(`✅ [confirmCartOrder] Commande #${order.id} confirmée avec succès`)
+
+    // 4️⃣ Récupérer la commande complète pour la réponse
+    const confirmedOrder = await Order.findByPk(order.id, {
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'username', 'email']
+        },
+        {
+          model: OrderItem,
+          as: 'items',
+          include: [{
+            model: Product,
+            as: 'product',
+            attributes: ['id', 'name', 'price', 'img']
+          }]
+        }
+      ]
+    })
+
+    reply.send({
+      success: true,
+      message: 'Commande confirmée avec succès',
+      order: confirmedOrder
+    })
+
+  } catch (error) {
+    await transaction.rollback()
+    console.error('❌ [confirmCartOrder] Erreur:', error)
+    reply.code(500).send({ 
+      success: false,
+      error: 'Erreur serveur lors de la confirmation de la commande',
+      details: error.message
+    })
+  }
 }
+
+// POST /api/orders/create - Créer une commande
+export async function createOrder(request, reply) {
+  const transaction = await Order.sequelize.transaction();
+  
+  try {
+    console.log('======================== [createOrder] ========================');
+    
+    const userId = request.user?.id;
+    if (!userId) {
+      await transaction.rollback();
+      return reply.code(401).send({ error: 'Non autorisé' });
+    }
+
+    const {
+      items,
+      totalPrice,
+      paymentMethod,
+      shippingAddress,
+      shippingMethod,
+      notes
+    } = request.body;
+
+    // Validation
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      await transaction.rollback();
+      return reply.code(400).send({ error: 'Le panier est vide' });
+    }
+
+    if (!totalPrice || totalPrice <= 0) {
+      await transaction.rollback();
+      return reply.code(400).send({ error: 'Prix total invalide' });
+    }
+
+    if (!paymentMethod) {
+      await transaction.rollback();
+      return reply.code(400).send({ error: 'Méthode de paiement requise' });
+    }
+
+    if (!shippingAddress) {
+      await transaction.rollback();
+      return reply.code(400).send({ error: 'Adresse de livraison requise' });
+    }
+
+    // Vérifier le stock
+    for (const item of items) {
+      const product = await Product.findByPk(item.productId, { transaction });
+      
+      if (!product) {
+        await transaction.rollback();
+        return reply.code(404).send({ 
+          error: `Produit ${item.productId} non trouvé` 
+        });
+      }
+
+      if (product.stock < item.quantity) {
+        await transaction.rollback();
+        return reply.code(400).send({ 
+          error: `Stock insuffisant pour ${product.name}` 
+        });
+      }
+    }
+
+    // Créer la commande
+    const order = await Order.create({
+      userId,
+      totalPrice: parseFloat(totalPrice),
+      status: 'confirmed',
+      paymentMethod,
+      paymentStatus: 'paid',
+      shippingAddress,
+      shippingMethod: shippingMethod || 'Standard',
+      notes: notes || null
+    }, { transaction });
+
+    console.log('✅ Commande créée:', order.id);
+
+    // Créer les items et diminuer le stock
+    for (const item of items) {
+      await OrderItem.create({
+        orderId: order.id,
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice: parseFloat(item.unitPrice || item.price || 0)
+      }, { transaction });
+
+      const product = await Product.findByPk(item.productId, { transaction });
+      product.stock -= item.quantity;
+      await product.save({ transaction });
+    }
+
+    await transaction.commit();
+
+    // Récupérer la commande complète
+    const completeOrder = await Order.findByPk(order.id, {
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'username', 'email']
+        },
+        {
+          model: OrderItem,
+          as: 'items',
+          include: [
+            {
+              model: Product,
+              as: 'product',
+              attributes: ['id', 'name', 'price', 'img']
+            }
+          ]
+        }
+      ]
+    });
+
+    reply.send({
+      success: true,
+      message: 'Commande créée avec succès',
+      order: completeOrder
+    });
+
+  } catch (error) {
+    await transaction.rollback();
+    console.error('[createOrder] Erreur:', error);
+    reply.code(500).send({ 
+      error: 'Erreur serveur'
+    });
+  }
+}
+
+// GET /api/orders/user - Commandes de l'utilisateur
+export async function getUserOrders(request, reply) {
+  try {
+    console.log('======================== [getUserOrders] ========================');
+    
+    const userId = request.user?.id;
+    if (!userId) {
+      return reply.code(401).send({ error: 'Non autorisé' });
+    }
+
+    const { page = 1, limit = 10, status } = request.query;
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    const where = { userId };
+    if (status) {
+      where.status = status;
+    }
+
+    const { count, rows: orders } = await Order.findAndCountAll({
+      where,
+      include: [
+        {
+          model: OrderItem,
+          as: 'items',
+          include: [
+            {
+              model: Product,
+              as: 'product',
+              attributes: ['id', 'name', 'price', 'img']
+            }
+          ]
+        }
+      ],
+      order: [['createdAt', 'DESC']],
+      offset,
+      limit: parseInt(limit)
+    });
+
+    reply.send({
+      success: true,
+      orders: orders,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: count,
+        pages: Math.ceil(count / parseInt(limit))
+      }
+    });
+
+  } catch (error) {
+    console.error('[getUserOrders] Erreur:', error);
+    reply.code(500).send({ error: 'Erreur serveur' });
+  }
+}
+
+
+// GET /api/orders/:orderId - Détails d'une commande
+export async function getOrderById(request, reply) {
+  try {
+    console.log('======================== [getOrderById] ========================');
+    
+    const userId = request.user?.id;
+    const { orderId } = request.params;
+
+    if (!userId) {
+      return reply.code(401).send({ error: 'Non autorisé' });
+    }
+
+    const order = await Order.findOne({
+      where: { 
+        id: orderId,
+        userId
+      },
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'username', 'email', 'name', 'lastName']
+        },
+        {
+          model: OrderItem,
+          as: 'items',
+          include: [
+            {
+              model: Product,
+              as: 'product'
+            }
+          ]
+        }
+      ]
+    });
+
+    if (!order) {
+      return reply.code(404).send({ error: 'Commande non trouvée' });
+    }
+
+    reply.send({
+      success: true,
+      order: order
+    });
+
+  } catch (error) {
+    console.error('[getOrderById] Erreur:', error);
+    reply.code(500).send({ error: 'Erreur serveur' });
+  }
+}
+
+// PUT /api/orders/:orderId/cancel - Annuler une commande
+export async function cancelOrder(request, reply) {
+  const transaction = await Order.sequelize.transaction();
+  
+  try {
+    console.log('======================== [cancelOrder] ========================');
+    
+    const userId = request.user?.id;
+    const { orderId } = request.params;
+
+    if (!userId) {
+      await transaction.rollback();
+      return reply.code(401).send({ error: 'Non autorisé' });
+    }
+
+    const order = await Order.findOne({
+      where: {
+        id: orderId,
+        userId,
+        status: { [Op.in]: ['pending', 'confirmed', 'processing'] }
+      },
+      include: [{
+        model: OrderItem,
+        as: 'items'
+      }],
+      transaction
+    });
+
+    if (!order) {
+      await transaction.rollback();
+      return reply.code(404).send({ 
+        error: 'Commande non trouvée ou ne peut pas être annulée' 
+      });
+    }
+
+    // Restaurer le stock
+    for (const item of order.items) {
+      const product = await Product.findByPk(item.productId, { transaction });
+      if (product) {
+        product.stock += item.quantity;
+        await product.save({ transaction });
+      }
+    }
+
+    // Annuler la commande
+    order.status = 'cancelled';
+    await order.save({ transaction });
+
+    await transaction.commit();
+
+    reply.send({
+      success: true,
+      message: 'Commande annulée avec succès',
+      order: order
+    });
+
+  } catch (error) {
+    await transaction.rollback();
+    console.error('[cancelOrder] Erreur:', error);
+    reply.code(500).send({ error: 'Erreur serveur' });
+  }
+}
+
+// GET /api/orders/stats - Statistiques
+export async function getOrderStats(request, reply) {
+  try {
+    console.log('======================== [getOrderStats] ========================');
+    
+    const userId = request.user?.id;
+    if (!userId) {
+      return reply.code(401).send({ error: 'Non autorisé' });
+    }
+
+    const stats = await Order.findOne({
+      where: { userId },
+      attributes: [
+        [sequelize.fn('COUNT', sequelize.col('id')), 'totalOrders'],
+        [
+          sequelize.fn('SUM', 
+            sequelize.literal("CASE WHEN status != 'cancelled' THEN totalPrice ELSE 0 END")
+          ), 
+          'totalSpent'
+        ]
+      ],
+      raw: true
+    });
+
+    const recentOrders = await Order.findAll({
+      where: { userId },
+      limit: 5,
+      order: [['createdAt', 'DESC']],
+      include: [{
+        model: OrderItem,
+        as: 'items',
+        include: [{
+          model: Product,
+          as: 'product',
+          attributes: ['id', 'name', 'img']
+        }]
+      }]
+    });
+
+    reply.send({
+      success: true,
+      stats: {
+        totalOrders: parseInt(stats.totalOrders) || 0,
+        totalSpent: parseFloat(stats.totalSpent) || 0,
+        recentOrders: recentOrders
+      }
+    });
+
+  } catch (error) {
+    console.error('[getOrderStats] Erreur:', error);
+    reply.code(500).send({ error: 'Erreur serveur' });
+  }
+}
+
+// GET /api/orders/tracking/:orderNumber - Suivi
+export async function trackOrder(request, reply) {
+  try {
+    console.log('======================== [trackOrder] ========================');
+    
+    const { orderNumber } = request.params;
+    const userId = request.user?.id;
+
+    if (!userId) {
+      return reply.code(401).send({ error: 'Non autorisé' });
+    }
+
+    const order = await Order.findOne({
+      where: {
+        id: orderNumber,
+        userId
+      },
+      include: [{
+        model: OrderItem,
+        as: 'items',
+        include: [{
+          model: Product,
+          as: 'product',
+          attributes: ['id', 'name', 'img']
+        }]
+      }]
+    });
+
+    if (!order) {
+      return reply.code(404).send({ 
+        error: 'Commande non trouvée' 
+      });
+    }
+
+    reply.send({
+      success: true,
+      order: order
+    });
+
+  } catch (error) {
+    console.error('[trackOrder] Erreur:', error);
+    reply.code(500).send({ error: 'Erreur serveur' });
+  }
+}
+
 
 export async function updateOrder(orderId)
 {
@@ -465,7 +631,7 @@ export async function getAllOrder()
 }
 
 
-export async function DeleteOrder(orderId){
+export async function deleteOrder(orderId){
   
   try {
     console.log('\x1b[31m%s\x1b[0m',"======================== [getAllOrder] ========================");
@@ -480,5 +646,45 @@ export async function DeleteOrder(orderId){
   } catch (error) {
     console.log(" [getAllOrder] error :",error);
     
+  }
+}
+
+// GET /api/orders/:orderId/items - Items d'une commande
+export async function getOrderItems(request, reply) {
+  try {
+    const userId = request.user?.id;
+    const { orderId } = request.params;
+
+    if (!userId) {
+      return reply.code(401).send({ error: 'Non autorisé' });
+    }
+
+    // Vérifier que l'utilisateur a accès à cette commande
+    const order = await Order.findOne({
+      where: { id: orderId, userId }
+    });
+
+    if (!order) {
+      return reply.code(404).send({ error: 'Commande non trouvée' });
+    }
+
+    const items = await OrderItem.findAll({
+      where: { orderId },
+      include: [{
+        model: Product,
+        as: 'product',
+        attributes: ['id', 'name', 'price', 'img']
+      }],
+      order: [['createdAt', 'ASC']]
+    });
+
+    reply.send({
+      success: true,
+      items: items
+    });
+
+  } catch (error) {
+    console.error('[getOrderItems] Erreur:', error);
+    reply.code(500).send({ error: 'Erreur serveur' });
   }
 }

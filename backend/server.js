@@ -4,13 +4,14 @@ import dotenv from 'dotenv';
 import cors from '@fastify/cors';
 import authRoutes from './routes/authRoutes.js';
 import profileRoutes from './routes/profileRoutes.js';
-import panierRoutes from './routes/panierRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import categorieRoutes from './routes/categorieRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
-import orderRoutes from './routes/orderRoutes.js'; // Importez le nouveau fichier ES6
+import panierRoutes from './routes/panierRoutes.js';
+import adminOrderRoutes from './routes/adminOrderRoutes.js';  // Importez le nouveau fichier ES6
 import homeRoute from './routes/homeRoute.js';
 import userRoutes from './routes/userRoutes.js';
+import cartRoutes from './routes/cartRoutes.js';
 
 import {initDatabase} from './database/initDb.js';
 import { sequelize } from './database/mysql.js';
@@ -53,9 +54,9 @@ await fastify.register(userRoutes);
 await fastify.register(profileRoutes, { prefix: '/profil' });
 await fastify.register(categorieRoutes, { prefix: '/categories' });
 await fastify.register(productRoutes, { prefix: '/product' });
-await fastify.register(panierRoutes, { prefix: '/panier' });
 await fastify.register(adminRoutes, { prefix: '/admin' });
-await fastify.register(orderRoutes, { prefix: '/orders' }); // Enregistrez les routes d'orders
+await fastify.register(cartRoutes, { prefix: '/cart' });
+await fastify.register(adminOrderRoutes, { prefix: '/AdminOrders' });// Enregistrez les routes d'orders
 await fastify.register(homeRoute, { prefix: '/hello' })
 
 // ========== DÉMARRAGE ==========
@@ -67,7 +68,7 @@ const start = async () => {
        await initDatabase();
     await fastify.listen({ port: PORT, host: '0.0.0.0' });
     // sync all models (create or alter tables to match models)
-    await sequelize.sync({ alter: true });
+    await sequelize.sync({ alter: false });
     fastify.log.info('✅ DB synced');
 
     console.log('\x1b[32m%s\x1b[0m', `✅ Serveur démarré sur http://localhost:${PORT}`);

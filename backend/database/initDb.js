@@ -40,7 +40,7 @@ async function ensureDatabase() {
 const adminList = [
   { username: 'Anis', name: 'Anis', lastName: 's', email: 'Anis@example.com', password: 'Anis', is_admin: true },
   { username: 'Test', name: 'Test', lastName: 'b', email: 'Test@example.com', password: 'Test', is_admin: false },
-  { username: 'Hermann', name: 'Hermann', lastName: 's', email: 'Hermann@example.com', password: 'Hermann', is_admin: true },
+  { username: 'Hermann', name: 'Hermann', lastName: 'Tchuente', email: 'Hermann@example.com', password: 'Hermann', is_admin: true },
   { username: 'Franklin', name: 'Franklin', lastName: 'x', email: 'Franklin@example.com', password: 'Franklin', is_admin: true },
 ];
 

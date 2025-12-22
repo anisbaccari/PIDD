@@ -3,7 +3,7 @@ import { User } from '../models/User.js';
 import { Product } from '../models/Product.js';
 import { Order } from '../models/Order.js';
 import { OrderItem } from '../models/OrderItem.js';
-import { getOrder} from './panierController.js';
+//import { getCart} from './cartController.js';
 
 export async function getAllProducts(request, reply) {
   try {
@@ -261,7 +261,7 @@ export async function addProductToOrder(request, reply) {
 
 
 /* ================== NOT THE ROMVE ONE  */
-export async function deleteFromCart(request, reply) {
+/* export async function deleteFromCart(request, reply) {
   try {
     
 
@@ -325,18 +325,25 @@ export async function deleteFromCart(request, reply) {
 
       await order.save();
 
-      const panier = getOrder(userId)
-      console.log("[removeItem] panier : ",panier)
+      //const panier = getOrder(userId)
+   //   console.log("[removeItem] panier : ",panier)
 
-      console.log("======================== END  [deleteFromCart] ========================");
-      reply.send(panier);
+     //console.log("======================== END  [deleteFromCart] ========================");
+     // reply.send(panier);
+     console.log("======================== END  [deleteFromCart] ========================");
+reply.send({
+  success: true,
+  message: "Produit supprimé du panier",
+  orderId: order.id
+});
+
 
   } catch (err) {
     console.log(err);
     reply.code(500).send({ error: "Server error" });
   }
 }
-
+  */
 
 /// DELETE A PRODUCT (ADMIN)
 
