@@ -56,7 +56,7 @@ await fastify.register(categorieRoutes, { prefix: '/categories' });
 await fastify.register(productRoutes, { prefix: '/product' });
 await fastify.register(adminRoutes, { prefix: '/admin' });
 await fastify.register(cartRoutes, { prefix: '/cart' });
-await fastify.register(adminOrderRoutes, { prefix: '/AdminOrders' });// Enregistrez les routes d'orders
+await fastify.register(adminOrderRoutes, { prefix: '/adminOrders' });// Enregistrez les routes d'orders
 await fastify.register(homeRoute, { prefix: '/hello' })
 
 // ========== DÉMARRAGE ==========

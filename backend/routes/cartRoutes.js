@@ -6,6 +6,8 @@ import {
   addItemToCart,
   updateCartItem,
    prepareCheckout,
+  confirmCartOrder,
+  getCurrentOrder,
   removeCartItem,
   clearCart
 } from '../controllers/cartController.js'
@@ -17,6 +19,9 @@ export default async function cartRoutes(fastify, options) {
   fastify.get('/', {
     preHandler: [authenticate]
   }, getCart)
+   fastify.get('/current', {
+    preHandler: [authenticate]
+  }, getCurrentOrder)
 
   // POST /api/cart/item - Ajouter un produit au panier
   fastify.post('/item', {
@@ -40,6 +45,11 @@ export default async function cartRoutes(fastify, options) {
 fastify.post('/checkout', {
   preHandler: [authenticate]
 }, prepareCheckout)
+// POST /api/orders/confirm - Confirmer le panier (NOUVELLE ROUTE)
+  fastify.post('/confirm', {
+    preHandler: [authenticate]
+  }, confirmCartOrder)
+
 
   console.log('✅ Routes panier enregistrées')
 }

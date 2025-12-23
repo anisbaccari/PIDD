@@ -400,7 +400,33 @@ export async function removeCartItem(request, reply) {
     })
   }
 }
+export async function getCurrentOrder(request, reply) {
+  const userId = request.user.id
 
+  const order = await Order.findOne({
+    where: { userId, status: 'pending' },
+    include: [{
+      model: OrderItem,
+      as: 'items',
+      include: [{ model: Product, as: 'product' }]
+    }]
+  })
+
+  if (!order) {
+    return reply.send({ success: true, order: null })
+  }
+
+  return reply.send({
+    success: true,
+    order: {
+      id: order.id,
+      items: order.items,
+      subtotal: order.items.reduce(
+        (t, i) => t + i.unitPrice * i.quantity, 0
+      )
+    }
+  })
+}
 export async function prepareCheckout(request, reply) {
   try {
     const userId = request.user.id
@@ -438,7 +464,83 @@ export async function prepareCheckout(request, reply) {
     })
   }
 }
+export async function confirmCartOrder(request, reply) {
+  const transaction = await sequelize.transaction()
 
+  try {
+    const userId = request.user.id
+
+    const {
+      items,
+      deliveryAddress,
+      deliveryMethod,
+      subtotal,
+      deliveryPrice,
+      total,
+      paymentMethod
+    } = request.body
+
+    // 🔒 Vérifications de base
+    if (!items || !items.length) {
+      return reply.code(400).send({
+        success: false,
+        message: 'Panier vide'
+      })
+    }
+
+    // 1️⃣ Créer la commande
+    const order = await Order.create({
+      userId,
+      status: 'paid',
+      subtotal,
+      deliveryPrice,
+      total,
+      paymentMethod,
+      deliveryMethod,
+      deliveryAddress: JSON.stringify(deliveryAddress)
+    }, { transaction })
+
+    // 2️⃣ Créer les orderItems
+    for (const item of items) {
+      // Vérifier le produit
+      const product = await Product.findByPk(item.productId, { transaction })
+
+      if (!product) {
+        throw new Error(`Produit introuvable (ID ${item.productId})`)
+      }
+
+      await OrderItem.create({
+        orderId: order.id,
+        productId: product.id,
+        quantity: item.quantity,
+        unitPrice: item.price
+      }, { transaction })
+    }
+
+    // 3️⃣ Commit transaction
+    await transaction.commit()
+
+    return reply.code(201).send({
+      success: true,
+      message: 'Commande confirmée avec succès',
+      order: {
+        id: order.id,
+        total: order.total,
+        status: order.status
+      }
+    })
+
+  } catch (error) {
+    await transaction.rollback()
+
+    console.error('❌ confirmCartOrder error:', error)
+
+    return reply.code(500).send({
+      success: false,
+      message: 'Erreur lors de la confirmation de la commande'
+    })
+  }
+}
 /**
  * 🔹 DELETE /api/cart
  * Vide complètement le panier
