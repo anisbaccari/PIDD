@@ -1,3 +1,4 @@
+//order model definition
 import { DataTypes } from 'sequelize'
 import { sequelize } from '../database/mysql.js'
 import { User } from './User.js'
@@ -11,22 +12,26 @@ export const Order = sequelize.define(
       primaryKey: true
     },
 
-    // 🔑 FK utilisateur (OBLIGATOIRE)
     userId: {
       type: DataTypes.INTEGER.UNSIGNED,
       allowNull: false
     },
 
-    // 💰 Total de la commande
     totalPrice: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
       defaultValue: 0
     },
 
-    // 📦 Statut commande
     status: {
-      type: DataTypes.ENUM('pending', 'paid', 'cancelled', 'fulfilled'),
+      type: DataTypes.ENUM(
+        'pending',
+        'confirmed',
+        'processing',
+        'shipped',
+        'delivered',
+        'cancelled'
+      ),
       allowNull: false,
       defaultValue: 'pending'
     }
@@ -40,7 +45,7 @@ export const Order = sequelize.define(
 Order.belongsTo(User, {
   foreignKey: 'userId',
   as: 'user',
-  onDelete: 'CASCADE',   // ✅ cohérent
+  onDelete: 'CASCADE',
   onUpdate: 'CASCADE'
 })
 

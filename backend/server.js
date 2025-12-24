@@ -12,7 +12,7 @@ import adminOrderRoutes from './routes/adminOrderRoutes.js';  // Importez le nou
 import homeRoute from './routes/homeRoute.js';
 import userRoutes from './routes/userRoutes.js';
 import cartRoutes from './routes/cartRoutes.js';
-
+import adminStatsRoutes from './routes/adminStatsRoutes.js';
 import {initDatabase} from './database/initDb.js';
 import { sequelize } from './database/mysql.js';
 
@@ -56,7 +56,8 @@ await fastify.register(categorieRoutes, { prefix: '/categories' });
 await fastify.register(productRoutes, { prefix: '/product' });
 await fastify.register(adminRoutes, { prefix: '/admin' });
 await fastify.register(cartRoutes, { prefix: '/cart' });
-await fastify.register(adminOrderRoutes, { prefix: '/adminOrders' });// Enregistrez les routes d'orders
+await fastify.register(adminStatsRoutes, { prefix: '/admin/stats' });
+await fastify.register(adminOrderRoutes, { prefix: '/admin/orders' });// Enregistrez les routes d'orders
 await fastify.register(homeRoute, { prefix: '/hello' })
 
 // ========== DÉMARRAGE ==========

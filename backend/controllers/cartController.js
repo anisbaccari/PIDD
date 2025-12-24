@@ -541,6 +541,7 @@ export async function confirmCartOrder(request, reply) {
     })
   }
 }
+
 /**
  * 🔹 DELETE /api/cart
  * Vide complètement le panier

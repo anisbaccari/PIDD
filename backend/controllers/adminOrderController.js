@@ -1,392 +1,319 @@
-// ============================================
 // controllers/adminOrderController.js
-// ============================================
 import { Order } from '../models/Order.js';
-import { OrderItem } from '../models/OrderItem.js';
-import { Product } from '../models/Product.js';
 import { User } from '../models/User.js';
-import { Op } from 'sequelize';
+import { Product } from '../models/Product.js';
+import { OrderItem } from '../models/OrderItem.js';
+import { sequelize } from '../database/mysql.js';
 
-// GET /api/orders/admin - Récupérer toutes les commandes (avec filtres)
+/**
+ * Récupérer toutes les commandes avec filtres
+ */
 export async function getAllOrders(request, reply) {
   try {
-    console.log('======================== [getAllOrders] ========================');
+    console.log(" ======[getAllOrders - ADMIN]=====");
     
-    const userId = request.user?.id;
-    if (!userId) {
-      return reply.code(401).send({ error: 'Unauthorized' });
-    }
-
-    // Vérifier que l'utilisateur est admin
-    const user = await User.findByPk(userId);
-    if (!user || !user.is_admin) {
-      return reply.code(403).send({ error: 'Accès réservé aux administrateurs' });
-    }
-
-    // Paramètres de pagination et filtres
+    // Récupérer les paramètres de requête
     const { 
       page = 1, 
       limit = 10, 
       status, 
-      search,
-      startDate,
-      endDate
+      search, 
+      startDate, 
+      endDate,
+      minAmount,
+      maxAmount
     } = request.query;
-
-    // Construction des conditions WHERE
-    const whereClause = {};
-
-    if (status) {
-      whereClause.status = status;
+    
+    const offset = (page - 1) * limit;
+    
+    // Construire les conditions WHERE
+    const whereConditions = {};
+    
+    if (status && status !== 'all') {
+      whereConditions.status = status;
     }
-
-    if (startDate && endDate) {
-      whereClause.createdAt = {
-        [Op.between]: [new Date(startDate), new Date(endDate + 'T23:59:59')]
+    
+    if (startDate) {
+      whereConditions.createdAt = {
+        [sequelize.Op.gte]: new Date(startDate)
       };
     }
-
-    // Récupérer les commandes avec includes
-    const { count, rows: orders } = await Order.findAndCountAll({
-      where: whereClause,
-      include: [
-        {
-          model: User,
-          as: 'user',
-          attributes: ['id', 'username', 'email', 'name', 'lastName', 'address']
-        },
-        {
-          model: OrderItem,
-          as: 'items',
-          include: [
-            {
-              model: Product,
-              as: 'product',
-              attributes: ['id', 'name', 'price', 'img', 'brand']
-            }
+    
+    if (endDate) {
+      whereConditions.createdAt = {
+        ...whereConditions.createdAt,
+        [sequelize.Op.lte]: new Date(endDate)
+      };
+    }
+    
+    if (minAmount) {
+      whereConditions.totalPrice = {
+        [sequelize.Op.gte]: parseFloat(minAmount)
+      };
+    }
+    
+    if (maxAmount) {
+      whereConditions.totalPrice = {
+        ...whereConditions.totalPrice,
+        [sequelize.Op.lte]: parseFloat(maxAmount)
+      };
+    }
+    
+    // Configuration des includes
+    const include = [
+      {
+        model: User,
+        as: 'user',
+        attributes: ['id', 'username', 'email', 'name', 'lastName', 'address'],
+        required: false
+      },
+      {
+        model: OrderItem,
+        as: 'items',
+        attributes: ['id', 'quantity', 'unitPrice'],
+        include: [{
+          model: Product,
+          as: 'product',
+          attributes: ['id', 'name', 'price', 'img', 'category']
+        }]
+      }
+    ];
+    
+    // Recherche par texte
+    if (search) {
+      // Ajouter une condition de recherche sur l'utilisateur
+      include[0] = {
+        ...include[0],
+        where: {
+          [sequelize.Op.or]: [
+            { email: { [sequelize.Op.like]: `%${search}%` } },
+            { username: { [sequelize.Op.like]: `%${search}%` } },
+            { name: { [sequelize.Op.like]: `%${search}%` } },
+            { lastName: { [sequelize.Op.like]: `%${search}%` } }
           ]
         }
-      ],
+      };
+      
+      // Ajouter aussi une recherche sur le numéro de commande
+      whereConditions[sequelize.Op.or] = [
+        sequelize.where(
+          sequelize.cast(sequelize.col('Order.id'), 'CHAR'),
+          { [sequelize.Op.like]: `%${search}%` }
+        )
+      ];
+    }
+    
+    console.log("Conditions de recherche:", whereConditions);
+    
+    // Récupérer les commandes avec pagination
+    const result = await Order.findAndCountAll({
+      where: whereConditions,
+      include: include,
+      distinct: true, // Important pour éviter les doublons avec les includes
       order: [['createdAt', 'DESC']],
       limit: parseInt(limit),
-      offset: (parseInt(page) - 1) * parseInt(limit)
+      offset: offset
     });
+    
+    console.log(`Résultat de findAndCountAll: ${result.count} commandes trouvées`);
+    
+    // Calculer les statistiques
+ const stats = await calculateOrderStats(whereConditions);
 
-    // Filtrer par recherche si nécessaire
-    let filteredOrders = orders;
-    if (search) {
-      const searchLower = search.toLowerCase();
-      filteredOrders = orders.filter(order => {
-        const orderData = order.get({ plain: true });
-        return (
-          orderData.orderNumber?.toLowerCase().includes(searchLower) ||
-          orderData.user?.username?.toLowerCase().includes(searchLower) ||
-          orderData.user?.email?.toLowerCase().includes(searchLower) ||
-          orderData.user?.name?.toLowerCase().includes(searchLower) ||
-          orderData.user?.lastName?.toLowerCase().includes(searchLower)
-        );
-      });
-    }
-
-    // Calculer les statistiques sur TOUTES les commandes
-    const allOrders = await Order.findAll({
-      attributes: ['id', 'totalPrice', 'status', 'createdAt']
-    });
-
-    const stats = {
-      totalOrders: allOrders.length,
-      totalRevenue: allOrders.reduce((sum, order) => sum + parseFloat(order.totalPrice || 0), 0),
-      pendingOrders: allOrders.filter(o => o.status === 'pending').length,
-      confirmedOrders: allOrders.filter(o => o.status === 'confirmed').length,
-      processingOrders: allOrders.filter(o => o.status === 'processing').length,
-      shippedOrders: allOrders.filter(o => o.status === 'shipped').length,
-      deliveredOrders: allOrders.filter(o => o.status === 'delivered').length,
-      cancelledOrders: allOrders.filter(o => o.status === 'cancelled').length,
-      averageOrderValue: allOrders.length > 0 
-        ? allOrders.reduce((sum, order) => sum + parseFloat(order.totalPrice || 0), 0) / allOrders.length 
-        : 0
-    };
-
-    console.log(`✅ ${filteredOrders.length} commandes récupérées`);
-
+    // Formater la réponse
+    const formattedOrders = result.rows.map(order => formatOrder(order));
+    
+    console.log(`✅ ${formattedOrders.length} commandes formatées`);
+    
     reply.send({
       success: true,
-      orders: filteredOrders.map(o => o.get({ plain: true })),
-      stats,
+      orders: formattedOrders,
       pagination: {
-        total: count,
         page: parseInt(page),
         limit: parseInt(limit),
-        totalPages: Math.ceil(count / parseInt(limit))
-      }
+        total: result.count,
+        pages: Math.ceil(result.count / limit)
+      },
+      stats: stats
     });
-
+    
   } catch (error) {
-    console.error('[getAllOrders] Erreur:', error);
-    reply.code(500).send({ error: 'Server error', details: error.message });
+    console.error("❌ [getAllOrders - ADMIN] Erreur:", error);
+    console.error("Détails de l'erreur:", error.stack);
+    reply.status(500).send({
+      success: false,
+      error: "Erreur serveur lors du chargement des commandes"
+    });
   }
 }
 
-// GET /api/orders/admin/export - Exporter les commandes en CSV
-export async function exportOrders(request, reply) {
+/**
+ * Calculer les statistiques des commandes
+ */
+async function calculateOrderStats(whereConditions = {}) {
   try {
-    console.log('======================== [exportOrders] ========================');
-    
-    const userId = request.user?.id;
-    if (!userId) {
-      return reply.code(401).send({ error: 'Unauthorized' });
-    }
+    console.log('📊 Calcul des statistiques avec conditions:', whereConditions);
 
-    const user = await User.findByPk(userId);
-    if (!user || !user.is_admin) {
-      return reply.code(403).send({ error: 'Accès réservé aux administrateurs' });
-    }
-
-    // Récupérer toutes les commandes
-    const orders = await Order.findAll({
-      include: [
-        {
-          model: User,
-          as: 'user',
-          attributes: ['username', 'email', 'name', 'lastName']
-        },
-        {
-          model: OrderItem,
-          as: 'items',
-          include: [
-            {
-              model: Product,
-              as: 'product',
-              attributes: ['name']
-            }
-          ]
-        }
-      ],
-      order: [['createdAt', 'DESC']]
+    // Total des commandes avec les filtres appliqués
+    const totalOrders = await Order.count({
+      where: whereConditions
     });
 
-    // Générer le CSV avec encodage UTF-8
-    const headers = ['Numéro Commande', 'Client', 'Email', 'Date', 'Montant', 'Statut', 'Paiement', 'Articles'];
-    const rows = orders.map(order => {
-      const orderData = order.get({ plain: true });
-      const customerName = `${orderData.user?.name || ''} ${orderData.user?.lastName || ''}`.trim() || orderData.user?.username || 'Client';
-      const products = orderData.items?.map(item => `${item.product?.name || 'Produit'} (x${item.quantity})`).join('; ') || '';
-      
-      return [
-        orderData.orderNumber || `CMD-${orderData.id}`,
-        customerName,
-        orderData.user?.email || '',
-        new Date(orderData.createdAt).toLocaleDateString('fr-FR'),
-        parseFloat(orderData.totalPrice).toFixed(2),
-        orderData.status,
-        orderData.paymentStatus || 'N/A',
-        products
-      ];
-    });
+    console.log('📦 Total commandes:', totalOrders);
 
-    const csv = [headers, ...rows]
-      .map(row => row.map(cell => `"${cell}"`).join(','))
-      .join('\n');
-
-    reply
-      .header('Content-Type', 'text/csv; charset=utf-8')
-      .header('Content-Disposition', `attachment; filename="commandes_${new Date().toISOString().split('T')[0]}.csv"`)
-      .send('\uFEFF' + csv); // BOM UTF-8 pour Excel
-
-  } catch (error) {
-    console.error('[exportOrders] Erreur:', error);
-    reply.code(500).send({ error: 'Server error' });
-  }
-}
-
-// PUT /api/orders/:orderId/status - Mettre à jour le statut d'une commande
-export async function updateOrderStatus(request, reply) {
-  try {
-    console.log('======================== [updateOrderStatus] ========================');
-    
-    const userId = request.user?.id;
-    if (!userId) {
-      return reply.code(401).send({ error: 'Unauthorized' });
-    }
-
-    const user = await User.findByPk(userId);
-    if (!user || !user.is_admin) {
-      return reply.code(403).send({ error: 'Accès réservé aux administrateurs' });
-    }
-
-    const { orderId } = request.params;
-    const { status, trackingNumber, notes } = request.body;
-
-    // Valider le statut
-    const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
-    if (!validStatuses.includes(status)) {
-      return reply.code(400).send({ error: 'Invalid status' });
-    }
-
-    const order = await Order.findByPk(orderId);
-    if (!order) {
-      return reply.code(404).send({ error: 'Order not found' });
-    }
-
-    // Mettre à jour le statut
-    order.status = status;
-    
-    if (trackingNumber) {
-      order.trackingNumber = trackingNumber;
-    }
-
-    if (notes) {
-      order.notes = notes;
-    }
-
-    // Si expédié, mettre une date de livraison estimée (3 jours ouvrés)
-    if (status === 'shipped' && !order.estimatedDelivery) {
-      const estimatedDate = new Date();
-      estimatedDate.setDate(estimatedDate.getDate() + 3);
-      order.estimatedDelivery = estimatedDate;
-    }
-
-    // Si confirmé, mettre à jour le statut de paiement
-    if (status === 'confirmed' && order.paymentStatus === 'pending') {
-      order.paymentStatus = 'paid';
-    }
-
-    await order.save();
-
-    console.log(`✅ Commande ${orderId} mise à jour - Statut: ${status}`);
-
-    reply.send({
-      success: true,
-      order: order.get({ plain: true })
-    });
-
-  } catch (error) {
-    console.error('[updateOrderStatus] Erreur:', error);
-    reply.code(500).send({ error: 'Server error', details: error.message });
-  }
-}
-
-// PUT /api/orders/bulk/status - Mettre à jour plusieurs commandes
-export async function updateBulkOrderStatus(request, reply) {
-  try {
-    console.log('======================== [updateBulkOrderStatus] ========================');
-    
-    const userId = request.user?.id;
-    if (!userId) {
-      return reply.code(401).send({ error: 'Unauthorized' });
-    }
-
-    const user = await User.findByPk(userId);
-    if (!user || !user.is_admin) {
-      return reply.code(403).send({ error: 'Accès réservé aux administrateurs' });
-    }
-
-    const { orderIds, status } = request.body;
-
-    if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
-      return reply.code(400).send({ error: 'Order IDs required' });
-    }
-
-    if (!status) {
-      return reply.code(400).send({ error: 'Status required' });
-    }
-
-    // Valider le statut
-    const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
-    if (!validStatuses.includes(status)) {
-      return reply.code(400).send({ error: 'Invalid status' });
-    }
-
-    // Préparer les données de mise à jour
-    const updateData = { status };
-    
-    if (status === 'shipped') {
-      const estimatedDate = new Date();
-      estimatedDate.setDate(estimatedDate.getDate() + 3);
-      updateData.estimatedDelivery = estimatedDate;
-    }
-
-    if (status === 'confirmed') {
-      updateData.paymentStatus = 'paid';
-    }
-
-    // Mettre à jour toutes les commandes
-    const [updatedCount] = await Order.update(updateData, {
+    // Commandes en attente avec filtres
+    const pendingOrders = await Order.count({
       where: {
-        id: {
-          [Op.in]: orderIds
-        }
+        ...whereConditions,
+        status: 'pending'
       }
     });
 
-    console.log(`✅ ${updatedCount} commandes mises à jour`);
+    console.log('⏳ Commandes en attente:', pendingOrders);
 
-    reply.send({
-      success: true,
-      updated: updatedCount
+    // 🔥 CORRECTION : Calcul du CA depuis OrderItem avec JOIN sur Order
+    const revenueResult = await OrderItem.findOne({
+      attributes: [
+        [
+          sequelize.fn(
+            'SUM',
+            sequelize.literal('`OrderItem`.`quantity` * `OrderItem`.`unitPrice`')
+          ),
+          'totalRevenue'
+        ]
+      ],
+      include: [{
+        model: Order,
+        as: 'order',
+        attributes: [],
+        where: {
+          ...whereConditions,
+          status: { [sequelize.Op.notIn]: ['cancelled'] }
+        }
+      }],
+      raw: true
     });
 
-  } catch (error) {
-    console.error('[updateBulkOrderStatus] Erreur:', error);
-    reply.code(500).send({ error: 'Server error', details: error.message });
-  }
-}
-
-// DELETE /api/orders/:orderId - Supprimer une commande
-export async function deleteOrder(request, reply) {
-  try {
-    console.log('======================== [deleteOrder] ========================');
+    const totalRevenue = parseFloat(revenueResult?.totalRevenue || 0);
     
-    const userId = request.user?.id;
-    if (!userId) {
-      return reply.code(401).send({ error: 'Unauthorized' });
-    }
+    console.log('💰 Chiffre d\'affaires calculé:', totalRevenue);
 
-    const user = await User.findByPk(userId);
-    if (!user || !user.is_admin) {
-      return reply.code(403).send({ error: 'Accès réservé aux administrateurs' });
-    }
+    // Panier moyen
+    const averageOrderValue = totalOrders > 0 
+      ? totalRevenue / totalOrders 
+      : 0;
 
-    const { orderId } = request.params;
+    console.log('📊 Panier moyen:', averageOrderValue);
 
-    const order = await Order.findByPk(orderId);
-    if (!order) {
-      return reply.code(404).send({ error: 'Order not found' });
-    }
-
-    // Supprimer les items associés (cascade devrait le faire automatiquement)
-    await OrderItem.destroy({ where: { orderId } });
-    
-    // Supprimer la commande
-    await order.destroy();
-
-    console.log(`✅ Commande ${orderId} supprimée`);
-
-    reply.send({ success: true });
+    return {
+      totalOrders,
+      pendingOrders,
+      totalRevenue: Math.round(totalRevenue * 100) / 100,
+      averageOrderValue: Math.round(averageOrderValue * 100) / 100
+    };
 
   } catch (error) {
-    console.error('[deleteOrder] Erreur:', error);
-    reply.code(500).send({ error: 'Server error', details: error.message });
+    console.error("❌ Erreur stats:", error.message);
+    console.error("❌ Stack:", error.stack);
+    return {
+      totalOrders: 0,
+      pendingOrders: 0,
+      totalRevenue: 0,
+      averageOrderValue: 0
+    };
   }
 }
+/**
+ * Formater une commande pour la réponse API
+ */
 
-// GET /api/orders/:orderId - Détails d'une commande
+function formatOrder(order) {
+  const user = order.user || {};
+  
+  // Calcul précis du totalPrice
+  const totalPrice = (order.items || []).reduce(
+    (sum, item) => {
+      const quantity = parseInt(item.quantity) || 0;
+      const unitPrice = parseFloat(item.unitPrice) || 0;
+      return sum + (quantity * unitPrice);
+    },
+    0
+  );
+  
+  // Arrondi à 2 décimales
+  const roundedTotalPrice = Math.round(totalPrice * 100) / 100;
+  
+  return {
+    id: order.id,
+    orderNumber: `CMD-${order.id.toString().padStart(6, '0')}`,
+    createdAt: order.createdAt,
+    updatedAt: order.updatedAt,
+    status: order.status,
+    totalPrice: roundedTotalPrice, // Utilisez le calcul précis
+
+    // Informations client
+    customer: {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      name: user.name,
+      lastName: user.lastName,
+      fullName: `${user.name || ''} ${user.lastName || ''}`.trim() || 'Client',
+      address: user.address
+    },
+    
+    // Articles
+    items: (order.items || []).map(item => {
+      const product = item.product || {};
+      const quantity = parseInt(item.quantity) || 0;
+      const unitPrice = parseFloat(item.unitPrice) || 0;
+      const total = quantity * unitPrice;
+      
+      return {
+        id: item.id,
+        quantity: quantity,
+        unitPrice: unitPrice,
+        total: Math.round(total * 100) / 100,
+        product: {
+          id: product.id,
+          name: product.name,
+          price: parseFloat(product.price || 0),
+          img: product.img,
+          category: product.category
+        }
+      };
+    }),
+    
+    // Informations de livraison
+    delivery: {
+      method: 'Standard',
+      address: user.address || 'Non spécifiée',
+      trackingNumber: order.trackingNumber || null
+    },
+    
+    // Informations de paiement
+    payment: {
+      method: 'Carte bancaire',
+      transactionId: `TRX-${order.id}`
+    }
+  };
+}
+/**
+ * Récupérer les détails d'une commande spécifique
+ */
 export async function getOrderDetails(request, reply) {
   try {
-    console.log('======================== [getOrderDetails] ========================');
-    
-    const userId = request.user?.id;
-    if (!userId) {
-      return reply.code(401).send({ error: 'Unauthorized' });
-    }
-
-    const user = await User.findByPk(userId);
-    if (!user || !user.is_admin) {
-      return reply.code(403).send({ error: 'Accès réservé aux administrateurs' });
-    }
-
     const { orderId } = request.params;
-
+    
+    console.log(`=====[getOrderDetails] Commande ID: ${orderId}`);
+    
+    if (!orderId) {
+      return reply.status(400).send({
+        success: false,
+        error: "ID de commande requis"
+      });
+    }
+    
     const order = await Order.findByPk(orderId, {
       include: [
         {
@@ -397,28 +324,374 @@ export async function getOrderDetails(request, reply) {
         {
           model: OrderItem,
           as: 'items',
-          include: [
-            {
-              model: Product,
-              as: 'product',
-              attributes: ['id', 'name', 'price', 'img', 'brand', 'description']
-            }
-          ]
+          include: [{
+            model: Product,
+            as: 'product',
+            attributes: ['id', 'name', 'price', 'img', 'category', 'description']
+          }]
         }
       ]
     });
-
+    
     if (!order) {
-      return reply.code(404).send({ error: 'Order not found' });
+      return reply.status(404).send({
+        success: false,
+        error: "Commande non trouvée"
+      });
     }
-
+    
     reply.send({
       success: true,
-      order: order.get({ plain: true })
+      order: formatOrder(order)
     });
-
+    
   } catch (error) {
-    console.error('[getOrderDetails] Erreur:', error);
-    reply.code(500).send({ error: 'Server error', details: error.message });
+    console.error("❌ [getOrderDetails] Erreur:", error);
+    reply.status(500).send({
+      success: false,
+      error: error.message
+    });
   }
+}
+
+/**
+ * Mettre à jour le statut d'une commande
+ */
+export async function updateOrderStatus(request, reply) {
+  try {
+    const { orderId } = request.params;
+    const { status, trackingNumber, notes } = request.body;
+    
+    console.log(`=====[updateOrderStatus] ID: ${orderId}, Status: ${status}`);
+    
+    if (!orderId || !status) {
+      return reply.status(400).send({
+        success: false,
+        error: "ID de commande et statut requis"
+      });
+    }
+    
+    // Vérifier que le statut est valide
+    const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return reply.status(400).send({
+        success: false,
+        error: "Statut invalide"
+      });
+    }
+    
+    const order = await Order.findByPk(orderId);
+    
+    if (!order) {
+      return reply.status(404).send({
+        success: false,
+        error: "Commande non trouvée"
+      });
+    }
+    
+    // Préparer les mises à jour
+    const updates = { status };
+    
+    // Ajouter un champ trackingNumber si vous l'avez dans votre modèle
+    // Si votre modèle n'a pas ce champ, vous pouvez l'ajouter ou utiliser le champ notes
+    if (trackingNumber) {
+      // Si votre modèle n'a pas trackingNumber, utilisez notes
+      updates.notes = trackingNumber;
+    }
+    
+    // Mettre à jour la commande
+    await order.update(updates);
+    
+    // Récupérer la commande mise à jour avec les relations
+    const updatedOrder = await Order.findByPk(orderId, {
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'email', 'name', 'lastName']
+        }
+      ]
+    });
+    
+    console.log(`✅ Statut mis à jour pour la commande ${orderId}`);
+    
+    reply.send({
+      success: true,
+      message: "Statut mis à jour avec succès",
+      order: formatOrder(updatedOrder)
+    });
+    
+  } catch (error) {
+    console.error("❌ [updateOrderStatus] Erreur:", error);
+    reply.status(500).send({
+      success: false,
+      error: error.message
+    });
+  }
+}
+
+/**
+ * Mise à jour en masse du statut
+ */
+export async function updateBulkOrderStatus(request, reply) {
+  try {
+    const { orderIds, status, notes } = request.body;
+    
+    console.log(`=====[updateBulkOrderStatus] IDs: ${orderIds}, Status: ${status}`);
+    
+    if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0 || !status) {
+      return reply.status(400).send({
+        success: false,
+        error: "Liste d'IDs et statut requis"
+      });
+    }
+    
+    // Vérifier que le statut est valide
+    const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return reply.status(400).send({
+        success: false,
+        error: "Statut invalide"
+      });
+    }
+    
+    let updatedCount = 0;
+    
+    // Mettre à jour chaque commande
+    for (const orderId of orderIds) {
+      const order = await Order.findByPk(orderId);
+      
+      if (order) {
+        await order.update({ status });
+        updatedCount++;
+        console.log(`✅ Commande ${orderId} mise à jour`);
+      }
+    }
+    
+    reply.send({
+      success: true,
+      message: `${updatedCount} commande(s) mises à jour`,
+      updatedCount: updatedCount
+    });
+    
+  } catch (error) {
+    console.error("❌ [updateBulkOrderStatus] Erreur:", error);
+    reply.status(500).send({
+      success: false,
+      error: error.message
+    });
+  }
+}
+
+/**
+ * Exporter les commandes en CSV
+ */
+export async function exportOrders(request, reply) {
+  try {
+    const { format = 'csv', startDate, endDate, status } = request.query;
+    
+    console.log(`=====[exportOrders] Format: ${format}, Status: ${status}`);
+    
+    // Récupérer les commandes à exporter
+    const whereConditions = {};
+    if (status && status !== 'all') {
+      whereConditions.status = status;
+    }
+    if (startDate) {
+      whereConditions.createdAt = { [sequelize.Op.gte]: new Date(startDate) };
+    }
+    if (endDate) {
+      whereConditions.createdAt = { [sequelize.Op.lte]: new Date(endDate) };
+    }
+    
+    const orders = await Order.findAll({
+      where: whereConditions,
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['email', 'name', 'lastName', 'address']
+        },
+        {
+          model: OrderItem,
+          as: 'items',
+          include: [{
+            model: Product,
+            as: 'product',
+            attributes: ['name', 'category']
+          }]
+        }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+    
+    // Formater pour CSV
+    const csvData = formatOrdersForCSV(orders);
+    
+    // Définir les en-têtes pour le téléchargement
+    reply.header('Content-Type', 'text/csv; charset=utf-8');
+    reply.header('Content-Disposition', `attachment; filename=commandes_${new Date().toISOString().split('T')[0]}.csv`);
+    
+    reply.send(csvData);
+    
+  } catch (error) {
+    console.error("❌ [exportOrders] Erreur:", error);
+    reply.status(500).send({
+      success: false,
+      error: error.message
+    });
+  }
+}
+
+/**
+ * Supprimer une commande
+ */
+export async function deleteOrder(request, reply) {
+  try {
+    const { orderId } = request.params;
+    
+    console.log(`=====[deleteOrder] ID: ${orderId}`);
+    
+    if (!orderId) {
+      return reply.status(400).send({
+        success: false,
+        error: "ID de commande requis"
+      });
+    }
+    
+    const order = await Order.findByPk(orderId);
+    
+    if (!order) {
+      return reply.status(404).send({
+        success: false,
+        error: "Commande non trouvée"
+      });
+    }
+    
+    // Ne supprimer que les commandes annulées ou en attente
+    if (!['pending', 'cancelled'].includes(order.status)) {
+      return reply.status(400).send({
+        success: false,
+        error: "Impossible de supprimer une commande avec ce statut"
+      });
+    }
+    
+    // Supprimer d'abord les items associés
+    await OrderItem.destroy({
+      where: { orderId: orderId }
+    });
+    
+    // Supprimer la commande
+    await order.destroy();
+    
+    reply.send({
+      success: true,
+      message: "Commande supprimée avec succès"
+    });
+    
+  } catch (error) {
+    console.error("❌ [deleteOrder] Erreur:", error);
+    reply.status(500).send({
+      success: false,
+      error: error.message
+    });
+  }
+}
+
+/**
+ * Helper: Formater les commandes pour CSV
+ */
+function formatOrdersForCSV(orders) {
+  const headers = [
+    'Numéro',
+    'Date',
+    'Client',
+    'Email',
+    'Statut',
+    'Montant total',
+    'Articles'
+  ].join(';');
+  
+  const rows = orders.map(order => {
+    const user = order.user || {};
+    const customerName = `${user.name || ''} ${user.lastName || ''}`.trim() || 'Client';
+    const email = user.email || 'N/A';
+    
+    // Articles sous forme de liste
+    const items = (order.items || []).map(item => {
+      const product = item.product || {};
+      return `${product.name || 'Produit'} (x${item.quantity}) - ${parseFloat(item.unitPrice || 0).toFixed(2)}€`;
+    }).join(' | ') || 'Aucun article';
+    
+    return [
+      `CMD-${order.id}`,
+      order.createdAt ? new Date(order.createdAt).toLocaleDateString('fr-FR') : 'N/A',
+      `"${customerName}"`,
+      `"${email}"`,
+      order.status,
+      `${parseFloat(order.totalPrice || 0).toFixed(2)}€`,
+      `"${items}"`
+    ].join(';');
+  });
+  
+  return [headers, ...rows].join('\n');
+}
+
+/**
+ * Vérifier si le modèle OrderItem existe
+ * Si non, le définir ici temporairement
+ */
+if (!OrderItem) {
+  // Définition temporaire du modèle OrderItem
+  const { DataTypes } = await import('sequelize');
+  
+  const OrderItem = sequelize.define('OrderItem', {
+    id: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      autoIncrement: true,
+      primaryKey: true
+    },
+    orderId: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: false
+    },
+    productId: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: false
+    },
+    quantity: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: false,
+      defaultValue: 1
+    },
+    unitPrice: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false
+    }
+  }, {
+    tableName: 'order_items'
+  });
+  
+  // Définir les relations
+  OrderItem.belongsTo(Order, {
+    foreignKey: 'orderId',
+    as: 'order'
+  });
+  
+  OrderItem.belongsTo(Product, {
+    foreignKey: 'productId',
+    as: 'product'
+  });
+  
+  Order.hasMany(OrderItem, {
+    foreignKey: 'orderId',
+    as: 'items'
+  });
+  
+  Product.hasMany(OrderItem, {
+    foreignKey: 'productId',
+    as: 'orderItems'
+  });
+  
+  console.log("⚠️  Modèle OrderItem défini temporairement dans le contrôleur");
 }

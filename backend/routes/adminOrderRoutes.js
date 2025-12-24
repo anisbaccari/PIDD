@@ -1,4 +1,3 @@
-
 // ============================================
 // routes/adminOrderRoutes.js
 // ============================================
@@ -16,35 +15,41 @@ export default async function adminOrderRoutes(fastify, options) {
   
   console.log('📝 Enregistrement des routes admin orders');
 
-  // GET /api/orders/admin - Liste des commandes (avec filtres)
-  fastify.get('/admin', {
+  // GET /admin/orders - Liste des commandes (avec filtres)
+  fastify.get('/', {
     preHandler: [authenticate]
   }, getAllOrders);
 
-  // GET /api/orders/admin/export - Export CSV
-  fastify.get('/admin/export', {
+  // GET /admin/orders/export - Export CSV
+  fastify.get('/export', {
     preHandler: [authenticate]
   }, exportOrders);
 
-  // GET /api/orders/:orderId - Détails d'une commande
+  // GET /admin/orders/:orderId - Détails d'une commande
   fastify.get('/:orderId', {
     preHandler: [authenticate]
   }, getOrderDetails);
 
-  // PUT /api/orders/:orderId/status - Mettre à jour le statut
+  // PUT /admin/orders/:orderId/status - Mettre à jour le statut
   fastify.put('/:orderId/status', {
     preHandler: [authenticate]
   }, updateOrderStatus);
 
-  // PUT /api/orders/bulk/status - Mise à jour en masse
+  // PUT /admin/orders/bulk/status - Mise à jour en masse
   fastify.put('/bulk/status', {
     preHandler: [authenticate]
   }, updateBulkOrderStatus);
 
-  // DELETE /api/orders/:orderId - Supprimer une commande
+  // DELETE /admin/orders/:orderId - Supprimer une commande
   fastify.delete('/:orderId', {
     preHandler: [authenticate]
   }, deleteOrder);
 
   console.log('✅ Routes admin orders enregistrées');
-   }
+  console.log('   - GET    /admin/orders');
+  console.log('   - GET    /admin/orders/export');
+  console.log('   - GET    /admin/orders/:orderId');
+  console.log('   - PUT    /admin/orders/:orderId/status');
+  console.log('   - PUT    /admin/orders/bulk/status');
+  console.log('   - DELETE /admin/orders/:orderId');
+}
