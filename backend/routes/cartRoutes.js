@@ -7,6 +7,7 @@ import {
   updateCartItem,
    prepareCheckout,
   confirmCartOrder,
+  confirmPayment,
   //createOrderFromCart,
   getCurrentOrder,
   removeCartItem,
@@ -51,6 +52,9 @@ fastify.post('/checkout', {
     preHandler: [authenticate]
   }, confirmCartOrder)
 
+  fastify.post('/orders/confirm', {
+  preHandler: [authenticate]
+}, confirmPayment)
 /* 
   fastify.post('/from-cart', {
     preHandler: [authenticate]

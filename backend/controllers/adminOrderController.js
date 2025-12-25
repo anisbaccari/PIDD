@@ -4,13 +4,14 @@ import { User } from '../models/User.js';
 import { Product } from '../models/Product.js';
 import { OrderItem } from '../models/OrderItem.js';
 import { sequelize } from '../database/mysql.js';
+import { Op } from 'sequelize'; // IMPORTANT: Importer Op
 
 /**
  * Récupérer toutes les commandes avec filtres
  */
 export async function getAllOrders(request, reply) {
   try {
-    console.log(" ======[getAllOrders - ADMIN]=====");
+    console.log("📦 ======[getAllOrders - ADMIN]=====");
     
     // Récupérer les paramètres de requête
     const { 
@@ -35,27 +36,29 @@ export async function getAllOrders(request, reply) {
     
     if (startDate) {
       whereConditions.createdAt = {
-        [sequelize.Op.gte]: new Date(startDate)
+        [Op.gte]: new Date(startDate)
       };
     }
     
     if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
       whereConditions.createdAt = {
         ...whereConditions.createdAt,
-        [sequelize.Op.lte]: new Date(endDate)
+        [Op.lte]: end
       };
     }
     
     if (minAmount) {
       whereConditions.totalPrice = {
-        [sequelize.Op.gte]: parseFloat(minAmount)
+        [Op.gte]: parseFloat(minAmount)
       };
     }
     
     if (maxAmount) {
       whereConditions.totalPrice = {
         ...whereConditions.totalPrice,
-        [sequelize.Op.lte]: parseFloat(maxAmount)
+        [Op.lte]: parseFloat(maxAmount)
       };
     }
     
@@ -81,49 +84,53 @@ export async function getAllOrders(request, reply) {
     
     // Recherche par texte
     if (search) {
-      // Ajouter une condition de recherche sur l'utilisateur
-      include[0] = {
-        ...include[0],
-        where: {
-          [sequelize.Op.or]: [
-            { email: { [sequelize.Op.like]: `%${search}%` } },
-            { username: { [sequelize.Op.like]: `%${search}%` } },
-            { name: { [sequelize.Op.like]: `%${search}%` } },
-            { lastName: { [sequelize.Op.like]: `%${search}%` } }
-          ]
-        }
+      const searchConditions = {
+        [Op.or]: [
+          // Recherche dans les commandes
+          sequelize.where(
+            sequelize.cast(sequelize.col('Order.id'), 'CHAR'),
+            { [Op.like]: `%${search}%` }
+          ),
+          // Recherche dans les utilisateurs via sous-requête
+          sequelize.literal(`EXISTS (
+            SELECT 1 FROM users WHERE users.id = Order.userId 
+            AND (
+              users.email LIKE '%${search}%' 
+              OR users.username LIKE '%${search}%'
+              OR CONCAT(users.name, ' ', users.lastName) LIKE '%${search}%'
+              OR users.name LIKE '%${search}%'
+              OR users.lastName LIKE '%${search}%'
+            )
+          )`)
+        ]
       };
       
-      // Ajouter aussi une recherche sur le numéro de commande
-      whereConditions[sequelize.Op.or] = [
-        sequelize.where(
-          sequelize.cast(sequelize.col('Order.id'), 'CHAR'),
-          { [sequelize.Op.like]: `%${search}%` }
-        )
+      // Si vous voulez toujours charger les données utilisateur même en cas de recherche
+      whereConditions[Op.and] = [
+        searchConditions,
+        ...(whereConditions[Op.and] || [])
       ];
     }
     
-    console.log("Conditions de recherche:", whereConditions);
+    console.log("🔍 Conditions de recherche:", whereConditions);
     
     // Récupérer les commandes avec pagination
     const result = await Order.findAndCountAll({
       where: whereConditions,
       include: include,
-      distinct: true, // Important pour éviter les doublons avec les includes
+      distinct: true,
       order: [['createdAt', 'DESC']],
       limit: parseInt(limit),
       offset: offset
     });
     
-    console.log(`Résultat de findAndCountAll: ${result.count} commandes trouvées`);
+    console.log(`✅ ${result.count} commandes trouvées`);
     
     // Calculer les statistiques
- const stats = await calculateOrderStats(whereConditions);
-
+    const stats = await calculateOrderStats(whereConditions);
+    
     // Formater la réponse
     const formattedOrders = result.rows.map(order => formatOrder(order));
-    
-    console.log(`✅ ${formattedOrders.length} commandes formatées`);
     
     reply.send({
       success: true,
@@ -139,10 +146,10 @@ export async function getAllOrders(request, reply) {
     
   } catch (error) {
     console.error("❌ [getAllOrders - ADMIN] Erreur:", error);
-    console.error("Détails de l'erreur:", error.stack);
     reply.status(500).send({
       success: false,
-      error: "Erreur serveur lors du chargement des commandes"
+      error: "Erreur serveur lors du chargement des commandes",
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 }
@@ -159,8 +166,6 @@ async function calculateOrderStats(whereConditions = {}) {
       where: whereConditions
     });
 
-    console.log('📦 Total commandes:', totalOrders);
-
     // Commandes en attente avec filtres
     const pendingOrders = await Order.count({
       where: {
@@ -168,8 +173,6 @@ async function calculateOrderStats(whereConditions = {}) {
         status: 'pending'
       }
     });
-
-    console.log('⏳ Commandes en attente:', pendingOrders);
 
     // 🔥 CORRECTION : Calcul du CA depuis OrderItem avec JOIN sur Order
     const revenueResult = await OrderItem.findOne({
@@ -188,7 +191,7 @@ async function calculateOrderStats(whereConditions = {}) {
         attributes: [],
         where: {
           ...whereConditions,
-          status: { [sequelize.Op.notIn]: ['cancelled'] }
+          status: { [Op.notIn]: ['cancelled'] }
         }
       }],
       raw: true
@@ -196,14 +199,10 @@ async function calculateOrderStats(whereConditions = {}) {
 
     const totalRevenue = parseFloat(revenueResult?.totalRevenue || 0);
     
-    console.log('💰 Chiffre d\'affaires calculé:', totalRevenue);
-
     // Panier moyen
     const averageOrderValue = totalOrders > 0 
       ? totalRevenue / totalOrders 
       : 0;
-
-    console.log('📊 Panier moyen:', averageOrderValue);
 
     return {
       totalOrders,
@@ -214,7 +213,6 @@ async function calculateOrderStats(whereConditions = {}) {
 
   } catch (error) {
     console.error("❌ Erreur stats:", error.message);
-    console.error("❌ Stack:", error.stack);
     return {
       totalOrders: 0,
       pendingOrders: 0,
@@ -223,10 +221,10 @@ async function calculateOrderStats(whereConditions = {}) {
     };
   }
 }
+
 /**
  * Formater une commande pour la réponse API
  */
-
 function formatOrder(order) {
   const user = order.user || {};
   
@@ -243,14 +241,22 @@ function formatOrder(order) {
   // Arrondi à 2 décimales
   const roundedTotalPrice = Math.round(totalPrice * 100) / 100;
   
+  // Créer le nom complet du client
+  let fullName = 'Client';
+  if (user.name || user.lastName) {
+    fullName = `${user.name || ''} ${user.lastName || ''}`.trim();
+  } else if (user.username) {
+    fullName = user.username;
+  }
+  
   return {
     id: order.id,
     orderNumber: `CMD-${order.id.toString().padStart(6, '0')}`,
     createdAt: order.createdAt,
     updatedAt: order.updatedAt,
     status: order.status,
-    totalPrice: roundedTotalPrice, // Utilisez le calcul précis
-
+    totalPrice: roundedTotalPrice,
+    
     // Informations client
     customer: {
       id: user.id,
@@ -258,7 +264,7 @@ function formatOrder(order) {
       email: user.email,
       name: user.name,
       lastName: user.lastName,
-      fullName: `${user.name || ''} ${user.lastName || ''}`.trim() || 'Client',
+      fullName: fullName,
       address: user.address
     },
     
@@ -276,7 +282,7 @@ function formatOrder(order) {
         total: Math.round(total * 100) / 100,
         product: {
           id: product.id,
-          name: product.name,
+          name: product.name || `Produit #${product.id}`,
           price: parseFloat(product.price || 0),
           img: product.img,
           category: product.category
@@ -294,10 +300,12 @@ function formatOrder(order) {
     // Informations de paiement
     payment: {
       method: 'Carte bancaire',
-      transactionId: `TRX-${order.id}`
+      transactionId: `TRX-${order.id}`,
+      status: order.status === 'pending' ? 'En attente' : 'Payé'
     }
   };
 }
+
 /**
  * Récupérer les détails d'une commande spécifique
  */
@@ -305,7 +313,7 @@ export async function getOrderDetails(request, reply) {
   try {
     const { orderId } = request.params;
     
-    console.log(`=====[getOrderDetails] Commande ID: ${orderId}`);
+    console.log(`🔍 [getOrderDetails] Commande ID: ${orderId}`);
     
     if (!orderId) {
       return reply.status(400).send({
@@ -319,7 +327,7 @@ export async function getOrderDetails(request, reply) {
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'username', 'email', 'name', 'lastName', 'address']
+          attributes: ['id', 'username', 'email', 'name', 'lastName', 'address', 'phone']
         },
         {
           model: OrderItem,
@@ -362,7 +370,7 @@ export async function updateOrderStatus(request, reply) {
     const { orderId } = request.params;
     const { status, trackingNumber, notes } = request.body;
     
-    console.log(`=====[updateOrderStatus] ID: ${orderId}, Status: ${status}`);
+    console.log(`🔄 [updateOrderStatus] ID: ${orderId}, Status: ${status}`);
     
     if (!orderId || !status) {
       return reply.status(400).send({
@@ -372,7 +380,7 @@ export async function updateOrderStatus(request, reply) {
     }
     
     // Vérifier que le statut est valide
-    const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+    const validStatuses = ['pending', 'paid', 'cancelled'];
     if (!validStatuses.includes(status)) {
       return reply.status(400).send({
         success: false,
@@ -392,11 +400,23 @@ export async function updateOrderStatus(request, reply) {
     // Préparer les mises à jour
     const updates = { status };
     
-    // Ajouter un champ trackingNumber si vous l'avez dans votre modèle
-    // Si votre modèle n'a pas ce champ, vous pouvez l'ajouter ou utiliser le champ notes
+    // Ajouter trackingNumber si disponible dans le modèle
     if (trackingNumber) {
-      // Si votre modèle n'a pas trackingNumber, utilisez notes
-      updates.notes = trackingNumber;
+      // Vérifier si le modèle a un champ trackingNumber
+      if (Order.rawAttributes.trackingNumber) {
+        updates.trackingNumber = trackingNumber;
+      } else {
+        // Sinon, utiliser un champ notes ou créér un objet metadata
+        updates.metadata = {
+          ...(order.metadata || {}),
+          trackingNumber,
+          updatedAt: new Date()
+        };
+      }
+    }
+    
+    if (notes) {
+      updates.notes = notes;
     }
     
     // Mettre à jour la commande
@@ -437,7 +457,7 @@ export async function updateBulkOrderStatus(request, reply) {
   try {
     const { orderIds, status, notes } = request.body;
     
-    console.log(`=====[updateBulkOrderStatus] IDs: ${orderIds}, Status: ${status}`);
+    console.log(`🔄 [updateBulkOrderStatus] IDs: ${orderIds.length}, Status: ${status}`);
     
     if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0 || !status) {
       return reply.status(400).send({
@@ -447,7 +467,7 @@ export async function updateBulkOrderStatus(request, reply) {
     }
     
     // Vérifier que le statut est valide
-    const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+    const validStatuses = ['pending', 'paid',  'cancelled'];
     if (!validStatuses.includes(status)) {
       return reply.status(400).send({
         success: false,
@@ -455,18 +475,17 @@ export async function updateBulkOrderStatus(request, reply) {
       });
     }
     
-    let updatedCount = 0;
-    
-    // Mettre à jour chaque commande
-    for (const orderId of orderIds) {
-      const order = await Order.findByPk(orderId);
-      
-      if (order) {
-        await order.update({ status });
-        updatedCount++;
-        console.log(`✅ Commande ${orderId} mise à jour`);
+    // Mise à jour en masse avec Sequelize
+    const [updatedCount] = await Order.update(
+      { status, updatedAt: new Date() },
+      {
+        where: {
+          id: { [Op.in]: orderIds }
+        }
       }
-    }
+    );
+    
+    console.log(`✅ ${updatedCount} commande(s) mises à jour`);
     
     reply.send({
       success: true,
@@ -490,18 +509,27 @@ export async function exportOrders(request, reply) {
   try {
     const { format = 'csv', startDate, endDate, status } = request.query;
     
-    console.log(`=====[exportOrders] Format: ${format}, Status: ${status}`);
+    console.log(`📤 [exportOrders] Format: ${format}, Status: ${status}`);
     
     // Récupérer les commandes à exporter
     const whereConditions = {};
     if (status && status !== 'all') {
       whereConditions.status = status;
     }
+    
     if (startDate) {
-      whereConditions.createdAt = { [sequelize.Op.gte]: new Date(startDate) };
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      whereConditions.createdAt = { [Op.gte]: start };
     }
+    
     if (endDate) {
-      whereConditions.createdAt = { [sequelize.Op.lte]: new Date(endDate) };
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      whereConditions.createdAt = {
+        ...whereConditions.createdAt,
+        [Op.lte]: end
+      };
     }
     
     const orders = await Order.findAll({
@@ -550,7 +578,7 @@ export async function deleteOrder(request, reply) {
   try {
     const { orderId } = request.params;
     
-    console.log(`=====[deleteOrder] ID: ${orderId}`);
+    console.log(`🗑️ [deleteOrder] ID: ${orderId}`);
     
     if (!orderId) {
       return reply.status(400).send({
@@ -568,26 +596,40 @@ export async function deleteOrder(request, reply) {
       });
     }
     
-    // Ne supprimer que les commandes annulées ou en attente
-    if (!['pending', 'cancelled'].includes(order.status)) {
+    // Vérification de sécurité - ne supprimer que certaines commandes
+    const deletableStatuses = ['pending', 'cancelled'];
+    if (!deletableStatuses.includes(order.status)) {
       return reply.status(400).send({
         success: false,
         error: "Impossible de supprimer une commande avec ce statut"
       });
     }
     
-    // Supprimer d'abord les items associés
-    await OrderItem.destroy({
-      where: { orderId: orderId }
-    });
+    // Utiliser une transaction pour garantir l'intégrité des données
+    const transaction = await sequelize.transaction();
     
-    // Supprimer la commande
-    await order.destroy();
-    
-    reply.send({
-      success: true,
-      message: "Commande supprimée avec succès"
-    });
+    try {
+      // Supprimer d'abord les items associés
+      await OrderItem.destroy({
+        where: { orderId: orderId },
+        transaction
+      });
+      
+      // Supprimer la commande
+      await order.destroy({ transaction });
+      
+      // Valider la transaction
+      await transaction.commit();
+      
+      reply.send({
+        success: true,
+        message: "Commande supprimée avec succès"
+      });
+      
+    } catch (transactionError) {
+      await transaction.rollback();
+      throw transactionError;
+    }
     
   } catch (error) {
     console.error("❌ [deleteOrder] Erreur:", error);
@@ -609,28 +651,50 @@ function formatOrdersForCSV(orders) {
     'Email',
     'Statut',
     'Montant total',
-    'Articles'
+    'Articles',
+    'Adresse'
   ].join(';');
   
   const rows = orders.map(order => {
     const user = order.user || {};
     const customerName = `${user.name || ''} ${user.lastName || ''}`.trim() || 'Client';
     const email = user.email || 'N/A';
+    const address = user.address || 'Non spécifiée';
+    
+    // Calcul du montant total
+    const totalAmount = (order.items || []).reduce((sum, item) => {
+      return sum + (parseFloat(item.unitPrice || 0) * parseInt(item.quantity || 0));
+    }, 0).toFixed(2);
     
     // Articles sous forme de liste
     const items = (order.items || []).map(item => {
       const product = item.product || {};
-      return `${product.name || 'Produit'} (x${item.quantity}) - ${parseFloat(item.unitPrice || 0).toFixed(2)}€`;
+      const quantity = parseInt(item.quantity || 0);
+      const unitPrice = parseFloat(item.unitPrice || 0);
+      const total = (quantity * unitPrice).toFixed(2);
+      
+      return `${product.name || 'Produit'} (x${quantity}) - ${unitPrice.toFixed(2)}€ = ${total}€`;
     }).join(' | ') || 'Aucun article';
+    
+    const formattedDate = order.createdAt 
+      ? new Date(order.createdAt).toLocaleDateString('fr-FR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      : 'N/A';
     
     return [
       `CMD-${order.id}`,
-      order.createdAt ? new Date(order.createdAt).toLocaleDateString('fr-FR') : 'N/A',
+      formattedDate,
       `"${customerName}"`,
       `"${email}"`,
       order.status,
-      `${parseFloat(order.totalPrice || 0).toFixed(2)}€`,
-      `"${items}"`
+      `${totalAmount}€`,
+      `"${items}"`,
+      `"${address}"`
     ].join(';');
   });
   
@@ -638,60 +702,112 @@ function formatOrdersForCSV(orders) {
 }
 
 /**
- * Vérifier si le modèle OrderItem existe
- * Si non, le définir ici temporairement
+ * Statistiques générales pour le dashboard
  */
-if (!OrderItem) {
-  // Définition temporaire du modèle OrderItem
-  const { DataTypes } = await import('sequelize');
-  
-  const OrderItem = sequelize.define('OrderItem', {
-    id: {
-      type: DataTypes.INTEGER.UNSIGNED,
-      autoIncrement: true,
-      primaryKey: true
-    },
-    orderId: {
-      type: DataTypes.INTEGER.UNSIGNED,
-      allowNull: false
-    },
-    productId: {
-      type: DataTypes.INTEGER.UNSIGNED,
-      allowNull: false
-    },
-    quantity: {
-      type: DataTypes.INTEGER.UNSIGNED,
-      allowNull: false,
-      defaultValue: 1
-    },
-    unitPrice: {
-      type: DataTypes.DECIMAL(10, 2),
-      allowNull: false
-    }
-  }, {
-    tableName: 'order_items'
-  });
-  
-  // Définir les relations
-  OrderItem.belongsTo(Order, {
-    foreignKey: 'orderId',
-    as: 'order'
-  });
-  
-  OrderItem.belongsTo(Product, {
-    foreignKey: 'productId',
-    as: 'product'
-  });
-  
-  Order.hasMany(OrderItem, {
-    foreignKey: 'orderId',
-    as: 'items'
-  });
-  
-  Product.hasMany(OrderItem, {
-    foreignKey: 'productId',
-    as: 'orderItems'
-  });
-  
-  console.log("⚠️  Modèle OrderItem défini temporairement dans le contrôleur");
+export async function getOrdersStats(request, reply) {
+  try {
+    console.log('📊 [getOrdersStats]');
+    
+    // Dernières 24 heures
+    const last24h = new Date();
+    last24h.setHours(last24h.getHours() - 24);
+    
+    // Cette semaine
+    const startOfWeek = new Date();
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    // Ce mois
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    
+    const stats = await Promise.all([
+      // Total général
+      Order.count(),
+      
+      // Commandes aujourd'hui
+      Order.count({
+        where: {
+          createdAt: { [Op.gte]: last24h }
+        }
+      }),
+      
+      // Commandes cette semaine
+      Order.count({
+        where: {
+          createdAt: { [Op.gte]: startOfWeek }
+        }
+      }),
+      
+      // Commandes ce mois
+      Order.count({
+        where: {
+          createdAt: { [Op.gte]: startOfMonth }
+        }
+      }),
+      
+      // CA total
+      OrderItem.findOne({
+        attributes: [
+          [
+            sequelize.fn('SUM', 
+              sequelize.literal('`OrderItem`.`quantity` * `OrderItem`.`unitPrice`')
+            ), 
+            'totalRevenue'
+          ]
+        ],
+        include: [{
+          model: Order,
+          as: 'order',
+          attributes: [],
+          where: {
+            status: { [Op.notIn]: ['cancelled'] }
+          }
+        }],
+        raw: true
+      }),
+      
+      // Commandes par statut
+      Order.findAll({
+        attributes: [
+          'status',
+          [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+        ],
+        group: ['status']
+      })
+    ]);
+    
+    const totalOrders = stats[0];
+    const todayOrders = stats[1];
+    const weekOrders = stats[2];
+    const monthOrders = stats[3];
+    const totalRevenue = parseFloat(stats[4]?.totalRevenue || 0);
+    const ordersByStatus = stats[5].reduce((acc, item) => {
+      acc[item.status] = parseInt(item.get('count') || 0);
+      return acc;
+    }, {});
+    
+    reply.send({
+      success: true,
+      stats: {
+        totalOrders,
+        todayOrders,
+        weekOrders,
+        monthOrders,
+        totalRevenue: Math.round(totalRevenue * 100) / 100,
+        ordersByStatus,
+        averageOrderValue: totalOrders > 0 
+          ? Math.round((totalRevenue / totalOrders) * 100) / 100 
+          : 0
+      }
+    });
+    
+  } catch (error) {
+    console.error("❌ [getOrdersStats] Erreur:", error);
+    reply.status(500).send({
+      success: false,
+      error: error.message
+    });
+  }
 }

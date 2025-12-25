@@ -10,6 +10,7 @@ import adminRoutes from './routes/adminRoutes.js';
 import panierRoutes from './routes/panierRoutes.js';
 import adminOrderRoutes from './routes/adminOrderRoutes.js';  // Importez le nouveau fichier ES6
 import homeRoute from './routes/homeRoute.js';
+import adminDashboardRoutes from './routes/adminDashboardRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import cartRoutes from './routes/cartRoutes.js';
 import adminStatsRoutes from './routes/adminStatsRoutes.js';
@@ -56,6 +57,8 @@ await fastify.register(categorieRoutes, { prefix: '/categories' });
 await fastify.register(productRoutes, { prefix: '/product' });
 await fastify.register(adminRoutes, { prefix: '/admin' });
 await fastify.register(cartRoutes, { prefix: '/cart' });
+//await fastify.register(panierRoutes, { prefix: '/panier' });
+await fastify.register(adminDashboardRoutes, { prefix: '/admin/dashboard' });
 await fastify.register(adminStatsRoutes, { prefix: '/admin/stats' });
 await fastify.register(adminOrderRoutes, { prefix: '/admin/orders' });// Enregistrez les routes d'orders
 await fastify.register(homeRoute, { prefix: '/hello' })

@@ -3,6 +3,7 @@ import { Order } from '../models/Order.js'
 import { OrderItem } from '../models/OrderItem.js'
 import { Product } from '../models/Product.js'
 
+
 /**
  * 🔹 GET /api/cart
  * Récupère le panier (commande pending) de l'utilisateur
@@ -470,74 +471,124 @@ export async function confirmCartOrder(request, reply) {
   try {
     const userId = request.user.id
 
-    const {
-      items,
-      deliveryAddress,
-      deliveryMethod,
-      subtotal,
-      deliveryPrice,
-      total,
-      paymentMethod
-    } = request.body
+    // 1️⃣ Récupérer la commande pending
+    const order = await Order.findOne({
+      where: { userId, status: 'pending' },
+      include: [{
+        model: OrderItem,
+        as: 'items',
+        include: [{ model: Product, as: 'product' }]
+      }],
+      transaction
+    })
 
-    // 🔒 Vérifications de base
-    if (!items || !items.length) {
+    if (!order || !order.items.length) {
       return reply.code(400).send({
         success: false,
         message: 'Panier vide'
       })
     }
 
-    // 1️⃣ Créer la commande
-    const order = await Order.create({
-      userId,
-      status: 'paid',
-      subtotal,
-      deliveryPrice,
-      total,
-      paymentMethod,
-      deliveryMethod,
-      deliveryAddress: JSON.stringify(deliveryAddress)
-    }, { transaction })
+    // 2️⃣ Calcul + vérification stock
+    let subtotal = 0
 
-    // 2️⃣ Créer les orderItems
-    for (const item of items) {
-      // Vérifier le produit
-      const product = await Product.findByPk(item.productId, { transaction })
+    for (const item of order.items) {
 
-      if (!product) {
-        throw new Error(`Produit introuvable (ID ${item.productId})`)
-      }
+      if (!item.product)
+        throw new Error('Produit introuvable')
 
-      await OrderItem.create({
-        orderId: order.id,
-        productId: product.id,
-        quantity: item.quantity,
-        unitPrice: item.price
+      if (item.product.quantity < item.quantity)
+        throw new Error(`Stock insuffisant pour ${item.product.name}`)
+
+      subtotal += Number(item.unitPrice) * item.quantity
+
+      await item.product.update({
+        quantity: item.product.quantity - item.quantity
       }, { transaction })
     }
 
-    // 3️⃣ Commit transaction
+    // 3️⃣ Mettre en payé
+    await order.update({
+      status: 'paid',
+      totalPrice: subtotal,
+      paidAt: new Date()
+    }, { transaction })
+
     await transaction.commit()
 
-    return reply.code(201).send({
+    return reply.send({
       success: true,
-      message: 'Commande confirmée avec succès',
+      message: 'Paiement confirmé',
       order: {
         id: order.id,
-        total: order.total,
-        status: order.status
+        status: order.status,
+        total: subtotal
       }
     })
 
   } catch (error) {
+
     await transaction.rollback()
 
     console.error('❌ confirmCartOrder error:', error)
 
     return reply.code(500).send({
       success: false,
-      message: 'Erreur lors de la confirmation de la commande'
+      message: error.message || 'Erreur paiement'
+    })
+  }
+}
+
+export async function confirmPayment(request, reply) {
+  try {
+    console.log('========== [confirmPayment] ==========')
+
+    const userId = request.user?.id
+    if (!userId) {
+      return reply.code(401).send({
+        success: false,
+        error: 'Non autorisé'
+      })
+    }
+
+    // On récupère la commande en attente
+    const order = await Order.findOne({
+      where: { userId, status: 'pending' },
+      include: [{ model: OrderItem }]
+    })
+
+    if (!order) {
+      return reply.code(404).send({
+        success: false,
+        error: 'Aucune commande en attente'
+      })
+    }
+
+    console.log(`[confirmPayment] Order #${order.id} trouvée`)
+
+    // ⚠️ On ne touche PAS au total
+    order.status = 'paid'
+    await order.save()
+
+    // Optionnel : vider les items après paiement
+    await OrderItem.destroy({
+      where: { orderId: order.id }
+    })
+
+    console.log(`✅ Order #${order.id} MAJ en PAID`)
+
+    reply.send({
+      success: true,
+      message: 'Commande confirmée et payée',
+      order
+    })
+
+  } catch (error) {
+    console.error('❌ [confirmPayment] Erreur:', error)
+    reply.code(500).send({
+      success: false,
+      error: 'Erreur lors de la confirmation du paiement',
+      message: error.message
     })
   }
 }
@@ -546,7 +597,7 @@ export async function confirmCartOrder(request, reply) {
  * 🔹 DELETE /api/cart
  * Vide complètement le panier
  */
-export async function clearCart(request, reply) {
+export async function clearCart(request, reply) { 
   try {
     console.log('======================== [clearCart] ========================')
     
@@ -560,7 +611,13 @@ export async function clearCart(request, reply) {
         error: 'Non autorisé' 
       })
     }
-
+if (order.status !== 'pending') {
+  return reply.code(400).send({
+    success:false,
+    message:'Impossible de vider une commande déjà payée'
+  })
+}
+    // 🔥 On récupère la commande "pending"
     const order = await Order.findOne({
       where: { userId, status: 'pending' }
     })
@@ -573,16 +630,15 @@ export async function clearCart(request, reply) {
       })
     }
 
-    // Supprimer tous les items
+    // ⛔️ NE PAS toucher à order.totalPrice !
+    // ❌ NE PAS remettre à 0
+
+    // 🧹 On supprime juste les items
     await OrderItem.destroy({
       where: { orderId: order.id }
     })
 
-    // Mettre à jour le total à 0
-    order.totalPrice = 0
-    await order.save()
-
-    console.log(`✅ [clearCart] Panier #${order.id} vidé`)
+    console.log(`✅ [clearCart] Panier #${order.id} vidé (total conservé = ${order.totalPrice})`)
 
     reply.send({ 
       success: true,
@@ -591,7 +647,6 @@ export async function clearCart(request, reply) {
 
   } catch (error) {
     console.error('❌ [clearCart] Erreur:', error)
-    console.error('❌ [clearCart] Stack:', error.stack)
     
     reply.code(500).send({ 
       success: false,
