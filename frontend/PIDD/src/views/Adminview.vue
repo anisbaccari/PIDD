@@ -6,7 +6,7 @@
       <p class="admin-welcome">Bienvenue, {{ user?.username || 'Administrateur' }}</p>
     </div>
 
-    <!-- Statistiques rapides -->
+    <!-- Statistiques rapides 
     <div class="admin-stats">
       <div class="stat-card">
         <div class="stat-icon">📊</div>
@@ -36,7 +36,7 @@
           <p class="stat-value">{{ stats?.totalUsers || '0' }}</p>
         </div>
       </div>
-    </div>
+    </div> -->
 
     <!-- Actions principales -->
     <div class="admin-actions">

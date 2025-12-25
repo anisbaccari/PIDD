@@ -592,7 +592,57 @@ export async function confirmPayment(request, reply) {
     })
   }
 }
+export async function getMyPaidOrders(request, reply) {
+  try {
+    const userId = request.user.id;
+    
+    // Vérifiez que les modèles sont bien définis
+    console.log('Modèles disponibles:', {
+      Order: !!Order,
+      OrderItem: !!OrderItem,
+      Product: !!Product
+    });
+    
+    // Utilisez le modèle correctement importé
+    const orders = await Order.findAll({
+      where: {
+        userId,
+        status: 'paid'
+      },
+      include: [
+        {
+          model: OrderItem,
+          include: [{
+            model: Product
+          }]
+        }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
 
+    reply.send({
+      success: true,
+      orders: orders,
+      message: 'Commandes récupérées avec succès'
+    });
+
+  } catch (err) {
+    console.error('Erreur détaillée Sequelize:');
+    console.error(err);
+    
+    // Réponse d'erreur temporaire pour debug
+    reply.code(500).send({ 
+      success: false, 
+      message: `Erreur technique: ${err.message}`,
+      debug: process.env.NODE_ENV === 'development' ? {
+        name: err.name,
+        message: err.message,
+        stack: err.stack
+      } : undefined,
+      orders: [] 
+    });
+  }
+}
 /**
  * 🔹 DELETE /api/cart
  * Vide complètement le panier

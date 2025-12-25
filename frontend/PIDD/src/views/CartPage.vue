@@ -99,7 +99,7 @@
               </div>
             </div>
           </div>
-
+      
           <!-- Résumé -->
           <div class="order-summary">
             <div class="summary-card">
@@ -149,12 +149,14 @@ export default {
     return {
       cartItems: [],
       subtotal: 0,
-      loading: true
+      loading: true,
+       myOrders: []
     }
   },
 
   async mounted() {
     await this.fetchCart()
+    await this.fetchMyOrders()
   },
 
   methods: {
@@ -197,7 +199,22 @@ export default {
         this.loading = false
       }
     },
+    async fetchMyOrders() {
+    try {
+      const token = localStorage.getItem('token')
 
+      const res = await fetch('http://localhost:3000/orders/mine', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      this.myOrders = await res.json()
+
+    } catch (e) {
+      console.error('Erreur récupération commandes', e)
+    }
+  },
     async updateQuantity(orderItemId, quantity) {
       if (quantity < 1) return
       

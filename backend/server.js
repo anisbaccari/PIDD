@@ -10,7 +10,7 @@ import adminRoutes from './routes/adminRoutes.js';
 import panierRoutes from './routes/panierRoutes.js';
 import adminOrderRoutes from './routes/adminOrderRoutes.js';  // Importez le nouveau fichier ES6
 import homeRoute from './routes/homeRoute.js';
-import adminDashboardRoutes from './routes/adminDashboardRoutes.js';
+import adminDashboardRoutes from './routes/adminDashboardController.js';
 import userRoutes from './routes/userRoutes.js';
 import cartRoutes from './routes/cartRoutes.js';
 import adminStatsRoutes from './routes/adminStatsRoutes.js';

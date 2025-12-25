@@ -34,7 +34,7 @@
           <router-link to="/admin/orders" class="nav-item" active-class="active">
             <span class="nav-icon">📋</span>
             <span class="nav-text">Commandes</span>
-            <span class="nav-badge new">{{ pendingOrdersCount }}</span>
+            
           </router-link>
           
           <router-link to="/admin/users" class="nav-item" active-class="active">

@@ -10,6 +10,7 @@ import {
   confirmPayment,
   //createOrderFromCart,
   getCurrentOrder,
+  getMyPaidOrders,
   removeCartItem,
   clearCart
 } from '../controllers/cartController.js'
@@ -51,6 +52,10 @@ fastify.post('/checkout', {
   fastify.post('/confirm', {
     preHandler: [authenticate]
   }, confirmCartOrder)
+fastify.get('/orders/mine', 
+  { preHandler: [authenticate] }, 
+  getMyPaidOrders
+)
 
   fastify.post('/orders/confirm', {
   preHandler: [authenticate]
