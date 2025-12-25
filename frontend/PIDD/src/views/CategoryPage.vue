@@ -60,19 +60,17 @@
 </template>
 
 <script>
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import axios from 'axios'
 
 // Import des images
-import noir from '../assets/noir.png';
-import blanc from '../assets/blanc.png';
-import rosefemme from '../assets/rosefemme.png';
-import blancfemme from '../assets/blancfemme.png';
-import noirfemme from '../assets/noirfemme.png';
-import enfantbleu from '../assets/enfantbleu.png';
-import enfantrouge from '../assets/enfantrouge.png';
-import gris from '../assets/gris.png';
+import noir from '../assets/noir.png'
+import blanc from '../assets/blanc.png'
+import rosefemme from '../assets/rosefemme.png'
+import blancfemme from '../assets/blancfemme.png'
+import noirfemme from '../assets/noirfemme.png'
+import enfantbleu from '../assets/enfantbleu.png'
+import enfantrouge from '../assets/enfantrouge.png'
+import gris from '../assets/gris.png'
 
 export default {
   name: 'CategoryPage',
@@ -80,7 +78,7 @@ export default {
   data() {
     return {
       products: [],
-      categoryName: "",
+      categoryName: '',
       loading: false,
       imageMap: {
         'noir.png': noir,
@@ -92,7 +90,7 @@ export default {
         'enfantbleu.png': enfantbleu,
         'enfantrouge.png': enfantrouge
       }
-    };
+    }
   },
   watch: {
     '$route.params.id': {
@@ -102,51 +100,49 @@ export default {
   },
   methods: {
     async loadCategoryProducts() {
-      const categoryId = parseInt(this.$route.params.id);
-      console.log(`🔄 Chargement catégorie ${categoryId}...`);
+      const categoryId = parseInt(this.$route.params.id)
+      console.log(`🔄 Chargement catégorie ${categoryId}...`)
 
-      this.loading = true;
-      this.products = [];
+      this.loading = true
+      this.products = []
 
       try {
-        const response = await axios.get(
-          `${API_URL}/product/category/${categoryId}`
-        );
+        // ✅ Axios utilise baseURL de main.js
+        const response = await axios.get(`/product/category/${categoryId}`)
 
-        console.log('📊 Réponse API:', response.data);
+        console.log('📊 Réponse API:', response.data)
 
         if (response.data?.success) {
-          this.products = response.data.data || [];
-          console.log(`✅ ${this.products.length} produits chargés`);
+          this.products = response.data.data || []
+          console.log(`✅ ${this.products.length} produits chargés`)
           
-          // Debug: Afficher les produits chargés
           if (this.products.length > 0) {
             console.log('📦 Premier produit:', {
               id: this.products[0].id,
               name: this.products[0].name,
               img: this.products[0].img,
               price: this.products[0].price
-            });
+            })
           }
         } else {
-          console.warn('⚠️ Réponse sans success:true', response.data);
+          console.warn('⚠️ Réponse sans success:true', response.data)
         }
 
       } catch (error) {
-        console.error('❌ Erreur chargement catégorie:', error);
+        console.error('❌ Erreur chargement catégorie:', error)
         
         if (error.response) {
           console.error('📊 Détails erreur:', {
             status: error.response.status,
             data: error.response.data,
             url: error.config?.url
-          });
+          })
         }
         
-        this.products = [];
+        this.products = []
       } finally {
-        this.loading = false;
-        this.setCategoryName(categoryId);
+        this.loading = false
+        this.setCategoryName(categoryId)
       }
     },
     
@@ -155,63 +151,66 @@ export default {
         1: 'T-shirts Homme',
         2: 'T-shirts Femme', 
         3: 'T-shirts Enfants'
-      };
-      this.categoryName = categories[categoryId] || 'Catégorie';
+      }
+      this.categoryName = categories[categoryId] || 'Catégorie'
     },
     
     getProductImageUrl(imgName) {
-      // ✅ Retourne l'image importée localement
-      return this.imageMap[imgName] || '';
+      return this.imageMap[imgName] || ''
     },
     
     formatPrice(price) {
       return new Intl.NumberFormat('fr-FR', {
         style: 'currency',
         currency: 'EUR'
-      }).format(price);
+      }).format(price)
     },
     
-    addToCart(product) {
+    async addToCart(product) {
       if (product.quantity <= 0) {
-        this.showNotification('Produit en rupture de stock', 'error');
-        return;
+        this.showNotification('Produit en rupture de stock', 'error')
+        return
       }
-      
-      const productToAdd = { 
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        quantity: 1,
-        img: product.img
-      };
-      
-      if (this.addToCartGlobal) {
-        this.addToCartGlobal(productToAdd);
-      } else {
-        this.addToCartLocal(productToAdd);
+
+      if (!this.user) {
+        this.showNotification('Veuillez vous connecter', 'error')
+        this.$router.push('/login')
+        return
       }
-      
-      this.showNotification(`✅ ${product.name} ajouté au panier !`, 'success');
-    },
-    
-    addToCartLocal(product) {
-      const existingCart = JSON.parse(localStorage.getItem('monShop_cart') || '[]');
-      const existingItem = existingCart.find(item => item.id === product.id);
-      
-      if (existingItem) {
-        existingItem.quantity += product.quantity || 1;
-      } else {
-        existingCart.push({ ...product, quantity: product.quantity || 1 });
+
+      try {
+        console.log(`🛒 Ajout au panier: ${product.name} (ID: ${product.id})`)
+        
+        // ✅ Axios utilise baseURL de main.js + token automatique via interceptor
+        await axios.post('/cart/item', {
+          productId: product.id,
+          quantity: 1
+        })
+
+        console.log('✅ Produit ajouté au panier')
+        
+        this.showNotification(`${product.name} ajouté au panier !`, 'success')
+        
+        // Informer le parent pour mettre à jour le compteur du panier
+        this.$emit('cart-updated')
+
+      } catch (error) {
+        console.error('❌ Erreur ajout panier:', {
+          message: error.message,
+          status: error.response?.status,
+          data: error.response?.data
+        })
+        
+        this.showNotification('Erreur lors de l\'ajout au panier', 'error')
       }
-      
-      localStorage.setItem('monShop_cart', JSON.stringify(existingCart));
     },
     
     showNotification(message, type = 'success') {
-      alert(message);
+      // À remplacer par votre système de notification
+      alert(message)
     }
   }
-};
+}
 </script>
 
 <style scoped>

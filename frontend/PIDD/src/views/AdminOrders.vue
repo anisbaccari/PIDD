@@ -1,6 +1,6 @@
 <template>
   <div class="admin-orders">
-   <!-- Header amélioré -->
+    <!-- Header -->
     <div class="admin-header">
       <div class="header-top">
         <div class="header-title-section">
@@ -11,14 +11,9 @@
           <p class="page-subtitle">Visualisez et gérez toutes les commandes de votre boutique</p>
         </div>
         
-        <!-- Boutons d'action -->
         <div class="header-actions">
           <div class="action-buttons">
-            <!-- Bouton Dashboard -->
-            <button 
-              @click="goToDashboard"
-              class="action-button dashboard-btn"
-            >
+            <button @click="goToDashboard" class="action-button dashboard-btn">
               <div class="button-content">
                 <div class="button-icon">
                   <span class="icon">🏠</span>
@@ -28,19 +23,10 @@
                   <span class="button-title">Dashboard</span>
                   <span class="button-subtitle">Tableau de bord</span>
                 </div>
-                <div class="button-arrow">
-                  <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M17 8l4 4m0 0l-4 4m4-4H3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                </div>
               </div>
             </button>
             
-            <!-- Bouton Analytics -->
-            <button 
-              @click="goToAnalytics"
-              class="action-button analytics-btn"
-            >
+            <button @click="goToAnalytics" class="action-button analytics-btn">
               <div class="button-content">
                 <div class="button-icon">
                   <span class="icon">📈</span>
@@ -48,15 +34,12 @@
                 </div>
                 <div class="button-text">
                   <span class="button-title">Analytics</span>
-                  <span class="button-subtitle">Statistiques avancées</span>
-                </div>
-                <div class="button-arrow">
-                  <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M17 8l4 4m0 0l-4 4m4-4H3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
+                  <span class="button-subtitle">Statistiques</span>
                 </div>
               </div>
             </button>
+            
+           
           </div>
         </div>
       </div>
@@ -70,22 +53,18 @@
               <span>Filtres rapides</span>
             </div>
             <div class="filter-controls">
-              <select v-model="statusFilter" class="filter-select">
+              <select v-model="statusFilter" @change="loadOrders" class="filter-select">
                 <option value="">Tous les statuts</option>
                 <option value="pending">⏳ En attente</option>
-                <option value="confirmed">✅ Confirmées</option>
-                <option value="processing">🔄 En traitement</option>
-                <option value="shipped">🚚 Expédiées</option>
-                <option value="delivered">📦 Livrées</option>
+                <option value="paid">✅ Payées</option>
                 <option value="cancelled">❌ Annulées</option>
               </select>
               
-              <select v-model="periodFilter" class="filter-select">
+              <select v-model="periodFilter" @change="loadOrders" class="filter-select">
                 <option value="all">📅 Toutes périodes</option>
                 <option value="today">☀️ Aujourd'hui</option>
                 <option value="week">📅 Cette semaine</option>
                 <option value="month">📆 Ce mois</option>
-                <option value="quarter">📊 Ce trimestre</option>
               </select>
               
               <button @click="exportOrders" class="export-button">
@@ -100,6 +79,7 @@
               <span class="search-icon">🔍</span>
               <input 
                 v-model="searchQuery" 
+                @input="debounceSearch"
                 placeholder="Rechercher une commande, client, email..."
                 class="search-input"
               />
@@ -115,8 +95,7 @@
         <div class="stat-icon total">📦</div>
         <div class="stat-content">
           <h3>Commandes totales</h3>
-          <p class="stat-number">{{ totalOrders }}</p>
-          
+          <p class="stat-number">{{ stats.totalOrders || 0 }}</p>
         </div>
       </div>
       
@@ -124,7 +103,7 @@
         <div class="stat-icon pending">⏳</div>
         <div class="stat-content">
           <h3>En attente</h3>
-          <p class="stat-number">{{ pendingOrders }}</p>
+          <p class="stat-number">{{ stats.pendingOrders || 0 }}</p>
         </div>
       </div>
       
@@ -132,8 +111,7 @@
         <div class="stat-icon revenue">💰</div>
         <div class="stat-content">
           <h3>Chiffre d'affaires</h3>
-          <p class="stat-number">{{ formatPrice(totalRevenue) }}</p>
-         
+          <p class="stat-number">{{ formatPrice(stats.totalRevenue || 0) }}</p>
         </div>
       </div>
       
@@ -141,43 +119,21 @@
         <div class="stat-icon average">📊</div>
         <div class="stat-content">
           <h3>Panier moyen</h3>
-          <p class="stat-number">{{ formatPrice(averageOrderValue) }}</p>
+          <p class="stat-number">{{ formatPrice(stats.averageOrderValue || 0) }}</p>
         </div>
       </div>
     </div>
 
-    <!-- Orders Table -->
-    <div class="orders-table">
-      <div class="table-header">
-        <div class="table-filters">
-          <input 
-            v-model="searchQuery" 
-            placeholder="Rechercher une commande, client..."
-            class="search-input"
-          />
-          <button @click="showFilters = !showFilters" class="filter-toggle">
-            🔍 Plus de filtres
-          </button>
-        </div>
-        
-        <div v-if="showFilters" class="advanced-filters">
-          <div class="filter-row">
-            <div class="filter-item">
-              <label>Montant min :</label>
-              <input v-model="minAmount" type="number" class="filter-input" placeholder="0">
-            </div>
-            <div class="filter-item">
-              <label>Montant max :</label>
-              <input v-model="maxAmount" type="number" class="filter-input" placeholder="1000">
-            </div>
-            <div class="filter-item">
-              <label>Client :</label>
-              <input v-model="customerFilter" class="filter-input" placeholder="Email ou nom">
-            </div>
-          </div>
-        </div>
+    <!-- Loading Indicator -->
+    <div v-if="loading" class="loading-overlay">
+      <div class="loading-spinner">
+        <div class="spinner"></div>
+        <p>Chargement des commandes...</p>
       </div>
+    </div>
 
+    <!-- Orders Table -->
+    <div v-else class="orders-table">
       <table>
         <thead>
           <tr>
@@ -187,12 +143,25 @@
             <th>Date</th>
             <th>Montant</th>
             <th>Statut</th>
-            <th>Livraison</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="order in filteredOrders" :key="order.id" :class="['order-row', order.status]">
+          <tr v-if="orders.length === 0">
+            <td colspan="7" class="no-data">
+              <div style="text-align: center; padding: 2rem;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">📭</div>
+                <h3>Aucune commande trouvée</h3>
+                <p v-if="isUsingTestData" style="color: #f59e0b;">
+                  Mode démo - Données de test affichées
+                </p>
+                <button @click="loadOrders" class="retry-btn" style="margin-top: 1rem;">
+                  🔄 Réessayer
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr v-for="order in orders" :key="order.id" :class="['order-row', order.status]">
             <td><input type="checkbox" :value="order.id" v-model="selectedOrders"></td>
             <td>
               <strong>{{ order.orderNumber }}</strong>
@@ -200,19 +169,18 @@
             </td>
             <td>
               <div class="customer-info">
-                <div class="customer-name">{{ order.customer.name }}</div>
+                <div class="customer-name">{{ order.customer.fullName }}</div>
                 <div class="customer-email">{{ order.customer.email }}</div>
-                <div class="customer-phone">{{ order.customer.phone }}</div>
               </div>
             </td>
             <td>
               <div class="order-date">
-                <div>{{ formatDate(order.date) }}</div>
-                <div class="order-time">{{ order.time }}</div>
+                <div>{{ formatDate(order.createdAt) }}</div>
+                <div class="order-time">{{ formatTime(order.createdAt) }}</div>
               </div>
             </td>
             <td class="amount-cell">
-              <strong>{{ formatPrice(order.amount) }}</strong>
+              <strong>{{ formatPrice(order.totalPrice) }}</strong>
             </td>
             <td>
               <span class="status-badge" :class="order.status">
@@ -220,29 +188,15 @@
               </span>
             </td>
             <td>
-              <div class="delivery-info">
-                <div>{{ order.delivery.method }}</div>
-                <div class="tracking-number" v-if="order.trackingNumber">
-                  <span>Suivi: {{ order.trackingNumber }}</span>
-                  <button @click="copyTracking(order.trackingNumber)" class="copy-btn">
-                    📋
-                  </button>
-                </div>
-              </div>
-            </td>
-            <td>
               <div class="order-actions">
                 <button @click="viewOrderDetails(order)" class="action-btn view" title="Voir détails">
                   👁️
                 </button>
-                <button @click="updateOrderStatus(order)" class="action-btn edit" title="Modifier statut">
+                <button @click="openStatusModal(order)" class="action-btn edit" title="Modifier statut">
                   ✏️
                 </button>
                 <button @click="printInvoice(order)" class="action-btn print" title="Imprimer facture">
                   🖨️
-                </button>
-                <button @click="showShippingModal(order)" class="action-btn ship" title="Gérer livraison">
-                  🚚
                 </button>
               </div>
             </td>
@@ -256,31 +210,22 @@
         <div class="bulk-buttons">
           <select v-model="bulkAction" class="bulk-select">
             <option value="">Action groupée</option>
-            <option value="mark_confirmed">Marquer comme confirmées</option>
-            <option value="mark_processing">Marquer en traitement</option>
-            <option value="mark_shipped">Marquer comme expédiées</option>
-            <option value="export">Exporter sélection</option>
-            <option value="cancel">Annuler commandes</option>
+            <option value="paid">Marquer comme Payées</option>
+            <option value="cancelled">Annuler commandes</option>
           </select>
           <button @click="applyBulkAction" class="apply-btn">Appliquer</button>
         </div>
       </div>
-      <!-- Loading Indicator -->
-<div v-if="loading" class="loading-overlay">
-  <div class="loading-spinner">
-    <div class="spinner"></div>
-    <p>Chargement des commandes...</p>
-  </div>
-</div>
+
       <!-- Pagination -->
-      <div class="pagination">
-        <button @click="prevPage" :disabled="currentPage === 1" class="page-btn">
+      <div class="pagination" v-if="pagination.pages > 1">
+        <button @click="prevPage" :disabled="pagination.page === 1" class="page-btn">
           ← Précédent
         </button>
         <span class="page-info">
-          Page {{ currentPage }} sur {{ totalPages }}
+          Page {{ pagination.page }} sur {{ pagination.pages }}
         </span>
-        <button @click="nextPage" :disabled="currentPage === totalPages" class="page-btn">
+        <button @click="nextPage" :disabled="pagination.page === pagination.pages" class="page-btn">
           Suivant →
         </button>
       </div>
@@ -290,7 +235,7 @@
     <div v-if="selectedOrder" class="modal-overlay" @click="closeModal">
       <div class="modal-content large" @click.stop>
         <div class="modal-header">
-          <h2>Détails de la commande #{{ selectedOrder.orderNumber }}</h2>
+          <h2>Détails de la commande {{ selectedOrder.orderNumber }}</h2>
           <button @click="closeModal" class="close-btn">×</button>
         </div>
         
@@ -301,7 +246,7 @@
             <div class="detail-grid">
               <div class="detail-item">
                 <label>Date :</label>
-                <span>{{ formatDate(selectedOrder.date) }} à {{ selectedOrder.time }}</span>
+                <span>{{ formatDate(selectedOrder.createdAt) }} à {{ formatTime(selectedOrder.createdAt) }}</span>
               </div>
               <div class="detail-item">
                 <label>Statut :</label>
@@ -327,16 +272,15 @@
               <div class="customer-card">
                 <div class="customer-header">
                   <div class="customer-avatar">
-                    {{ selectedOrder.customer.name.split(' ').map(n => n[0]).join('') }}
+                    {{ getInitials(selectedOrder.customer.fullName) }}
                   </div>
                   <div>
-                    <h4>{{ selectedOrder.customer.name }}</h4>
+                    <h4>{{ selectedOrder.customer.fullName }}</h4>
                     <p>{{ selectedOrder.customer.email }}</p>
                   </div>
                 </div>
                 <div class="customer-contact">
-                  <p>📱 {{ selectedOrder.customer.phone }}</p>
-                  <p>📍 {{ selectedOrder.delivery.address }}</p>
+                  <p>📍 {{ selectedOrder.delivery.address || 'Adresse non renseignée' }}</p>
                 </div>
               </div>
             </div>
@@ -359,27 +303,28 @@
                   <tr v-for="item in selectedOrder.items" :key="item.id">
                     <td>
                       <div class="product-info">
-                        <div class="product-name">{{ item.name }}</div>
-                        <div class="product-sku">SKU: {{ item.sku }}</div>
+                        <img 
+                          v-if="item.product.img" 
+                          :src="getProductImage(item.product.img)" 
+                          :alt="item.product.name" 
+                          class="product-img"
+                          @error="handleImageError"
+                        >
+                        <div>
+                          <div class="product-name">{{ item.product.name }}</div>
+                          <div class="product-category">{{ item.product.category }}</div>
+                        </div>
                       </div>
                     </td>
-                    <td>{{ formatPrice(item.price) }}</td>
+                    <td>{{ formatPrice(item.unitPrice) }}</td>
                     <td>{{ item.quantity }}</td>
-                    <td><strong>{{ formatPrice(item.price * item.quantity) }}</strong></td>
+                    <td><strong>{{ formatPrice(item.total) }}</strong></td>
                   </tr>
                 </tbody>
                 <tfoot>
-                  <tr>
-                    <td colspan="3">Sous-total</td>
-                    <td>{{ formatPrice(selectedOrder.subtotal) }}</td>
-                  </tr>
-                  <tr>
-                    <td colspan="3">Livraison</td>
-                    <td>{{ formatPrice(selectedOrder.shipping) }}</td>
-                  </tr>
                   <tr class="total-row">
                     <td colspan="3"><strong>Total</strong></td>
-                    <td><strong>{{ formatPrice(selectedOrder.amount) }}</strong></td>
+                    <td><strong>{{ formatPrice(selectedOrder.totalPrice) }}</strong></td>
                   </tr>
                 </tfoot>
               </table>
@@ -391,11 +336,8 @@
             <button @click="printInvoice(selectedOrder)" class="action-btn primary">
               🖨️ Imprimer facture
             </button>
-            <button @click="updateOrderStatus(selectedOrder)" class="action-btn secondary">
+            <button @click="openStatusModal(selectedOrder)" class="action-btn secondary">
               ✏️ Modifier statut
-            </button>
-            <button @click="sendEmail(selectedOrder)" class="action-btn secondary">
-              📧 Envoyer confirmation
             </button>
           </div>
         </div>
@@ -415,22 +357,20 @@
             <label>Nouveau statut :</label>
             <select v-model="newStatus" class="form-select">
               <option value="pending">En attente</option>
-              <option value="confirmed">Confirmée</option>
-              <option value="processing">En traitement</option>
-              <option value="shipped">Expédiée</option>
-              <option value="delivered">Livrée</option>
+              <option value="paid">Payée</option>
               <option value="cancelled">Annulée</option>
             </select>
           </div>
+      
           
           <div class="form-group">
-            <label>Commentaire (optionnel) :</label>
+            <label>Commentaire :</label>
             <textarea v-model="statusComment" placeholder="Ajouter un commentaire..." rows="3"></textarea>
           </div>
           
           <div class="form-actions">
             <button @click="closeStatusModal" class="btn-cancel">Annuler</button>
-            <button @click="saveStatusUpdate" class="btn-save">Enregistrer</button>
+            <button @click="saveStatusUpdate" class="btn-save" :disabled="!newStatus">Enregistrer</button>
           </div>
         </div>
       </div>
@@ -440,223 +380,189 @@
 
 <script>
 import axios from 'axios';
+
 export default {
   name: 'AdminOrders',
   data() {
     return {
       orders: [],
-       loading: false,
+      loading: false,
       searchQuery: '',
       statusFilter: '',
       periodFilter: 'all',
-      minAmount: null,
-      maxAmount: null,
-      customerFilter: '',
-      showFilters: false,
       selectedOrders: [],
-      currentPage: 1,
-      itemsPerPage: 10,
       selectedOrder: null,
       showStatusModal: false,
       orderToUpdate: null,
       newStatus: '',
+      trackingNumber: '',
       statusComment: '',
       bulkAction: '',
-       refreshInterval: null,
+      searchTimeout: null,
+      isUsingTestData: false,
+      pagination: {
+        page: 1,
+        limit: 10,
+        total: 0,
+        pages: 1
+      },
       stats: {
         totalOrders: 0,
         totalRevenue: 0,
-        confirmedOrders: 0,
-        shippedOrders: 0,
-        deliveredOrders: 0,
+        pendingOrders: 0,
         averageOrderValue: 0
       }
-      
-    }
-  },
-  computed: {
-    filteredOrders() {
-      let filtered = this.orders;
-      
-      // Filtre par statut
-      if (this.statusFilter) {
-        filtered = filtered.filter(order => order.status === this.statusFilter);
-      }
-      
-      // Filtre par période
-      if (this.periodFilter !== 'all') {
-        const now = new Date();
-        filtered = filtered.filter(order => {
-          const orderDate = new Date(order.date);
-          switch (this.periodFilter) {
-            case 'today':
-              return orderDate.toDateString() === now.toDateString();
-            case 'week':
-              const weekAgo = new Date(now.setDate(now.getDate() - 7));
-              return orderDate >= weekAgo;
-            case 'month':
-              const monthAgo = new Date(now.setMonth(now.getMonth() - 1));
-              return orderDate >= monthAgo;
-            case 'quarter':
-              const quarterAgo = new Date(now.setMonth(now.getMonth() - 3));
-              return orderDate >= quarterAgo;
-          }
-          return true;
-        });
-      }
-      
-      // Filtre par montant
-      if (this.minAmount) {
-        filtered = filtered.filter(order => order.amount >= this.minAmount);
-      }
-      if (this.maxAmount) {
-        filtered = filtered.filter(order => order.amount <= this.maxAmount);
-      }
-      
-      // Filtre par client
-      if (this.customerFilter) {
-        const query = this.customerFilter.toLowerCase();
-        filtered = filtered.filter(order => 
-          order.customer.name.toLowerCase().includes(query) ||
-          order.customer.email.toLowerCase().includes(query) ||
-          order.customer.phone.includes(query)
-        );
-      }
-         // Statut
-    if (this.statusFilter !== '') {
-      result = result.filter(o => o.status === this.statusFilter);
-    }
-      // Recherche générale
-      if (this.searchQuery) {
-        const query = this.searchQuery.toLowerCase();
-        filtered = filtered.filter(order => 
-          order.orderNumber.toLowerCase().includes(query) ||
-          order.customer.name.toLowerCase().includes(query) ||
-          order.customer.email.toLowerCase().includes(query)
-        );
-      }
-      
-      return filtered;
-    },
-    
-    paginatedOrders() {
-      const start = (this.currentPage - 1) * this.itemsPerPage;
-      return this.filteredOrders.slice(start, start + this.itemsPerPage);
-    },
-    
-    totalPages() {
-      return Math.ceil(this.filteredOrders.length / this.itemsPerPage);
-    },
-    
-    totalOrders() {
-      return this.stats.totalOrders || this.orders.length;
-    },
-   pendingOrders() {
-      return this.orders.filter(o => o.status === 'pending' || o.status === 'confirmed').length;
-    },
-    totalRevenue() {
-      return this.orders.reduce((sum, order) => sum + order.amount, 0);
-    },
-     
-    totalRevenue() {
-      return this.stats.totalRevenue || this.orders.reduce((sum, order) => sum + order.amount, 0);
-    },
-    
-    averageOrderValue() {
-      return this.stats.averageOrderValue || 
-        (this.orders.length > 0 ? this.totalRevenue / this.orders.length : 0);
-    },
-    
-    averageOrderValue() {
-      return this.orders.length > 0 ? this.totalRevenue / this.orders.length : 0;
     }
   },
 
   async mounted() {
     await this.loadOrders();
-    // Actualiser automatiquement toutes les 30 secondes
-    this.refreshInterval = setInterval(() => {
-      this.loadOrders();
-    }, 30000);
   },
 
-   beforeUnmount() {
-    // Nettoyer l'intervalle
-    if (this.refreshInterval) {
-      clearInterval(this.refreshInterval);
-    }
-  },
-  
   methods: {
-  async loadOrders() {
+    async loadOrders() {
       this.loading = true;
+      this.isUsingTestData = false;
+      
       try {
-        const response = await axios.get('/api/orders/admin', {
-          params: {
-            page: this.currentPage,
-            limit: this.itemsPerPage,
-            status: this.statusFilter || undefined,
-            search: this.searchQuery || undefined,
-            startDate: this.getStartDateFilter(),
-            endDate: new Date().toISOString().split('T')[0]
-          },
+        const params = {
+          page: this.pagination.page,
+          limit: this.pagination.limit
+        };
+
+        if (this.statusFilter) params.status = this.statusFilter;
+        if (this.searchQuery) params.search = this.searchQuery;
+        
+        const startDate = this.getStartDateFilter();
+        if (startDate) params.startDate = startDate;
+
+        console.log('🔍 Requête API vers /admin/orders avec params:', params);
+
+        const response = await axios.get('/admin/orders', {
+          params,
           headers: this.getAuthHeaders()
         });
-        
-        if (response.data.success) {
-          this.orders = response.data.orders.map(order => this.formatOrderForFrontend(order));
-          this.stats = response.data.stats || {};
-          console.log(`✅ ${this.orders.length} commandes chargées`);
-        }
-        
-      } catch (error) {
-        console.error('❌ Erreur chargement commandes:', error);
-        // Fallback avec données de démo si le backend n'est pas encore prêt
-        if (error.response && error.response.status === 404) {
-          this.orders = this.getSampleOrders();
-          this.calculateStats();
+
+        console.log('✅ Réponse API reçue:', response.data);
+
+        if (response.data && response.data.success) {
+          this.orders = response.data.orders || [];
+          this.pagination = response.data.pagination || this.pagination;
+          this.stats = response.data.stats || this.stats;
+          
+          console.log(`📊 ${this.orders.length} commandes chargées`);
+          console.log('📈 Statistiques:', this.stats);
+          
+          // Si pas de données mais API fonctionne
+          if (this.orders.length === 0) {
+            console.log('⚠️  Aucune commande dans la base de données');
+          }
         } else {
-          this.showNotification('Erreur de connexion au serveur', 'error');
+          console.warn('⚠️  Réponse API sans succès:', response.data);
+          throw new Error(response.data?.error || 'Erreur API');
         }
+
+      } catch (error) {
+        console.error('❌ Erreur chargement commandes:', {
+          message: error.message,
+          status: error.response?.status,
+          data: error.response?.data,
+          config: error.config
+        });
+        
+        // Fallback: charger des données de test
+        this.loadTestData();
+        this.showNotification('Données de démo affichées (API non disponible)', 'warning');
+        
       } finally {
         this.loading = false;
       }
     },
+
+    async testBackendConnection() {
+      try {
+        console.log('🧪 Test de connexion backend...');
+        
+        // Test endpoint simple
+        const testResponse = await axios.get('/admin/orders', {
+          params: { page: 1, limit: 2 },
+          headers: this.getAuthHeaders()
+        });
+        
+        console.log('✅ Backend fonctionnel:', testResponse.data);
+        
+        if (testResponse.data.success) {
+          alert(`✅ Backend OK!\n${testResponse.data.orders?.length || 0} commandes trouvées`);
+          await this.loadOrders();
+        } else {
+          alert(`⚠️  Backend erreur: ${testResponse.data.error}`);
+        }
+        
+        return testResponse.data;
+        
+      } catch (error) {
+        console.error('❌ Test backend échoué:', error);
+        
+        const errorMsg = error.response?.data?.error || error.message;
+        alert(`❌ Erreur backend:\n${errorMsg}\n\nCode: ${error.response?.status}`);
+        
+        return null;
+      }
+    },
+
+    loadTestData() {
+      console.log('🧪 Chargement données de test...');
+      this.isUsingTestData = true;
     
-    formatOrderForFrontend(order) {
-      return {
-        id: order.id,
-        orderNumber: order.orderNumber || `CMD-${order.id.slice(-8)}`,
-        date: order.createdAt ? new Date(order.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-        time: order.createdAt ? new Date(order.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString('fr-FR'),
-        customer: {
-          name: order.customerName || `${order.user?.firstName || ''} ${order.user?.lastName || ''}`.trim() || 'Client',
-          email: order.customerEmail || order.user?.email || '',
-          phone: order.customerPhone || order.user?.phone || ''
-        },
-        amount: order.totalPrice || 0,
-        subtotal: order.subtotal || (order.totalPrice - (order.shipping || 0)),
-        shipping: order.shipping || 0,
-        status: order.status || 'confirmed',
-        payment: {
-          method: order.paymentMethod || 'card',
-          transactionId: order.paymentTransactionId || `TRX-${Date.now()}`
-        },
-        delivery: {
-          method: order.shippingMethod || 'Standard',
-          address: order.shippingAddress || '',
-          trackingNumber: order.trackingNumber || ''
-        },
-        items: order.items?.map(item => ({
-          id: item.id,
-          name: item.productName || item.product?.name || 'Produit',
-          sku: item.product?.sku || 'N/A',
-          price: item.unitPrice || item.price || 0,
-          quantity: item.quantity || 1,
-          total: (item.unitPrice || 0) * (item.quantity || 1)
-        })) || []
+      
+      // Calculer les stats locales
+      this.calculateLocalStats();
+      
+      // Mettre à jour la pagination
+      this.pagination = {
+        page: 1,
+        limit: 10,
+        total: this.orders.length,
+        pages: 1
       };
     },
+
+    calculateLocalStats() {
+      this.stats = {
+        totalOrders: this.orders.length,
+        pendingOrders: this.orders.filter(o => o.status === 'pending').length,
+        totalRevenue: this.orders.reduce((sum, order) => sum + (order.totalPrice || 0), 0),
+        averageOrderValue: this.orders.length > 0 
+          ? this.orders.reduce((sum, order) => sum + (order.totalPrice || 0), 0) / this.orders.length
+          : 0
+      };
+    },
+
+    debounceSearch() {
+      clearTimeout(this.searchTimeout);
+      this.searchTimeout = setTimeout(() => {
+        this.pagination.page = 1;
+        this.loadOrders();
+      }, 500);
+    },
+
+    getProductImage(img) {
+      if (!img) {
+        return '/image/no-image.png';
+      }
+      
+      if (img.startsWith('http://') || img.startsWith('https://') || img.includes('/')) {
+        return img;
+      }
+      
+      return `/image/${img}`;
+    },
+
+    handleImageError(event) {
+      event.target.src = '/image/no-image.png';
+      event.target.onerror = null;
+    },
+
     getStartDateFilter() {
       const now = new Date();
       switch (this.periodFilter) {
@@ -670,72 +576,86 @@ export default {
           const monthAgo = new Date(now);
           monthAgo.setMonth(monthAgo.getMonth() - 1);
           return monthAgo.toISOString().split('T')[0];
-        case 'quarter':
-          const quarterAgo = new Date(now);
-          quarterAgo.setMonth(quarterAgo.getMonth() - 3);
-          return quarterAgo.toISOString().split('T')[0];
         default:
           return null;
       }
     },
-    
-    calculateStats() {
-      this.stats = {
-        totalOrders: this.orders.length,
-        totalRevenue: this.orders.reduce((sum, order) => sum + order.amount, 0),
-        confirmedOrders: this.orders.filter(o => o.status === 'confirmed').length,
-        shippedOrders: this.orders.filter(o => o.status === 'shipped').length,
-        deliveredOrders: this.orders.filter(o => o.status === 'delivered').length,
-        averageOrderValue: this.orders.length > 0 ? 
-          this.orders.reduce((sum, order) => sum + order.amount, 0) / this.orders.length : 0
-      };
-    },
-   
-    async updateOrderStatus(order) {
+
+    openStatusModal(order) {
       this.orderToUpdate = order;
       this.newStatus = order.status;
+      this.trackingNumber = order.delivery?.trackingNumber || '';
       this.showStatusModal = true;
     },
-    
+
     async saveStatusUpdate() {
       if (!this.orderToUpdate || !this.newStatus) return;
-      
+
       try {
         const response = await axios.put(
-          `/api/orders/${this.orderToUpdate.id}/status`,
+          `/admin/orders/${this.orderToUpdate.id}/status`,
           {
             status: this.newStatus,
-            trackingNumber: this.newStatus === 'shipped' ? this.generateTrackingNumber() : undefined,
-            notes: this.statusComment
+            trackingNumber: this.trackingNumber || undefined,
+            notes: this.statusComment || undefined
           },
-          {
-            headers: this.getAuthHeaders()
-          }
+          { headers: this.getAuthHeaders() }
         );
-        
+
         if (response.data.success) {
-          // Mettre à jour localement
-          const index = this.orders.findIndex(o => o.id === this.orderToUpdate.id);
-          if (index !== -1) {
-            this.orders[index].status = this.newStatus;
-            if (response.data.order.trackingNumber) {
-              this.orders[index].delivery.trackingNumber = response.data.order.trackingNumber;
-            }
-          }
-          
           this.showNotification('Statut mis à jour avec succès', 'success');
           this.closeStatusModal();
+          await this.loadOrders();
         }
-        
+
       } catch (error) {
         console.error('❌ Erreur mise à jour statut:', error);
         this.showNotification('Erreur lors de la mise à jour', 'error');
       }
     },
-    
+
+    async applyBulkAction() {
+      if (!this.bulkAction || this.selectedOrders.length === 0) return;
+
+      if (this.bulkAction === 'cancelled') {
+        if (!confirm(`Êtes-vous sûr de vouloir annuler ${this.selectedOrders.length} commande(s) ?`)) {
+          return;
+        }
+      }
+
+      try {
+        const response = await axios.put(
+          '/admin/orders/bulk/status',
+          {
+            orderIds: this.selectedOrders,
+            status: this.bulkAction
+          },
+          { headers: this.getAuthHeaders() }
+        );
+
+        if (response.data.success) {
+          this.showNotification(`${this.selectedOrders.length} commande(s) mises à jour`, 'success');
+          this.selectedOrders = [];
+          this.bulkAction = '';
+          await this.loadOrders();
+        }
+
+      } catch (error) {
+        console.error('❌ Erreur action groupée:', error);
+        this.showNotification('Erreur lors de l\'action groupée', 'error');
+      }
+    },
+
     async exportOrders() {
       try {
-        const response = await axios.get('/api/orders/admin/export', {
+        const params = {};
+        if (this.statusFilter) params.status = this.statusFilter;
+        
+        const startDate = this.getStartDateFilter();
+        if (startDate) params.startDate = startDate;
+
+        const response = await axios.get('/admin/orders/export', {
+          params,
           headers: this.getAuthHeaders(),
           responseType: 'blob'
         });
@@ -746,176 +666,89 @@ export default {
         link.setAttribute('download', `commandes_${new Date().toISOString().split('T')[0]}.csv`);
         document.body.appendChild(link);
         link.click();
-        
+        link.remove();
+
       } catch (error) {
         console.error('❌ Erreur export:', error);
         this.showNotification('Erreur lors de l\'export', 'error');
       }
     },
-      
-    async applyBulkAction() {
-      if (!this.bulkAction || this.selectedOrders.length === 0) return;
-      
-      try {
-        switch (this.bulkAction) {
-          case 'mark_confirmed':
-            await this.updateBulkStatus('confirmed');
-            break;
-          case 'mark_processing':
-            await this.updateBulkStatus('processing');
-            break;
-          case 'mark_shipped':
-            await this.updateBulkStatus('shipped');
-            break;
-          case 'cancel':
-            if (confirm(`Êtes-vous sûr de vouloir annuler ${this.selectedOrders.length} commande(s) ?`)) {
-              await this.updateBulkStatus('cancelled');
-            }
-            break;
-          case 'export':
-            await this.exportSelectedOrders();
-            break;
-        }
-        
+
+    viewOrderDetails(order) {
+      this.selectedOrder = order;
+    },
+
+    printInvoice(order) {
+      console.log('Impression facture:', order.orderNumber);
+      window.print();
+    },
+
+    toggleSelectAll(event) {
+      if (event.target.checked) {
+        this.selectedOrders = this.orders.map(o => o.id);
+      } else {
         this.selectedOrders = [];
-        this.bulkAction = '';
-        
-      } catch (error) {
-        console.error('❌ Erreur action groupée:', error);
-        this.showNotification('Erreur lors de l\'action groupée', 'error');
       }
     },
-    
-    async updateBulkStatus(status) {
-      try {
-        const response = await axios.put(
-          '/api/orders/bulk/status',
-          {
-            orderIds: this.selectedOrders,
-            status: status
-          },
-          {
-            headers: this.getAuthHeaders()
-          }
-        );
-        
-        if (response.data.success) {
-          // Mettre à jour localement
-          this.orders.forEach(order => {
-            if (this.selectedOrders.includes(order.id)) {
-              order.status = status;
-            }
-          });
-          
-          this.showNotification(`${this.selectedOrders.length} commande(s) mises à jour`, 'success');
-          await this.loadOrders(); // Recharger pour les stats
-        }
-        
-      } catch (error) {
-        throw error;
+
+    prevPage() {
+      if (this.pagination.page > 1) {
+        this.pagination.page--;
+        this.loadOrders();
       }
     },
-    
-    async exportSelectedOrders() {
-      const selectedData = this.orders.filter(order => 
-        this.selectedOrders.includes(order.id)
-      );
-      
-      const csv = this.convertToCSV(selectedData);
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `commandes_selection_${new Date().toISOString().split('T')[0]}.csv`;
-      link.click();
+
+    nextPage() {
+      if (this.pagination.page < this.pagination.pages) {
+        this.pagination.page++;
+        this.loadOrders();
+      }
     },
-    
+
+    closeModal() {
+      this.selectedOrder = null;
+    },
+
+    closeStatusModal() {
+      this.showStatusModal = false;
+      this.orderToUpdate = null;
+      this.newStatus = '';
+      this.trackingNumber = '';
+      this.statusComment = '';
+    },
+
     goToDashboard() {
       this.$router.push('/admin/products');
     },
+
     goToAnalytics() {
       this.$router.push('/admin/analytics');
     },
-  
-    getSampleOrders() {
-      return [
-        {
-          id: 'ORD-001',
-          orderNumber: 'CMD-2024-001',
-          date: '2024-01-15',
-          time: '14:30',
-          customer: {
-            name: 'Jean Dupont',
-            email: 'jean.dupont@email.com',
-            phone: '0612345678'
-          },
-          amount: 149.99,
-          subtotal: 145.00,
-          shipping: 4.99,
-          status: 'confirmed',
-          payment: {
-            method: 'Carte bancaire',
-            transactionId: 'TRX-001'
-          },
-          delivery: {
-            method: 'Livraison standard',
-            address: '123 Rue de Paris, 75001 Paris',
-            trackingNumber: 'COL123456789FR'
-          },
-          items: [
-            { id: 1, name: 'T-shirt Noir Classique', sku: 'TSHIRT-BLK', price: 29.99, quantity: 2 },
-            { id: 2, name: 'Casquette Sport', sku: 'CAP-SPORT', price: 19.99, quantity: 1 },
-            { id: 3, name: 'Chaussettes Premium', sku: 'SOCKS-PRM', price: 14.99, quantity: 3 }
-          ]
-        },
-        {
-          id: 'ORD-002',
-          orderNumber: 'CMD-2024-002',
-          date: '2024-01-14',
-          time: '09:15',
-          customer: {
-            name: 'Marie Martin',
-            email: 'marie.martin@email.com',
-            phone: '0698765432'
-          },
-          amount: 89.50,
-          subtotal: 84.50,
-          shipping: 5.00,
-          status: 'shipped',
-          payment: {
-            method: 'PayPal',
-            transactionId: 'TRX-002'
-          },
-          delivery: {
-            method: 'Livraison express',
-            address: '456 Avenue des Champs, 69002 Lyon',
-            trackingNumber: 'CHR987654321FR'
-          },
-          items: [
-            { id: 4, name: 'Pull en Laine', sku: 'SWEATER-WL', price: 49.99, quantity: 1 },
-            { id: 5, name: 'Écharpe Hiver', sku: 'SCARF-WIN', price: 34.99, quantity: 1 }
-          ]
-        },
-        // Ajoutez plus de commandes de test...
-      ];
-    },
-    
+
     formatPrice(price) {
       return new Intl.NumberFormat('fr-FR', {
         style: 'currency',
         currency: 'EUR'
-      }).format(price);
+      }).format(price || 0);
     },
-    
+
     formatDate(dateString) {
+      if (!dateString) return 'N/A';
       return new Date(dateString).toLocaleDateString('fr-FR', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
       });
     },
-    
+
+    formatTime(dateString) {
+      if (!dateString) return '';
+      return new Date(dateString).toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    },
+
     getStatusLabel(status) {
       const labels = {
         pending: 'En attente',
@@ -927,191 +760,92 @@ export default {
       };
       return labels[status] || status;
     },
-    
-    toggleSelectAll() {
-      if (this.selectedOrders.length === this.filteredOrders.length) {
-        this.selectedOrders = [];
-      } else {
-        this.selectedOrders = this.filteredOrders.map(order => order.id);
-      }
+
+    getInitials(name) {
+      if (!name) return '?';
+      return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
     },
-    
-    viewOrderDetails(order) {
-      this.selectedOrder = order;
-    },
-    
-    updateOrderStatus(order) {
-      this.orderToUpdate = order;
-      this.newStatus = order.status;
-      this.showStatusModal = true;
-    },
-    
-    saveStatusUpdate() {
-      if (this.orderToUpdate) {
-        this.orderToUpdate.status = this.newStatus;
-        if (this.statusComment) {
-          console.log('Commentaire:', this.statusComment);
-        }
-        this.showNotification('Statut mis à jour', 'success');
-      }
-      this.closeStatusModal();
-    },
-    
-    printInvoice(order) {
-      console.log('Impression facture:', order.orderNumber);
-      window.print();
-    },
-    
-    copyTracking(trackingNumber) {
-      navigator.clipboard.writeText(trackingNumber);
-      this.showNotification('Numéro copié', 'success');
-    },
-    
-    sendEmail(order) {
-      console.log('Envoi email à:', order.customer.email);
-      this.showNotification('Email envoyé', 'success');
-    },
-    
-    exportOrders() {
-      const csv = this.convertToCSV(this.orders);
-      this.downloadCSV(csv, 'commandes.csv');
-    },
-    
-    convertToCSV(data) {
-      const headers = ['Numéro', 'Client', 'Date', 'Montant', 'Statut', 'Livraison'];
-      const rows = data.map(order => [
-        order.orderNumber,
-        order.customer.name,
-        order.date,
-        order.amount,
-        this.getStatusLabel(order.status),
-        order.delivery.method
-      ]);
+
+    getAuthHeaders() {
+      // Essayer plusieurs sources pour le token
+      let token = null;
       
-      return [headers, ...rows].map(row => row.join(',')).join('\n');
-    },
-    
-    downloadCSV(csv, filename) {
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-    },
-    
-    applyBulkAction() {
-      if (!this.bulkAction) return;
+      // 1. LocalStorage
+      token = localStorage.getItem('authToken');
       
-      switch (this.bulkAction) {
-        case 'mark_confirmed':
-          this.orders.forEach(order => {
-            if (this.selectedOrders.includes(order.id)) {
-              order.status = 'confirmed';
-            }
-          });
-          break;
-        case 'mark_processing':
-          this.orders.forEach(order => {
-            if (this.selectedOrders.includes(order.id)) {
-              order.status = 'processing';
-            }
-          });
-          break;
-        case 'mark_shipped':
-          this.orders.forEach(order => {
-            if (this.selectedOrders.includes(order.id)) {
-              order.status = 'shipped';
-            }
-          });
-          break;
-        case 'export':
-          const selectedData = this.orders.filter(order => 
-            this.selectedOrders.includes(order.id)
-          );
-          const csv = this.convertToCSV(selectedData);
-          this.downloadCSV(csv, 'commandes_selection.csv');
-          break;
-        case 'cancel':
-          if (confirm(`Annuler ${this.selectedOrders.length} commande(s) ?`)) {
-            this.orders.forEach(order => {
-              if (this.selectedOrders.includes(order.id)) {
-                order.status = 'cancelled';
-              }
-            });
-          }
-          break;
+      // 2. SessionStorage
+      if (!token) {
+        token = sessionStorage.getItem('authToken');
       }
       
-      this.selectedOrders = [];
-      this.bulkAction = '';
-      this.showNotification('Action appliquée', 'success');
-    },
-    
-    prevPage() {
-      if (this.currentPage > 1) this.currentPage--;
-    },
-    
-    nextPage() {
-      if (this.currentPage < this.totalPages) this.currentPage++;
-    },
-    
-    closeModal() {
-      this.selectedOrder = null;
-    },
-   getAuthHeaders() {
-      // Récupérer le token depuis localStorage ou Vuex store
-      const token = localStorage.getItem('authToken') || 
-                    (this.$store && this.$store.state.auth?.token);
+      // 3. Vuex store
+      if (!token && this.$store && this.$store.state.auth) {
+        token = this.$store.state.auth.token;
+      }
+      
+      // 4. Cookie
+      if (!token) {
+        const cookieToken = document.cookie
+          .split('; ')
+          .find(row => row.startsWith('authToken='))
+          ?.split('=')[1];
+        if (cookieToken) token = cookieToken;
+      }
+      
+      console.log('🔑 Token récupéré:', token ? '✅' : '❌ NON TROUVÉ');
+      
+      if (!token) {
+        console.warn('⚠️  Aucun token d\'authentification trouvé');
+        // Vous pouvez rediriger vers login si nécessaire
+        // this.$router.push('/login');
+        return {};
+      }
       
       return {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       };
     },
-    closeStatusModal() {
-      this.showStatusModal = false;
-      this.orderToUpdate = null;
-      this.newStatus = '';
-      this.statusComment = '';
-    },
-        generateTrackingNumber() {
-      const prefix = 'TRK';
-      const timestamp = Date.now().toString(36).toUpperCase();
-      const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-      return `${prefix}${timestamp.slice(-6)}${random}`;
-    },
-    
-   showNotification(message, type = 'info') {
-      // Utiliser votre système de notification
-      // Exemple avec alert temporaire :
-      alert(`${type === 'success' ? '✅' : '❌'} ${message}`);
+
+    showNotification(message, type = 'info') {
+      // Utilisez votre système de notification préféré
+      const icon = type === 'success' ? '✅' : type === 'warning' ? '⚠️' : '❌';
+      alert(`${icon} ${message}`);
     }
   }
 }
 </script>
-
 <style scoped>
+/* ============================================
+   STYLE PRINCIPAL ADMIN ORDERS
+   ============================================ */
+
 .admin-orders {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  padding: 2rem;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
+/* ============================================
+   HEADER
+   ============================================ */
 .admin-header {
-   background: white;
-  border-bottom: 1px solid #e5e7eb;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  margin-bottom: 2rem;
+  border: 1px solid #e2e8f0;
 }
 
 .header-top {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   padding: 1.5rem 2rem;
-  gap: 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
 }
 
 .header-title-section {
@@ -1119,101 +853,78 @@ export default {
 }
 
 .page-title {
+  font-size: 2.2rem;
+  font-weight: 800;
+  margin: 0 0 0.5rem 0;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin: 0;
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: #1f2937;
+  gap: 1rem;
+  letter-spacing: -0.5px;
 }
+
 .title-icon {
-  font-size: 2rem;
+  font-size: 2.5rem;
+  background: rgba(255, 255, 255, 0.2);
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
 .page-subtitle {
-  margin: 0.5rem 0 0 0;
-  color: #6b7280;
-  font-size: 0.95rem;
+  font-size: 1.1rem;
+  opacity: 0.9;
+  margin: 0;
+  font-weight: 400;
 }
 
-/* Boutons d'action */
-.header-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
+/* ============================================
+   BOUTONS D'ACTION HEADER
+   ============================================ */
 .action-buttons {
   display: flex;
   gap: 1rem;
 }
 
 .action-button {
-  border: none;
-  border-radius: 12px;
-  padding: 1rem 1.5rem;
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 14px;
+  padding: 0.8rem 1.2rem;
+  color: white;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-  min-width: 180px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  backdrop-filter: blur(10px);
+  min-width: 140px;
 }
 
-.action-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, transparent 30%, rgba(255, 255, 255, 0.2) 50%, transparent 70%);
-  transform: translateX(-100%);
-  transition: transform 0.6s;
-}
-
-.action-button:hover::before {
-  transform: translateX(100%);
-}
-
-.dashboard-btn {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-  box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.2), 0 2px 4px -1px rgba(99, 102, 241, 0.1);
-}
-
-.dashboard-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3), 0 4px 6px -2px rgba(99, 102, 241, 0.15);
-}
-
-.analytics-btn {
-  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
-  box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2), 0 2px 4px -1px rgba(16, 185, 129, 0.1);
-}
-
-.analytics-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3), 0 4px 6px -2px rgba(16, 185, 129, 0.15);
+.action-button:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
 .button-content {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  width: 100%;
-  color: white;
+  gap: 0.8rem;
 }
 
 .button-icon {
   position: relative;
+  width: 40px;
+  height: 40px;
 }
 
-.icon {
-  font-size: 1.75rem;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+.button-icon .icon {
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   position: relative;
   z-index: 2;
 }
@@ -1223,401 +934,410 @@ export default {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 40px;
-  height: 40px;
-  background: rgba(255, 255, 255, 0.2);
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
   filter: blur(8px);
+  z-index: 1;
 }
 
 .button-text {
-  flex: 1;
+  display: flex;
+  flex-direction: column;
   text-align: left;
 }
 
 .button-title {
-  display: block;
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-bottom: 0.125rem;
+  font-weight: 700;
+  font-size: 1rem;
 }
 
 .button-subtitle {
-  display: block;
   font-size: 0.8rem;
-  opacity: 0.9;
+  opacity: 0.8;
   font-weight: 400;
 }
 
-.button-arrow {
-  opacity: 0;
-  transform: translateX(-10px);
-  transition: all 0.3s ease;
+/* Boutons spécifiques */
+.dashboard-btn {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.9) 0%, rgba(59, 130, 246, 0.9) 100%);
 }
 
-.action-button:hover .button-arrow {
-  opacity: 1;
-  transform: translateX(0);
+.analytics-btn {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.9) 0%, rgba(5, 150, 105, 0.9) 100%);
 }
 
-.arrow-icon {
-  width: 20px;
-  height: 20px;
-  stroke-width: 2.5;
+.test-btn {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.9) 0%, rgba(217, 119, 6, 0.9) 100%);
 }
 
-.admin-header h1 {
-  margin: 0 0 1.5rem 0;
-  color: #1f2937;
-  font-size: 1.8rem;
-}
-
+/* ============================================
+   FILTRES
+   ============================================ */
 .header-filters {
-  background: #f8fafc;
-  border-top: 1px solid #e5e7eb;
-  padding: 1.25rem 2rem;
+  background: white;
+  padding: 1.5rem 2rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.filters-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
 }
 
 .filter-group {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 1.5rem;
 }
 
-.filter-group label {
-   display: flex;
+.filter-label {
+  display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  color: #4b5563;
-  font-weight: 500;
-  font-size: 0.9rem;
+  font-weight: 600;
+  color: #475569;
+  font-size: 0.95rem;
 }
+
+.filter-icon {
+  font-size: 1.2rem;
+}
+
 .filter-controls {
   display: flex;
   gap: 1rem;
   align-items: center;
 }
+
 .filter-select {
-   padding: 0.625rem 1rem;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
   background: white;
-  color: #374151;
-  font-size: 0.9rem;
+  color: #334155;
+  font-weight: 500;
   cursor: pointer;
-  min-width: 180px;
   transition: all 0.2s ease;
+  min-width: 180px;
+}
+
+.filter-select:hover {
+  border-color: #94a3b8;
 }
 
 .filter-select:focus {
   outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
-
-.filter-select:hover {
-  border-color: #9ca3af;
-}
-
 
 .export-button {
+  padding: 0.6rem 1.2rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
-  background: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .export-button:hover {
-  background: #2563eb;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
-
-.export-icon {
-  font-size: 1.1rem;
-}
-
-/* Recherche */
+/* ============================================
+   RECHERCHE
+   ============================================ */
 .search-container {
-  min-width: 300px;
+  flex: 1;
+  max-width: 400px;
 }
 
 .search-input-wrapper {
   position: relative;
-  display: flex;
-  align-items: center;
+  width: 100%;
 }
 
 .search-icon {
   position: absolute;
   left: 1rem;
-  color: #9ca3af;
-  font-size: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.2rem;
+  color: #94a3b8;
 }
 
 .search-input {
   width: 100%;
-  padding: 0.75rem 1rem 0.75rem 2.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
+  padding: 0.8rem 1rem 0.8rem 3rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
   font-size: 0.95rem;
-  background: white;
-  transition: all 0.2s ease;
+  background: #f8fafc;
+  transition: all 0.3s ease;
 }
 
 .search-input:focus {
   outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  border-color: #3b82f6;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
 }
 
 .search-input::placeholder {
-  color: #9ca3af;
+  color: #94a3b8;
 }
 
-/* Responsive */
-@media (max-width: 1024px) {
-  .header-top {
-    flex-direction: column;
-  }
-  
-  .action-buttons {
-    width: 100%;
-  }
-  
-  .action-button {
-    flex: 1;
-  }
-}
-
-@media (max-width: 768px) {
-  .header-top,
-  .header-filters {
-    padding: 1.25rem;
-  }
-  
-  .filters-container {
-    flex-direction: column;
-    gap: 1rem;
-  }
-  
-  .filter-controls {
-    flex-wrap: wrap;
-  }
-  
-  .filter-select {
-    min-width: 150px;
-  }
-  
-  .search-container {
-    width: 100%;
-    min-width: auto;
-  }
-  
-  .action-buttons {
-    flex-direction: column;
-  }
-}
-
-@media (max-width: 640px) {
-  .filter-controls {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .filter-select {
-    width: 100%;
-  }
-}
-/* Stats Cards */
+/* ============================================
+   CARTES STATISTIQUES
+   ============================================ */
 .stats-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 1.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 2.5rem;
 }
 
 .stat-card {
   background: white;
+  border-radius: 18px;
   padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   display: flex;
   align-items: center;
   gap: 1.5rem;
-  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  border-radius: 18px 18px 0 0;
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
 }
 
 .stat-icon {
   width: 60px;
   height: 60px;
-  border-radius: 12px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 2rem;
+  flex-shrink: 0;
 }
 
 .stat-icon.total {
-  background: linear-gradient(135deg, #f0f9ff, #e6f7ff);
-  color: #3b82f6;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  color: #1d4ed8;
 }
 
 .stat-icon.pending {
-  background: linear-gradient(135deg, #fef3c7, #fef9c3);
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
   color: #d97706;
 }
 
 .stat-icon.revenue {
   background: linear-gradient(135deg, #dcfce7, #bbf7d0);
-  color: #10b981;
+  color: #059669;
 }
 
 .stat-icon.average {
   background: linear-gradient(135deg, #f5f3ff, #ede9fe);
-  color: #8b5cf6;
+  color: #7c3aed;
+}
+
+.stat-content {
+  flex: 1;
 }
 
 .stat-content h3 {
-  font-size: 0.95rem;
-  color: #6b7280;
-  margin: 0 0 0.25rem 0;
-  font-weight: 500;
-}
-
-.stat-number {
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: #1f2937;
-  margin: 0;
-}
-
-.stat-change {
-  font-size: 0.8rem;
-  color: #10b981;
-  margin: 0;
-  font-weight: 500;
-}
-
-/* Table */
-.orders-table {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
-}
-
-.table-header {
-  padding: 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.table-filters {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-}
-
-.search-input {
-  flex: 1;
-  padding: 0.75rem 1rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.95rem;
-}
-
-.filter-toggle {
-  padding: 0.75rem 1.5rem;
-  background: #f8fafc;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  color: #4b5563;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.filter-toggle:hover {
-  background: #f1f5f9;
-}
-
-.advanced-filters {
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #e5e7eb;
-}
-
-.filter-row {
-  display: flex;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-}
-
-.filter-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  min-width: 150px;
-}
-
-.filter-item label {
-  font-size: 0.85rem;
-  color: #6b7280;
-  font-weight: 500;
-}
-
-.filter-input {
-  padding: 0.5rem;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
   font-size: 0.9rem;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-thead {
-  background: #f8fafc;
-}
-
-th, td {
-  padding: 1rem;
-  text-align: left;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-th {
-  font-weight: 600;
-  color: #4b5563;
-  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0 0 0.5rem 0;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
+.stat-number {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.2;
+}
+
+/* ============================================
+   LOADING
+   ============================================ */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+}
+
+.loading-spinner {
+  text-align: center;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.spinner {
+  width: 60px;
+  height: 60px;
+  border: 4px solid #e2e8f0;
+  border-top: 4px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1.5rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-spinner p {
+  color: #475569;
+  font-weight: 500;
+  font-size: 1.1rem;
+}
+
+/* ============================================
+   TABLEAU DES COMMANDES
+   ============================================ */
+.orders-table {
+  background: white;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 4px 25px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+}
+
+.orders-table table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1000px;
+}
+
+.orders-table thead {
+  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+}
+
+.orders-table th {
+  padding: 1.2rem 1.5rem;
+  text-align: left;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.orders-table th:first-child {
+  width: 50px;
+  text-align: center;
+}
+
+.orders-table th:last-child {
+  width: 150px;
+}
+
+.orders-table th input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+/* ============================================
+   LIGNES DE COMMANDES
+   ============================================ */
+.order-row {
+  border-bottom: 1px solid #f1f5f9;
+  transition: all 0.2s ease;
+}
+
 .order-row:hover {
-  background: #f9fafb;
+  background: #f8fafc;
+  transform: scale(1.001);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 
-.order-row.pending {
-  background: #fffbeb;
+.order-row.pending:hover {
+  background: rgba(254, 243, 199, 0.1);
 }
 
-.order-id {
-  font-size: 0.8rem;
-  color: #6b7280;
-  margin-top: 0.25rem;
+.order-row.confirmed:hover {
+  background: rgba(219, 234, 254, 0.1);
 }
 
+.order-row.shipped:hover {
+  background: rgba(240, 249, 255, 0.1);
+}
+
+.order-row.delivered:hover {
+  background: rgba(220, 252, 231, 0.1);
+}
+
+.order-row.cancelled:hover {
+  background: rgba(254, 226, 226, 0.1);
+}
+
+.orders-table td {
+  padding: 1.2rem 1.5rem;
+  vertical-align: middle;
+}
+
+.orders-table td:first-child {
+  text-align: center;
+}
+
+.orders-table td input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #3b82f6;
+}
+
+/* ============================================
+   INFOS CLIENT
+   ============================================ */
 .customer-info {
   display: flex;
   flex-direction: column;
@@ -1625,218 +1345,273 @@ th {
 }
 
 .customer-name {
-  font-weight: 500;
-  color: #1f2937;
+  font-weight: 600;
+  color: #0f172a;
+  font-size: 1rem;
 }
 
-.customer-email,
-.customer-phone {
+.customer-email {
   font-size: 0.85rem;
-  color: #6b7280;
+  color: #64748b;
+  font-weight: 400;
 }
 
+/* ============================================
+   DATE ET HEURE
+   ============================================ */
 .order-date {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
 }
 
+.order-date > div {
+  color: #475569;
+  font-weight: 500;
+}
+
 .order-time {
   font-size: 0.85rem;
-  color: #6b7280;
+  color: #94a3b8;
 }
 
+/* ============================================
+   MONTANT
+   ============================================ */
 .amount-cell {
-  font-weight: 600;
-  color: #1f2937;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #059669;
 }
 
+/* ============================================
+   BADGE STATUT
+   ============================================ */
 .status-badge {
   display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 120px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .status-badge.pending {
-  background: #fef3c7;
-  color: #d97706;
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  color: #92400e;
+  border: 2px solid #fbbf24;
 }
 
 .status-badge.confirmed {
-  background: #dbeafe;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
   color: #1e40af;
+  border: 2px solid #60a5fa;
 }
 
 .status-badge.processing {
-  background: #f0f9ff;
-  color: #3b82f6;
+  background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+  color: #5b21b6;
+  border: 2px solid #8b5cf6;
 }
 
 .status-badge.shipped {
-  background: #dcfce7;
-  color: #166534;
+  background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+  color: #0c4a6e;
+  border: 2px solid #38bdf8;
 }
 
 .status-badge.delivered {
-  background: #d1fae5;
+  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
   color: #065f46;
+  border: 2px solid #10b981;
 }
 
 .status-badge.cancelled {
-  background: #fee2e2;
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
   color: #991b1b;
+  border: 2px solid #f87171;
 }
 
-.delivery-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.tracking-number {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
-  color: #6b7280;
-}
-
-.copy-btn {
-  background: none;
-  border: none;
-  color: #6b7280;
-  cursor: pointer;
-  font-size: 0.9rem;
-  padding: 0.25rem;
-  border-radius: 4px;
-}
-
-.copy-btn:hover {
-  background: #f3f4f6;
-}
-
+/* ============================================
+   ACTIONS
+   ============================================ */
 .order-actions {
   display: flex;
   gap: 0.5rem;
+  justify-content: center;
 }
 
 .action-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 6px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   border: none;
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: all 0.2s ease;
+  background: #f1f5f9;
+  color: #475569;
 }
 
-.action-btn.view {
-  background: #f0f9ff;
-  color: #3b82f6;
+.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .action-btn.view:hover {
-  background: #dbeafe;
-}
-
-.action-btn.edit {
-  background: #fef3c7;
-  color: #d97706;
+  background: #3b82f6;
+  color: white;
 }
 
 .action-btn.edit:hover {
-  background: #fde68a;
-}
-
-.action-btn.print {
-  background: #f5f3ff;
-  color: #8b5cf6;
+  background: #10b981;
+  color: white;
 }
 
 .action-btn.print:hover {
-  background: #ede9fe;
+  background: #f59e0b;
+  color: white;
 }
 
-.action-btn.ship {
-  background: #dcfce7;
-  color: #166534;
+/* ============================================
+   DONNÉES VIDE
+   ============================================ */
+.no-data {
+  padding: 4rem 2rem;
+  text-align: center;
+  color: #64748b;
 }
 
-.action-btn.ship:hover {
-  background: #bbf7d0;
+.no-data h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 1rem 0 0.5rem 0;
+  color: #334155;
 }
 
-/* Bulk Actions */
+.no-data p {
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.retry-btn {
+  padding: 0.8rem 2rem;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.retry-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+}
+
+/* ============================================
+   ACTIONS GROUPÉES
+   ============================================ */
 .bulk-actions {
-  padding: 1rem 1.5rem;
-  background: #f0f9ff;
-  border-top: 1px solid #e5e7eb;
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  padding: 1.2rem 1.5rem;
+  border-top: 2px solid #e2e8f0;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: sticky;
+  bottom: 0;
+  backdrop-filter: blur(10px);
 }
 
 .selected-count {
-  color: #3b82f6;
-  font-weight: 500;
+  font-weight: 600;
+  color: #475569;
+  font-size: 1rem;
 }
 
 .bulk-buttons {
   display: flex;
-  gap: 0.5rem;
+  gap: 1rem;
   align-items: center;
 }
 
 .bulk-select {
-  padding: 0.5rem 1rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
+  padding: 0.6rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
   background: white;
-  color: #374151;
+  color: #334155;
+  font-weight: 500;
+  cursor: pointer;
   min-width: 200px;
 }
 
+.bulk-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
 .apply-btn {
-  padding: 0.5rem 1.5rem;
-  background: #3b82f6;
+  padding: 0.6rem 1.5rem;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
   color: white;
   border: none;
-  border-radius: 6px;
-  font-weight: 500;
+  border-radius: 10px;
+  font-weight: 600;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.apply-btn:hover {
-  background: #2563eb;
+.apply-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
-/* Pagination */
+.apply-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ============================================
+   PAGINATION
+   ============================================ */
 .pagination {
   padding: 1.5rem;
-  border-top: 1px solid #e5e7eb;
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 1rem;
+  gap: 1.5rem;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
 }
 
 .page-btn {
-  padding: 0.5rem 1rem;
-  border: 1px solid #d1d5db;
+  padding: 0.7rem 1.5rem;
   background: white;
-  color: #4b5563;
-  border-radius: 6px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  color: #475569;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
+  min-width: 120px;
 }
 
 .page-btn:hover:not(:disabled) {
-  background: #f8fafc;
-  border-color: #d1d5db;
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
 }
 
 .page-btn:disabled {
@@ -1845,62 +1620,101 @@ th {
 }
 
 .page-info {
-  color: #6b7280;
-  font-weight: 500;
+  font-weight: 600;
+  color: #64748b;
+  font-size: 0.95rem;
+  background: white;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
 }
 
-/* Modal Styles */
+/* ============================================
+   MODALS
+   ============================================ */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
-  justify-content: center;
   align-items: center;
-  z-index: 1000;
+  justify-content: center;
+  z-index: 2000;
+  padding: 2rem;
+  backdrop-filter: blur(8px);
+  animation: fadeIn 0.3s ease;
 }
 
 .modal-content {
   background: white;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 800px;
+  border-radius: 24px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  max-width: 500px;
+  width: 100%;
   max-height: 90vh;
   overflow-y: auto;
+  animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .modal-content.large {
-  max-width: 1000px;
+  max-width: 900px;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .modal-header {
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid #e2e8f0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem 2rem;
-  border-bottom: 1px solid #e5e7eb;
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border-radius: 24px 24px 0 0;
 }
 
 .modal-header h2 {
   margin: 0;
-  color: #1f2937;
+  color: #0f172a;
+  font-size: 1.5rem;
+  font-weight: 700;
 }
 
 .close-btn {
-  background: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   border: none;
+  background: #f1f5f9;
+  color: #64748b;
   font-size: 1.5rem;
   cursor: pointer;
-  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
 }
 
 .close-btn:hover {
-  color: #374151;
+  background: #ef4444;
+  color: white;
+  transform: rotate(90deg);
 }
 
+/* ============================================
+   DÉTAILS COMMANDE MODAL
+   ============================================ */
 .order-details-modal {
   padding: 2rem;
 }
@@ -1910,258 +1724,360 @@ th {
 }
 
 .detail-section h3 {
-  color: #1f2937;
+  font-size: 1.3rem;
+  color: #0f172a;
   margin: 0 0 1.5rem 0;
+  font-weight: 700;
   padding-bottom: 0.75rem;
-  border-bottom: 2px solid #f3f4f6;
+  border-bottom: 2px solid #e2e8f0;
 }
 
 .detail-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
 }
 
 .detail-item {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.5rem;
 }
 
 .detail-item label {
-  font-size: 0.85rem;
-  color: #6b7280;
+  font-size: 0.9rem;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detail-item span {
+  font-size: 1rem;
+  color: #334155;
   font-weight: 500;
 }
 
+/* ============================================
+   CARTE CLIENT
+   ============================================ */
 .customer-card {
-  background: #f8fafc;
-  border-radius: 8px;
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border-radius: 18px;
   padding: 1.5rem;
-  border: 1px solid #e5e7eb;
+  border: 2px solid #e2e8f0;
 }
 
 .customer-header {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .customer-avatar {
-  width: 48px;
-  height: 48px;
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 1.5rem;
+  flex-shrink: 0;
 }
 
 .customer-header h4 {
-  margin: 0;
-  color: #1f2937;
+  margin: 0 0 0.5rem 0;
+  color: #0f172a;
+  font-size: 1.2rem;
+  font-weight: 700;
 }
 
 .customer-header p {
-  margin: 0.25rem 0 0 0;
-  color: #6b7280;
-  font-size: 0.9rem;
+  margin: 0;
+  color: #64748b;
+  font-size: 0.95rem;
 }
 
 .customer-contact p {
-  margin: 0.5rem 0;
-  color: #4b5563;
+  margin: 0;
+  color: #475569;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
+/* ============================================
+   ARTICLES COMMANDÉS
+   ============================================ */
 .order-items table {
   width: 100%;
   border-collapse: collapse;
-}
-
-.order-items th,
-.order-items td {
-  padding: 0.75rem 1rem;
-  border: 1px solid #e5e7eb;
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
 }
 
 .order-items th {
-  background: #f8fafc;
+  padding: 1rem;
+  text-align: left;
+  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+  color: #475569;
   font-weight: 600;
-  color: #4b5563;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.order-items td {
+  padding: 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.order-items tbody tr:hover {
+  background: #f8fafc;
+}
+
+.order-items tfoot {
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+}
+
+.order-items tfoot td {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 1.1rem;
 }
 
 .product-info {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  align-items: center;
+  gap: 1rem;
+}
+
+.product-img {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: #f1f5f9;
+  border: 2px solid #e2e8f0;
 }
 
 .product-name {
-  font-weight: 500;
-  color: #1f2937;
+  font-weight: 600;
+  color: #0f172a;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
 }
 
-.product-sku {
-  font-size: 0.8rem;
-  color: #6b7280;
+.product-category {
+  font-size: 0.85rem;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  display: inline-block;
 }
 
-.total-row {
-  background: #f8fafc;
-}
-
+/* ============================================
+   ACTIONS MODAL
+   ============================================ */
 .modal-actions {
   display: flex;
   gap: 1rem;
   justify-content: flex-end;
-  padding-top: 1.5rem;
-  border-top: 1px solid #e5e7eb;
+  padding-top: 2rem;
+  border-top: 2px solid #e2e8f0;
 }
 
-.action-btn.primary {
-  padding: 0.75rem 1.5rem;
-  background: #3b82f6;
+.modal-actions .action-btn {
+  padding: 0.8rem 2rem;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 180px;
+}
+
+.modal-actions .primary {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
   color: white;
-  border: none;
-  border-radius: 6px;
-  font-weight: 500;
-  cursor: pointer;
 }
 
-.action-btn.primary:hover {
-  background: #2563eb;
+.modal-actions .secondary {
+  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+  color: #475569;
 }
 
-.action-btn.secondary {
-  padding: 0.75rem 1.5rem;
-  background: #f8fafc;
-  color: #4b5563;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-weight: 500;
-  cursor: pointer;
+.modal-actions .action-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
-.action-btn.secondary:hover {
-  background: #f1f5f9;
-}
-
-/* Status Form */
+/* ============================================
+   FORMULAIRE STATUT
+   ============================================ */
 .status-form {
   padding: 2rem;
 }
 
-.status-form .form-group {
+.form-group {
   margin-bottom: 1.5rem;
 }
 
-.status-form label {
+.form-group label {
   display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: #374151;
+  margin-bottom: 0.75rem;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.95rem;
 }
 
-.form-select {
+.form-select,
+.form-input,
+textarea {
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
+  padding: 0.8rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
   font-size: 1rem;
+  background: white;
+  transition: all 0.2s ease;
 }
 
-.status-form textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 1rem;
+.form-select:focus,
+.form-input:focus,
+textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 100px;
   font-family: inherit;
 }
 
+/* ============================================
+   ACTIONS FORMULAIRE
+   ============================================ */
 .form-actions {
   display: flex;
-  justify-content: flex-end;
   gap: 1rem;
+  justify-content: flex-end;
   padding-top: 1.5rem;
-  border-top: 1px solid #e5e7eb;
+  margin-top: 2rem;
+  border-top: 1px solid #e2e8f0;
 }
 
 .btn-cancel {
-  padding: 0.75rem 1.5rem;
-  background: #6b7280;
-  color: white;
-  border: none;
-  border-radius: 6px;
+  padding: 0.8rem 2rem;
+  background: #f1f5f9;
+  color: #475569;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-weight: 600;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .btn-cancel:hover {
-  background: #4b5563;
+  background: #e2e8f0;
+  transform: translateY(-2px);
 }
 
 .btn-save {
-  padding: 0.75rem 1.5rem;
-  background: #10b981;
+  padding: 0.8rem 2rem;
+  background: linear-gradient(135deg, #10b981, #059669);
   color: white;
   border: none;
-  border-radius: 6px;
-  font-weight: 500;
+  border-radius: 12px;
+  font-weight: 600;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.btn-save:hover {
-  background: #059669;
+.btn-save:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
 }
 
-/* Responsive */
+.btn-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 1200px) {
+  .admin-orders {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 992px) {
+  .header-top {
+    flex-direction: column;
+    gap: 1.5rem;
+    align-items: flex-start;
+  }
+  
+  .action-buttons {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  
+  .filters-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1.5rem;
+  }
+  
+  .search-container {
+    max-width: 100%;
+  }
+}
+
 @media (max-width: 768px) {
   .admin-orders {
     padding: 1rem;
   }
   
-  .header-filters {
+  .stats-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .filter-controls {
     flex-direction: column;
     align-items: stretch;
   }
   
-  .filter-group {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .stats-cards {
-    grid-template-columns: 1fr;
-  }
-  
-  .table-filters {
-    flex-direction: column;
-  }
-  
-  .filter-row {
-    flex-direction: column;
+  .filter-select {
+    min-width: 100%;
   }
   
   .bulk-actions {
     flex-direction: column;
     gap: 1rem;
-    text-align: center;
+    align-items: stretch;
   }
   
   .bulk-buttons {
-    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
   }
   
-  .bulk-select {
-    flex: 1;
-  }
-  
-  .modal-content {
-    width: 95%;
+  .modal-content.large {
     margin: 1rem;
   }
   
@@ -2169,39 +2085,126 @@ th {
     flex-direction: column;
   }
   
-  .action-btn {
+  .modal-actions .action-btn {
+    min-width: 100%;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .form-actions button {
     width: 100%;
   }
-  .loading-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(255, 255, 255, 0.9);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 10000;
 }
 
-.loading-spinner {
-  text-align: center;
+@media (max-width: 576px) {
+  .stats-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+  }
+  
+  .action-button {
+    min-width: 100%;
+  }
+  
+  .page-btn {
+    min-width: 100px;
+    padding: 0.7rem 1rem;
+  }
+  
+  .pagination {
+    flex-direction: column;
+    gap: 1rem;
+  }
 }
 
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #3b82f6;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 1rem;
+/* ============================================
+   ANIMATIONS SUPPLÉMENTAIRES
+   ============================================ */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+.pulse {
+  animation: pulse 2s infinite;
 }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* ============================================
+   PERSONNALISATION SCROLLBAR
+   ============================================ */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #94a3b8, #64748b);
+  border-radius: 10px;
+  border: 2px solid #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #64748b, #475569);
+}
+
+/* ============================================
+   EFFETS SPÉCIAUX
+   ============================================ */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.shadow-glow {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+.hover-lift {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+}
+
+/* ============================================
+   ICÔNES ANIMÉES
+   ============================================ */
+.icon-spin {
+  animation: iconSpin 2s linear infinite;
+}
+
+@keyframes iconSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.icon-bounce {
+  animation: iconBounce 2s infinite;
+}
+
+@keyframes iconBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 </style>

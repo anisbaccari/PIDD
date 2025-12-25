@@ -2,25 +2,23 @@
   <div class="admin-analytics">
     <!-- Header -->
     <div class="analytics-header">
-        <button 
-    @click="goToDashboard"
-    class="group flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:from-blue-600 hover:to-blue-700 active:from-blue-700 active:to-blue-800 transition-all duration-300 ease-in-out transform hover:-translate-y-0.5 active:translate-y-0 border border-blue-400/20"
-  >
-    <span class="text-xl">🏠</span>
-    <span>
-      Dashboard
-    </span>
-  </button>
-   <button 
-    @click="goToCommandes"
-    class="group flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:from-blue-600 hover:to-blue-700 active:from-blue-700 active:to-blue-800 transition-all duration-300 ease-in-out transform hover:-translate-y-0.5 active:translate-y-0 border border-blue-400/20"
-  >
-    
-    <span>
-      Gestion des commandes
-    </span>
-  </button>
+      <button 
+        @click="goToDashboard"
+        class="group flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300"
+      >
+        <span class="text-xl">🏠</span>
+        <span>Dashboard</span>
+      </button>
+      
+      <button 
+        @click="goToCommandes"
+        class="group flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300"
+      >
+        <span>Gestion des commandes</span>
+      </button>
+      
       <h1>Tableau de bord Statistiques</h1>
+      
       <div class="date-range">
         <button 
           v-for="range in dateRanges" 
@@ -33,6 +31,7 @@
         <input 
           type="date" 
           v-model="customStartDate" 
+          @change="loadStats"
           class="date-input"
           :max="today"
         />
@@ -40,6 +39,7 @@
         <input 
           type="date" 
           v-model="customEndDate" 
+          @change="loadStats"
           class="date-input"
           :max="today"
           :min="customStartDate"
@@ -47,40 +47,45 @@
       </div>
     </div>
 
+    <!-- Loading -->
+    <div v-if="loading" class="loading-overlay">
+      <div class="loading-spinner">
+        <div class="spinner"></div>
+        <p>Chargement des statistiques...</p>
+      </div>
+    </div>
+
     <!-- KPI Cards -->
-    <div class="kpi-grid">
+    <div v-else class="kpi-grid">
       <div class="kpi-card">
         <div class="kpi-header">
           <div class="kpi-icon revenue">💰</div>
-          <div class="kpi-trend positive">+12%</div>
         </div>
         <div class="kpi-content">
           <h3>Chiffre d'affaires</h3>
-          <p class="kpi-value">{{ formatPrice(totalRevenue) }}</p>
-          <p class="kpi-period">vs période précédente</p>
+          <p class="kpi-value">{{ formatPrice(stats.totalRevenue) }}</p>
+          <p class="kpi-period">Période sélectionnée</p>
         </div>
       </div>
       
       <div class="kpi-card">
         <div class="kpi-header">
           <div class="kpi-icon orders">📦</div>
-          <div class="kpi-trend positive">+8%</div>
         </div>
         <div class="kpi-content">
           <h3>Commandes</h3>
-          <p class="kpi-value">{{ totalOrders }}</p>
-          <p class="kpi-period">{{ averageOrdersPerDay }} / jour</p>
+          <p class="kpi-value">{{ stats.totalOrders }}</p>
+          <p class="kpi-period">{{ stats.averageOrdersPerDay }} / jour</p>
         </div>
       </div>
       
       <div class="kpi-card">
         <div class="kpi-header">
           <div class="kpi-icon average">📊</div>
-          <div class="kpi-trend positive">+5%</div>
         </div>
         <div class="kpi-content">
           <h3>Panier moyen</h3>
-          <p class="kpi-value">{{ formatPrice(averageOrderValue) }}</p>
+          <p class="kpi-value">{{ formatPrice(stats.averageOrderValue) }}</p>
           <p class="kpi-period">Par commande</p>
         </div>
       </div>
@@ -88,11 +93,10 @@
       <div class="kpi-card">
         <div class="kpi-header">
           <div class="kpi-icon customers">👥</div>
-          <div class="kpi-trend positive">+15%</div>
         </div>
         <div class="kpi-content">
-          <h3>Nouveaux clients</h3>
-          <p class="kpi-value">{{ newCustomers }}</p>
+          <h3>Clients uniques</h3>
+          <p class="kpi-value">{{ stats.newCustomers }}</p>
           <p class="kpi-period">Clients actifs</p>
         </div>
       </div>
@@ -104,28 +108,13 @@
       <div class="chart-card">
         <div class="chart-header">
           <h3>Évolution du chiffre d'affaires</h3>
-          <select v-model="revenueChartType" class="chart-select">
+          <select v-model="revenueChartType" @change="updateRevenueChart" class="chart-select">
             <option value="line">Ligne</option>
             <option value="bar">Barres</option>
-            <option value="area">Aire</option>
           </select>
         </div>
         <div class="chart-container">
           <canvas ref="revenueChart"></canvas>
-        </div>
-      </div>
-      
-      <!-- Orders Chart -->
-      <div class="chart-card">
-        <div class="chart-header">
-          <h3>Commandes par jour</h3>
-          <select v-model="ordersChartType" class="chart-select">
-            <option value="bar">Barres</option>
-            <option value="line">Ligne</option>
-          </select>
-        </div>
-        <div class="chart-container">
-          <canvas ref="ordersChart"></canvas>
         </div>
       </div>
       
@@ -138,17 +127,24 @@
           </button>
         </div>
         <div class="top-products">
-          <div v-for="(product, index) in topProducts" :key="product.id" class="product-rank">
+          <div v-if="topProducts.length === 0" class="no-data">
+            Aucun produit vendu sur cette période
+          </div>
+          <div v-else v-for="(product, index) in topProducts" :key="product.id" class="product-rank">
             <div class="rank-number">{{ index + 1 }}</div>
+            <img 
+              v-if="product.image" 
+              :src="getProductImage(product.image)" 
+              :alt="product.name" 
+              class="product-thumb"
+              @error="handleImageError"
+            >
             <div class="product-info">
               <div class="product-name">{{ product.name }}</div>
               <div class="product-stats">
                 <span class="quantity">{{ product.quantity }} ventes</span>
                 <span class="revenue">{{ formatPrice(product.revenue) }}</span>
               </div>
-            </div>
-            <div class="product-trend" :class="product.trend > 0 ? 'positive' : 'negative'">
-              {{ product.trend > 0 ? '+' : '' }}{{ product.trend }}%
             </div>
           </div>
         </div>
@@ -158,14 +154,28 @@
       <div class="chart-card">
         <div class="chart-header">
           <h3>Ventes par catégorie</h3>
-          <select v-model="categoryChartType" class="chart-select">
+          <select v-model="categoryChartType" @change="updateCategoryChart" class="chart-select">
             <option value="doughnut">Anneau</option>
             <option value="pie">Camembert</option>
-            <option value="polarArea">Polaire</option>
           </select>
         </div>
         <div class="chart-container">
           <canvas ref="categoryChart"></canvas>
+        </div>
+      </div>
+      
+      <!-- Orders by Status -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>Commandes par statut</h3>
+        </div>
+        <div class="status-stats">
+          <div v-for="(count, status) in stats.ordersByStatus || {}" :key="status" class="status-item">
+            <span class="status-badge" :class="status">
+              {{ getStatusLabel(status) }}
+            </span>
+            <span class="status-count">{{ count }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -176,7 +186,7 @@
         <button 
           v-for="tab in statsTabs" 
           :key="tab.id"
-          @click="activeTab = tab.id"
+          @click="selectTab(tab.id)"
           :class="['tab-btn', { active: activeTab === tab.id }]"
         >
           {{ tab.label }}
@@ -188,19 +198,16 @@
         <div v-if="activeTab === 'customers'" class="tab-pane">
           <div class="customer-metrics">
             <div class="metric-card">
-              <h4>Nouveaux clients</h4>
-              <p class="metric-value">{{ newCustomers }}</p>
-              <p class="metric-change positive">+15%</p>
+              <h4>Clients totaux</h4>
+              <p class="metric-value">{{ customerStats.totalCustomers || 0 }}</p>
             </div>
             <div class="metric-card">
               <h4>Taux de rétention</h4>
-              <p class="metric-value">{{ retentionRate }}%</p>
-              <p class="metric-change positive">+3%</p>
+              <p class="metric-value">{{ customerStats.retentionRate || 0 }}%</p>
             </div>
             <div class="metric-card">
-              <h4>CLV (Customer Lifetime Value)</h4>
-              <p class="metric-value">{{ formatPrice(clv) }}</p>
-              <p class="metric-change positive">+8%</p>
+              <h4>CLV moyen</h4>
+              <p class="metric-value">{{ formatPrice(customerStats.clv || 0) }}</p>
             </div>
           </div>
           
@@ -211,24 +218,24 @@
                 <div class="segment-icon vip">👑</div>
                 <div class="segment-info">
                   <h5>Clients VIP</h5>
-                  <p class="segment-count">{{ vipCustomers }}</p>
-                  <p class="segment-revenue">{{ formatPrice(vipRevenue) }}</p>
+                  <p class="segment-count">{{ customerStats.vipCustomers || 0 }}</p>
+                  <p class="segment-revenue">{{ formatPrice(customerStats.vipRevenue || 0) }}</p>
                 </div>
               </div>
               <div class="segment-card">
                 <div class="segment-icon regular">👍</div>
                 <div class="segment-info">
                   <h5>Réguliers</h5>
-                  <p class="segment-count">{{ regularCustomers }}</p>
-                  <p class="segment-revenue">{{ formatPrice(regularRevenue) }}</p>
+                  <p class="segment-count">{{ customerStats.regularCustomers || 0 }}</p>
+                  <p class="segment-revenue">{{ formatPrice(customerStats.regularRevenue || 0) }}</p>
                 </div>
               </div>
               <div class="segment-card">
                 <div class="segment-icon new">🌟</div>
                 <div class="segment-info">
                   <h5>Nouveaux</h5>
-                  <p class="segment-count">{{ newCustomers }}</p>
-                  <p class="segment-revenue">{{ formatPrice(newRevenue) }}</p>
+                  <p class="segment-count">{{ customerStats.newCustomers || 0 }}</p>
+                  <p class="segment-revenue">{{ formatPrice(customerStats.newRevenue || 0) }}</p>
                 </div>
               </div>
             </div>
@@ -245,15 +252,23 @@
                   <th>Ventes</th>
                   <th>Chiffre d'affaires</th>
                   <th>Stock</th>
-                  <th>Taux de rotation</th>
-                  <th>Tendance</th>
+                  <th>Rotation</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="product in productStats" :key="product.id">
+                <tr v-if="productStats.length === 0">
+                  <td colspan="5" class="no-data">Aucune donnée disponible</td>
+                </tr>
+                <tr v-else v-for="product in productStats" :key="product.id">
                   <td>
                     <div class="product-cell">
-                      <img :src="product.image" :alt="product.name" class="product-img">
+                      <img 
+                        v-if="product.image" 
+                        :src="getProductImage(product.image)" 
+                        :alt="product.name" 
+                        class="product-img"
+                        @error="handleImageError"
+                      >
                       <div>
                         <strong>{{ product.name }}</strong>
                         <p class="product-sku">{{ product.sku }}</p>
@@ -265,17 +280,12 @@
                   <td>
                     <div class="stock-indicator">
                       <div class="stock-bar">
-                        <div class="stock-fill" :style="{ width: product.stockPercent + '%' }"></div>
+                        <div class="stock-fill" :style="{ width: Math.min(product.stockPercent || 0, 100) + '%' }"></div>
                       </div>
                       <span>{{ product.stock }}</span>
                     </div>
                   </td>
                   <td>{{ product.turnover }} jours</td>
-                  <td>
-                    <span class="trend-badge" :class="product.trend >= 0 ? 'positive' : 'negative'">
-                      {{ product.trend >= 0 ? '↑' : '↓' }} {{ Math.abs(product.trend) }}%
-                    </span>
-                  </td>
                 </tr>
               </tbody>
             </table>
@@ -285,39 +295,17 @@
         <!-- Sales Stats -->
         <div v-else class="tab-pane">
           <div class="sales-metrics">
-            <div class="metric-row">
-              <div class="metric-item">
-                <h4>Conversion rate</h4>
-                <p class="metric-value">{{ conversionRate }}%</p>
-              </div>
-              <div class="metric-item">
-                <h4>Panier abandonné</h4>
-                <p class="metric-value">{{ abandonedCartRate }}%</p>
-              </div>
-              <div class="metric-item">
-                <h4>Temps moyen d'achat</h4>
-                <p class="metric-value">{{ averagePurchaseTime }} min</p>
-              </div>
-            </div>
-            
-            <div class="sales-channels">
-              <h4>Canaux de vente</h4>
-              <div class="channels-grid">
-                <div class="channel-card">
-                  <div class="channel-icon web">🌐</div>
-                  <div class="channel-info">
-                    <h5>Site web</h5>
-                    <p class="channel-percent">{{ webSalesPercent }}%</p>
-                    <p class="channel-amount">{{ formatPrice(webSales) }}</p>
-                  </div>
+            <h4>Répartition des commandes par statut</h4>
+            <div class="status-grid">
+              <div v-for="(count, status) in stats.ordersByStatus || {}" :key="status" class="status-card">
+                <div class="status-badge-large" :class="status">
+                  {{ getStatusLabel(status) }}
                 </div>
-                <div class="channel-card">
-                  <div class="channel-icon mobile">📱</div>
-                  <div class="channel-info">
-                    <h5>Mobile</h5>
-                    <p class="channel-percent">{{ mobileSalesPercent }}%</p>
-                    <p class="channel-amount">{{ formatPrice(mobileSales) }}</p>
-                  </div>
+                <div class="status-details">
+                  <p class="status-count-large">{{ count }}</p>
+                  <p class="status-percentage">
+                    {{ getStatusPercentage(count) }}%
+                  </p>
                 </div>
               </div>
             </div>
@@ -330,20 +318,20 @@
     <div class="export-section">
       <h3>Exporter les rapports</h3>
       <div class="export-options">
-        <button @click="exportRevenueReport" class="export-option">
-          <span class="export-icon">📈</span>
-          <span>Rapport revenus</span>
+        <button @click="exportTopProducts" class="export-option">
+          <span class="export-icon">📦</span>
+          <span>Top produits</span>
         </button>
         <button @click="exportCustomerReport" class="export-option">
           <span class="export-icon">👥</span>
           <span>Rapport clients</span>
         </button>
         <button @click="exportProductReport" class="export-option">
-          <span class="export-icon">📦</span>
+          <span class="export-icon">📊</span>
           <span>Rapport produits</span>
         </button>
         <button @click="exportFullReport" class="export-option primary">
-          <span class="export-icon">📊</span>
+          <span class="export-icon">📈</span>
           <span>Rapport complet</span>
         </button>
       </div>
@@ -352,20 +340,25 @@
 </template>
 
 <script>
+import axios from 'axios';
 import { Chart, registerables } from 'chart.js';
 Chart.register(...registerables);
 
 export default {
   name: 'AdminAnalytics',
   data() {
+    const today = new Date();
+    const lastMonth = new Date();
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+    
     return {
+      loading: false,
       selectedRange: 'month',
-      customStartDate: '',
-      customEndDate: '',
-      today: new Date().toISOString().split('T')[0],
+      customStartDate: lastMonth.toISOString().split('T')[0],
+      customEndDate: today.toISOString().split('T')[0],
+      today: today.toISOString().split('T')[0],
       
       revenueChartType: 'line',
-      ordersChartType: 'bar',
       categoryChartType: 'doughnut',
       
       activeTab: 'customers',
@@ -374,8 +367,7 @@ export default {
         { id: 'day', label: 'Aujourd\'hui' },
         { id: 'week', label: '7 jours' },
         { id: 'month', label: '30 jours' },
-        { id: 'quarter', label: '3 mois' },
-        { id: 'year', label: '1 an' }
+        { id: 'quarter', label: '3 mois' }
       ],
       
       statsTabs: [
@@ -385,87 +377,35 @@ export default {
       ],
       
       revenueChart: null,
-      ordersChart: null,
       categoryChart: null,
       
-      // Données de démo
-      totalRevenue: 152847.89,
-      totalOrders: 1247,
-      averageOrderValue: 122.54,
-      newCustomers: 156,
-      averageOrdersPerDay: 41.6,
-      retentionRate: 78.5,
-      clv: 285.76,
-      vipCustomers: 45,
-      vipRevenue: 68500,
-      regularCustomers: 420,
-      regularRevenue: 64320,
-      newRevenue: 20027.89,
-      conversionRate: 3.2,
-      abandonedCartRate: 65.4,
-      averagePurchaseTime: 8.5,
-      webSalesPercent: 68,
-      mobileSalesPercent: 32,
-      webSales: 103936.57,
-      mobileSales: 48911.32
+      stats: {
+        totalRevenue: 0,
+        totalOrders: 0,
+        averageOrderValue: 0,
+        newCustomers: 0,
+        averageOrdersPerDay: 0,
+        ordersByStatus: {}
+      },
+      
+      revenueEvolution: [],
+      topProducts: [],
+      categories: [],
+      customerStats: {},
+      productStats: []
     }
   },
-  computed: {
-    topProducts() {
-      return [
-        { id: 1, name: 'T-shirt Noir Classique', quantity: 245, revenue: 7350.55, trend: 12 },
-        { id: 2, name: 'Pull en Laine Premium', quantity: 189, revenue: 13230, trend: 8 },
-        { id: 3, name: 'Chaussures Sport', quantity: 156, revenue: 18720, trend: 15 },
-        { id: 4, name: 'Casquette Urbaine', quantity: 234, revenue: 4680, trend: -3 },
-        { id: 5, name: 'Sac à dos Travel', quantity: 98, revenue: 14700, trend: 22 }
-      ];
-    },
-    
-    productStats() {
-      return [
-        { id: 1, name: 'T-shirt Noir', sku: 'TSH-BLK', image: '', sales: 245, revenue: 7350.55, stock: 150, stockPercent: 60, turnover: 15, trend: 12 },
-        { id: 2, name: 'Pull Laine', sku: 'SWT-WL', image: '', sales: 189, revenue: 13230, stock: 80, stockPercent: 40, turnover: 12, trend: 8 },
-        { id: 3, name: 'Chaussures Sport', sku: 'SHO-SPT', image: '', sales: 156, revenue: 18720, stock: 45, stockPercent: 25, turnover: 8, trend: 15 },
-        { id: 4, name: 'Casquette', sku: 'CAP-URB', image: '', sales: 234, revenue: 4680, stock: 120, stockPercent: 30, turnover: 20, trend: -3 },
-        { id: 5, name: 'Sac Travel', sku: 'BAG-TRV', image: '', sales: 98, revenue: 14700, stock: 25, stockPercent: 10, turnover: 7, trend: 22 }
-      ];
-    }
+  
+  async mounted() {
+    await this.loadStats();
   },
-  mounted() {
-    this.initCharts();
-    this.setDefaultDates();
-  },
+  
   beforeUnmount() {
     if (this.revenueChart) this.revenueChart.destroy();
-    if (this.ordersChart) this.ordersChart.destroy();
     if (this.categoryChart) this.categoryChart.destroy();
   },
-  watch: {
-    revenueChartType() {
-      this.updateRevenueChart();
-    },
-    ordersChartType() {
-      this.updateOrdersChart();
-    },
-    categoryChartType() {
-      this.updateCategoryChart();
-    }
-  },
+  
   methods: {
-    setDefaultDates() {
-      const end = new Date();
-      const start = new Date();
-      start.setMonth(start.getMonth() - 1);
-      
-      this.customStartDate = start.toISOString().split('T')[0];
-      this.customEndDate = end.toISOString().split('T')[0];
-    },
-    goToDashboard() {
-      this.$router.push('/admin/products');
-    },
-     goToCommandes() {
-      this.$router.push('/admin/orders');
-    },
     selectDateRange(rangeId) {
       this.selectedRange = rangeId;
       const end = new Date();
@@ -473,6 +413,7 @@ export default {
       
       switch (rangeId) {
         case 'day':
+          // Aujourd'hui
           break;
         case 'week':
           start.setDate(start.getDate() - 7);
@@ -483,49 +424,191 @@ export default {
         case 'quarter':
           start.setMonth(start.getMonth() - 3);
           break;
-        case 'year':
-          start.setFullYear(start.getFullYear() - 1);
-          break;
       }
       
       this.customStartDate = start.toISOString().split('T')[0];
       this.customEndDate = end.toISOString().split('T')[0];
+      
+      this.loadStats();
     },
     
-    initCharts() {
-      this.createRevenueChart();
-      this.createOrdersChart();
-      this.createCategoryChart();
+    async loadStats() {
+      this.loading = true;
+      try {
+        const params = {
+          startDate: this.customStartDate,
+          endDate: this.customEndDate
+        };
+        
+        console.log('📊 Chargement des stats avec params:', params);
+        
+        // Charger toutes les stats en parallèle
+        const [general, revenue, topProds, cats] = await Promise.all([
+          axios.get('/admin/stats/general', { 
+            params, 
+            headers: this.getAuthHeaders() 
+          }).catch(err => {
+            console.error('Erreur stats générales:', err);
+            return { data: { success: false } };
+          }),
+          
+          axios.get('/admin/stats/revenue-evolution', { 
+            params: { ...params, groupBy: 'day' }, 
+            headers: this.getAuthHeaders() 
+          }).catch(err => {
+            console.error('Erreur évolution revenu:', err);
+            return { data: { success: false, data: [] } };
+          }),
+          
+          axios.get('/admin/stats/top-products', { 
+            params: { ...params, limit: 5 }, 
+            headers: this.getAuthHeaders() 
+          }).catch(err => {
+            console.error('Erreur top produits:', err);
+            return { data: { success: false, products: [] } };
+          }),
+          
+          axios.get('/admin/stats/categories', { 
+            params, 
+            headers: this.getAuthHeaders() 
+          }).catch(err => {
+            console.error('Erreur catégories:', err);
+            return { data: { success: false, categories: [] } };
+          })
+        ]);
+        
+        if (general.data.success) {
+          this.stats = general.data.stats;
+        } else {
+          this.stats = {
+            totalRevenue: 0,
+            totalOrders: 0,
+            averageOrderValue: 0,
+            newCustomers: 0,
+            averageOrdersPerDay: 0,
+            ordersByStatus: {}
+          };
+        }
+        
+        if (revenue.data.success) {
+          this.revenueEvolution = revenue.data.data || [];
+          this.createRevenueChart();
+        } else {
+          this.revenueEvolution = [];
+        }
+        
+        if (topProds.data.success) {
+          this.topProducts = topProds.data.products || [];
+        } else {
+          this.topProducts = [];
+        }
+        
+        if (cats.data.success) {
+          this.categories = cats.data.categories || [];
+          this.createCategoryChart();
+        } else {
+          this.categories = [];
+        }
+        
+        console.log('✅ Statistiques chargées:', this.stats);
+        
+      } catch (error) {
+        console.error('❌ Erreur chargement stats:', error);
+        this.showNotification('Erreur lors du chargement des statistiques', 'error');
+      } finally {
+        this.loading = false;
+      }
+    },
+    
+    async selectTab(tabId) {
+      this.activeTab = tabId;
+      
+      const params = {
+        startDate: this.customStartDate,
+        endDate: this.customEndDate
+      };
+      
+      try {
+        if (tabId === 'customers') {
+          const response = await axios.get('/admin/stats/customers', { 
+            params, 
+            headers: this.getAuthHeaders() 
+          });
+          if (response.data.success) {
+            this.customerStats = response.data.customerStats || {};
+          }
+        } else if (tabId === 'products') {
+          const response = await axios.get('/admin/stats/products', { 
+            params, 
+            headers: this.getAuthHeaders() 
+          });
+          if (response.data.success) {
+            this.productStats = response.data.products || [];
+          }
+        }
+      } catch (error) {
+        console.error('❌ Erreur chargement onglet:', error);
+        if (tabId === 'customers') {
+          this.customerStats = {};
+        } else if (tabId === 'products') {
+          this.productStats = [];
+        }
+      }
     },
     
     createRevenueChart() {
-      const ctx = this.$refs.revenueChart.getContext('2d');
+      if (this.revenueChart) {
+        this.revenueChart.destroy();
+      }
+      
+      const ctx = this.$refs.revenueChart?.getContext('2d');
+      if (!ctx || this.revenueEvolution.length === 0) {
+        return;
+      }
+      
+      const labels = this.revenueEvolution.map(item => {
+        try {
+          const date = new Date(item.period);
+          return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+        } catch {
+          return item.period;
+        }
+      });
+      
+      const data = this.revenueEvolution.map(item => item.revenue || 0);
       
       this.revenueChart = new Chart(ctx, {
         type: this.revenueChartType,
         data: {
-          labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul'],
+          labels,
           datasets: [{
             label: 'Chiffre d\'affaires (€)',
-            data: [45000, 52000, 48000, 61000, 58000, 72000, 68000],
+            data,
             borderColor: '#3b82f6',
             backgroundColor: this.revenueChartType === 'line' ? 'rgba(59, 130, 246, 0.1)' : '#3b82f6',
-            fill: this.revenueChartType === 'area',
-            tension: 0.4
+            fill: this.revenueChartType === 'line',
+            tension: 0.4,
+            borderWidth: 2
           }]
         },
         options: {
           responsive: true,
+          maintainAspectRatio: false,
           plugins: {
-            legend: {
-              display: false
+            legend: { 
+              display: false 
+            },
+            tooltip: {
+              callbacks: {
+                label: (context) => `CA: ${this.formatPrice(context.raw)}`
+              }
             }
           },
           scales: {
             y: {
               beginAtZero: true,
               ticks: {
-                callback: value => `${value / 1000}k€`
+                callback: value => `${value.toLocaleString('fr-FR')}€`
               }
             }
           }
@@ -533,54 +616,44 @@ export default {
       });
     },
     
-    createOrdersChart() {
-      const ctx = this.$refs.ordersChart.getContext('2d');
-      
-      this.ordersChart = new Chart(ctx, {
-        type: this.ordersChartType,
-        data: {
-          labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
-          datasets: [{
-            label: 'Commandes',
-            data: [45, 52, 48, 61, 58, 72, 68],
-            backgroundColor: '#10b981',
-            borderColor: '#10b981',
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: {
-              display: false
-            }
-          }
-        }
-      });
-    },
-    
     createCategoryChart() {
-      const ctx = this.$refs.categoryChart.getContext('2d');
+      if (this.categoryChart) {
+        this.categoryChart.destroy();
+      }
+      
+      const ctx = this.$refs.categoryChart?.getContext('2d');
+      if (!ctx || this.categories.length === 0) return;
+      
+      const labels = this.categories.map(cat => cat.category || 'Sans catégorie');
+      const data = this.categories.map(cat => cat.revenue || 0);
       
       this.categoryChart = new Chart(ctx, {
         type: this.categoryChartType,
         data: {
-          labels: ['Homme', 'Femme', 'Enfant', 'Accessoires'],
+          labels,
           datasets: [{
-            data: [45, 30, 15, 10],
+            data,
             backgroundColor: [
-              '#3b82f6',
-              '#8b5cf6',
-              '#10b981',
-              '#f59e0b'
+              '#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444',
+              '#06b6d4', '#84cc16', '#f97316', '#8b5cf6', '#ec4899'
             ]
           }]
         },
         options: {
           responsive: true,
+          maintainAspectRatio: false,
           plugins: {
-            legend: {
-              position: 'bottom'
+            legend: { 
+              position: 'bottom',
+              labels: {
+                padding: 20,
+                usePointStyle: true
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: (context) => `${context.label}: ${this.formatPrice(context.raw)}`
+              }
             }
           }
         }
@@ -588,89 +661,138 @@ export default {
     },
     
     updateRevenueChart() {
-      if (this.revenueChart) {
-        this.revenueChart.destroy();
-        this.createRevenueChart();
-      }
-    },
-    
-    updateOrdersChart() {
-      if (this.ordersChart) {
-        this.ordersChart.destroy();
-        this.createOrdersChart();
-      }
+      this.createRevenueChart();
     },
     
     updateCategoryChart() {
-      if (this.categoryChart) {
-        this.categoryChart.destroy();
-        this.createCategoryChart();
+      this.createCategoryChart();
+    },
+    
+    getStatusPercentage(count) {
+      if (!this.stats.ordersByStatus) return '0.0';
+      const total = Object.values(this.stats.ordersByStatus).reduce((sum, c) => sum + c, 0);
+      return total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
+    },
+    
+    getProductImage(img) {
+      if (!img) {
+        return '/placeholder-product.png';
       }
+      
+      if (img.startsWith('http')) {
+        return img;
+      }
+      
+      if (img.includes('/')) {
+        return img;
+      }
+      
+      return `/uploads/products/${img}`;
+    },
+    
+    handleImageError(event) {
+      event.target.src = '/placeholder-product.png';
+    },
+    
+    goToDashboard() {
+      this.$router.push('/admin/dashboard');
+    },
+    
+    goToCommandes() {
+      this.$router.push('/admin/orders');
     },
     
     formatPrice(price) {
       return new Intl.NumberFormat('fr-FR', {
         style: 'currency',
-        currency: 'EUR'
-      }).format(price);
+        currency: 'EUR',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(price || 0);
+    },
+    
+    getStatusLabel(status) {
+      const labels = {
+        pending: 'En attente',
+        confirmed: 'Confirmée',
+        processing: 'En traitement',
+        shipped: 'Expédiée',
+        delivered: 'Livrée',
+        cancelled: 'Annulée',
+        completed: 'Terminée'
+      };
+      return labels[status] || status;
     },
     
     exportTopProducts() {
-      const csv = this.convertToCSV(this.topProducts);
-      this.downloadCSV(csv, 'top_produits.csv');
-    },
-    
-    exportRevenueReport() {
-      const data = [
-        ['Période', 'Chiffre d\'affaires'],
-        ['Janvier', '45,000 €'],
-        ['Février', '52,000 €'],
-        ['Mars', '48,000 €'],
-        ['Avril', '61,000 €'],
-        ['Mai', '58,000 €'],
-        ['Juin', '72,000 €'],
-        ['Juillet', '68,000 €']
-      ];
+      if (this.topProducts.length === 0) {
+        this.showNotification('Aucun produit à exporter', 'warning');
+        return;
+      }
       
-      const csv = data.map(row => row.join(',')).join('\n');
-      this.downloadCSV(csv, 'rapport_revenus.csv');
+      const csv = this.convertToCSV(this.topProducts.map(p => ({
+        'Nom': p.name,
+        'Quantité vendue': p.quantity,
+        'Chiffre d\'affaires': p.revenue,
+        'Prix unitaire': p.price
+      })));
+      
+      this.downloadCSV(csv, `top_produits_${this.customStartDate}_${this.customEndDate}.csv`);
+      this.showNotification('Top produits exporté avec succès', 'success');
     },
     
     exportCustomerReport() {
       const data = [
-        ['Segment', 'Clients', 'Chiffre d\'affaires'],
-        ['Clients VIP', '45', '68,500 €'],
-        ['Clients réguliers', '420', '64,320 €'],
-        ['Nouveaux clients', '156', '20,028 €']
+        { 
+          'Segment': 'Clients VIP', 
+          'Nombre': this.customerStats.vipCustomers || 0, 
+          'Revenue': this.customerStats.vipRevenue || 0 
+        },
+        { 
+          'Segment': 'Clients réguliers', 
+          'Nombre': this.customerStats.regularCustomers || 0, 
+          'Revenue': this.customerStats.regularRevenue || 0 
+        },
+        { 
+          'Segment': 'Nouveaux clients', 
+          'Nombre': this.customerStats.newCustomers || 0, 
+          'Revenue': this.customerStats.newRevenue || 0 
+        }
       ];
       
-      const csv = data.map(row => row.join(',')).join('\n');
-      this.downloadCSV(csv, 'rapport_clients.csv');
+      const csv = this.convertToCSV(data);
+      this.downloadCSV(csv, `rapport_clients_${this.customStartDate}_${this.customEndDate}.csv`);
+      this.showNotification('Rapport clients exporté avec succès', 'success');
     },
     
     exportProductReport() {
-      const csv = this.convertToCSV(this.productStats);
-      this.downloadCSV(csv, 'rapport_produits.csv');
+      if (this.productStats.length === 0) {
+        this.showNotification('Aucune donnée produit à exporter', 'warning');
+        return;
+      }
+      
+      const csv = this.convertToCSV(this.productStats.map(p => ({
+        'Nom': p.name,
+        'Ventes': p.sales,
+        'Revenue': p.revenue,
+        'Stock': p.stock,
+        'Pourcentage stock': p.stockPercent + '%',
+        'Rotation (jours)': p.turnover
+      })));
+      
+      this.downloadCSV(csv, `rapport_produits_${this.customStartDate}_${this.customEndDate}.csv`);
+      this.showNotification('Rapport produits exporté avec succès', 'success');
     },
     
     exportFullReport() {
-      const now = new Date();
       const report = {
-        date: now.toISOString(),
         periode: `${this.customStartDate} au ${this.customEndDate}`,
-        metrics: {
-          totalRevenue: this.totalRevenue,
-          totalOrders: this.totalOrders,
-          averageOrderValue: this.averageOrderValue,
-          newCustomers: this.newCustomers,
-          conversionRate: this.conversionRate
-        },
+        stats: this.stats,
         topProducts: this.topProducts,
-        customerSegments: {
-          vip: { count: this.vipCustomers, revenue: this.vipRevenue },
-          regular: { count: this.regularCustomers, revenue: this.regularRevenue },
-          new: { count: this.newCustomers, revenue: this.newRevenue }
-        }
+        categories: this.categories,
+        customerStats: this.customerStats,
+        productStats: this.productStats,
+        generatedAt: new Date().toISOString()
       };
       
       const json = JSON.stringify(report, null, 2);
@@ -678,33 +800,55 @@ export default {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `rapport_complet_${now.getTime()}.json`;
+      a.download = `rapport_complet_${Date.now()}.json`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       
-      this.showNotification('Rapport exporté avec succès', 'success');
+      this.showNotification('Rapport complet exporté avec succès', 'success');
     },
     
     convertToCSV(data) {
-      if (data.length === 0) return '';
-      
+      if (!data || data.length === 0) return '';
       const headers = Object.keys(data[0]);
-      const rows = data.map(item => headers.map(header => item[header]));
-      
-      return [headers, ...rows].map(row => row.join(',')).join('\n');
+      const rows = data.map(item => headers.map(h => {
+        const value = item[h];
+        return typeof value === 'string' && value.includes(',') ? `"${value}"` : value;
+      }));
+      return [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
     },
     
     downloadCSV(csv, filename) {
-      const blob = new Blob([csv], { type: 'text/csv' });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = filename;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
     },
     
-    showNotification(message, type) {
-      // Implémentez votre système de notification
-      alert(message);
+    getAuthHeaders() {
+      const token = localStorage.getItem('authToken') || 
+                    (this.$store && this.$store.state.auth?.token);
+      return {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+    },
+    
+    showNotification(message, type = 'info') {
+      // Utilisez votre propre système de notifications
+      const types = {
+        success: '✅',
+        error: '❌',
+        warning: '⚠️',
+        info: 'ℹ️'
+      };
+      
+      const icon = types[type] || types.info;
+      alert(`${icon} ${message}`);
     }
   }
 }
@@ -723,12 +867,16 @@ export default {
   border-radius: 12px;
   margin-bottom: 1.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .analytics-header h1 {
-  margin: 0 0 1.5rem 0;
+  margin: 0;
   color: #1f2937;
   font-size: 1.8rem;
+  font-weight: 600;
 }
 
 .date-range {
@@ -746,6 +894,7 @@ export default {
   color: #4b5563;
   cursor: pointer;
   transition: all 0.3s ease;
+  font-size: 0.9rem;
 }
 
 .range-btn:hover {
@@ -763,6 +912,7 @@ export default {
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font-family: inherit;
+  font-size: 0.9rem;
 }
 
 /* KPI Cards */
@@ -779,12 +929,15 @@ export default {
   border-radius: 12px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   border: 1px solid #e5e7eb;
+  transition: transform 0.2s ease;
+}
+
+.kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
 }
 
 .kpi-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
   margin-bottom: 1rem;
 }
 
@@ -818,18 +971,6 @@ export default {
   color: #db2777;
 }
 
-.kpi-trend {
-  font-size: 0.9rem;
-  font-weight: 600;
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-}
-
-.kpi-trend.positive {
-  background: #d1fae5;
-  color: #065f46;
-}
-
 .kpi-content h3 {
   font-size: 0.95rem;
   color: #6b7280;
@@ -842,6 +983,7 @@ export default {
   font-weight: 700;
   color: #1f2937;
   margin: 0;
+  line-height: 1.2;
 }
 
 .kpi-period {
@@ -887,6 +1029,7 @@ export default {
   background: white;
   color: #4b5563;
   font-size: 0.9rem;
+  cursor: pointer;
 }
 
 .export-btn.small {
@@ -897,6 +1040,11 @@ export default {
   color: #4b5563;
   font-size: 0.85rem;
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.export-btn.small:hover {
+  background: #f1f5f9;
 }
 
 .chart-container {
@@ -919,6 +1067,11 @@ export default {
   background: #f8fafc;
   border-radius: 8px;
   border: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+}
+
+.product-rank:hover {
+  background: #f1f5f9;
 }
 
 .rank-number {
@@ -932,16 +1085,29 @@ export default {
   justify-content: center;
   font-weight: 700;
   font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.product-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex-shrink: 0;
 }
 
 .product-info {
   flex: 1;
+  min-width: 0;
 }
 
 .product-name {
   font-weight: 500;
   color: #1f2937;
   margin: 0 0 0.25rem 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .product-stats {
@@ -959,21 +1125,106 @@ export default {
   font-weight: 500;
 }
 
-.product-trend {
-  font-size: 0.9rem;
-  font-weight: 600;
+/* Status Stats */
+.status-stats {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+
+.status-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.status-badge {
   padding: 0.25rem 0.75rem;
   border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
 }
 
-.product-trend.positive {
-  background: #d1fae5;
-  color: #065f46;
+.status-badge.pending {
+  background: #fef3c7;
+  color: #d97706;
 }
 
-.product-trend.negative {
+.status-badge.confirmed {
+  background: #dbeafe;
+  color: #3b82f6;
+}
+
+.status-badge.processing {
+  background: #f5f3ff;
+  color: #8b5cf6;
+}
+
+.status-badge.shipped {
+  background: #f0f9ff;
+  color: #0ea5e9;
+}
+
+.status-badge.delivered {
+  background: #dcfce7;
+  color: #10b981;
+}
+
+.status-badge.cancelled {
   background: #fee2e2;
-  color: #991b1b;
+  color: #ef4444;
+}
+
+.status-count {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #1f2937;
+}
+
+/* Loading */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.loading-spinner {
+  text-align: center;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* No Data */
+.no-data {
+  text-align: center;
+  padding: 3rem;
+  color: #6b7280;
+  font-style: italic;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 2px dashed #e5e7eb;
 }
 
 /* Detailed Stats */
@@ -988,6 +1239,7 @@ export default {
 .stats-tabs {
   display: flex;
   border-bottom: 1px solid #e5e7eb;
+  flex-wrap: wrap;
 }
 
 .tab-btn {
@@ -999,10 +1251,12 @@ export default {
   cursor: pointer;
   position: relative;
   transition: all 0.3s ease;
+  white-space: nowrap;
 }
 
 .tab-btn:hover {
   color: #374151;
+  background: #f8fafc;
 }
 
 .tab-btn.active {
@@ -1028,10 +1282,11 @@ export default {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
+/* Customer Metrics */
 .customer-metrics {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1060,19 +1315,12 @@ export default {
   margin: 0;
 }
 
-.metric-change {
-  font-size: 0.9rem;
-  margin: 0.25rem 0 0 0;
-}
-
-.metric-change.positive {
-  color: #10b981;
-}
-
+/* Customer Segments */
 .customer-segments h4 {
   color: #1f2937;
-  margin: 0 0 1rem 0;
+  margin: 0 0 1.5rem 0;
   font-weight: 600;
+  font-size: 1.1rem;
 }
 
 .segments-grid {
@@ -1089,6 +1337,12 @@ export default {
   display: flex;
   align-items: center;
   gap: 1rem;
+  transition: all 0.2s ease;
+}
+
+.segment-card:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .segment-icon {
@@ -1099,20 +1353,21 @@ export default {
   align-items: center;
   justify-content: center;
   font-size: 1.2rem;
+  flex-shrink: 0;
 }
 
 .segment-icon.vip {
-  background: #fef3c7;
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
   color: #d97706;
 }
 
 .segment-icon.regular {
-  background: #dbeafe;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
   color: #3b82f6;
 }
 
 .segment-icon.new {
-  background: #fce7f3;
+  background: linear-gradient(135deg, #fce7f3, #fbcfe8);
   color: #db2777;
 }
 
@@ -1120,6 +1375,7 @@ export default {
   margin: 0 0 0.25rem 0;
   color: #1f2937;
   font-size: 0.9rem;
+  font-weight: 600;
 }
 
 .segment-count,
@@ -1140,16 +1396,19 @@ export default {
 /* Products Table */
 .products-table {
   overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
 }
 
 .products-table table {
   width: 100%;
   border-collapse: collapse;
+  min-width: 600px;
 }
 
 .products-table th,
 .products-table td {
-  padding: 0.75rem 1rem;
+  padding: 1rem;
   border-bottom: 1px solid #e5e7eb;
   text-align: left;
 }
@@ -1161,6 +1420,7 @@ export default {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   background: #f8fafc;
+  white-space: nowrap;
 }
 
 .product-cell {
@@ -1173,131 +1433,101 @@ export default {
   width: 40px;
   height: 40px;
   border-radius: 6px;
-  background: #f3f4f6;
   object-fit: cover;
+  flex-shrink: 0;
+  background: #f3f4f6;
 }
 
 .product-sku {
   font-size: 0.8rem;
   color: #6b7280;
-  margin: 0;
+  margin: 0.25rem 0 0 0;
 }
 
 .stock-indicator {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .stock-bar {
-  width: 60px;
+  width: 80px;
   height: 6px;
   background: #e5e7eb;
   border-radius: 3px;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .stock-fill {
   height: 100%;
-  background: #10b981;
+  background: linear-gradient(90deg, #10b981, #34d399);
   border-radius: 3px;
+  transition: width 0.3s ease;
 }
 
-.trend-badge {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.trend-badge.positive {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.trend-badge.negative {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-/* Sales Metrics */
-.sales-metrics {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-}
-
-.metric-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
-}
-
-.metric-item h4 {
-  font-size: 0.9rem;
-  color: #6b7280;
-  margin: 0 0 0.5rem 0;
-  font-weight: 500;
-}
-
-.sales-channels h4 {
-  color: #1f2937;
-  margin: 0 0 1rem 0;
-  font-weight: 600;
-}
-
-.channels-grid {
+/* Status Grid for Sales Tab */
+.status-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
 }
 
-.channel-card {
+.status-card {
   background: white;
-  padding: 1rem;
+  padding: 1.5rem;
   border-radius: 8px;
   border: 1px solid #e5e7eb;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+  text-align: center;
 }
 
-.channel-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2rem;
+.status-badge-large {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  display: inline-block;
 }
 
-.channel-icon.web {
+.status-badge-large.pending {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.status-badge-large.confirmed {
   background: #dbeafe;
   color: #3b82f6;
 }
 
-.channel-icon.mobile {
+.status-badge-large.processing {
+  background: #f5f3ff;
+  color: #8b5cf6;
+}
+
+.status-badge-large.shipped {
   background: #f0f9ff;
   color: #0ea5e9;
 }
 
-.channel-info h5 {
-  margin: 0 0 0.25rem 0;
-  color: #1f2937;
-  font-size: 0.9rem;
+.status-badge-large.delivered {
+  background: #dcfce7;
+  color: #10b981;
 }
 
-.channel-percent {
-  font-size: 1.2rem;
+.status-badge-large.cancelled {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+.status-count-large {
+  font-size: 2rem;
   font-weight: 700;
   color: #1f2937;
-  margin: 0;
+  margin: 0.5rem 0;
 }
 
-.channel-amount {
-  font-size: 0.85rem;
+.status-percentage {
+  font-size: 1rem;
   color: #6b7280;
   margin: 0;
 }
@@ -1314,17 +1544,17 @@ export default {
 .export-section h3 {
   margin: 0 0 1.5rem 0;
   color: #1f2937;
+  font-size: 1.2rem;
+  font-weight: 600;
 }
 
 .export-options {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
-  flex-wrap: wrap;
 }
 
 .export-option {
-  flex: 1;
-  min-width: 200px;
   padding: 1rem 1.5rem;
   background: #f8fafc;
   border: 2px solid #e5e7eb;
@@ -1334,22 +1564,25 @@ export default {
   gap: 0.75rem;
   cursor: pointer;
   transition: all 0.3s ease;
+  font-weight: 500;
 }
 
 .export-option:hover {
   background: #f1f5f9;
   border-color: #d1d5db;
+  transform: translateY(-2px);
 }
 
 .export-option.primary {
-  background: #3b82f6;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
   color: white;
-  border-color: #3b82f6;
+  border-color: transparent;
 }
 
 .export-option.primary:hover {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: linear-gradient(135deg, #2563eb, #1e40af);
+  border-color: transparent;
+  box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
 }
 
 .export-icon {
@@ -1362,9 +1595,18 @@ export default {
     padding: 1rem;
   }
   
+  .analytics-header {
+    padding: 1rem;
+  }
+  
   .date-range {
     flex-direction: column;
     align-items: stretch;
+    gap: 0.5rem;
+  }
+  
+  .date-range span {
+    text-align: center;
   }
   
   .kpi-grid {
@@ -1375,6 +1617,10 @@ export default {
     grid-template-columns: 1fr;
   }
   
+  .chart-card {
+    min-width: unset;
+  }
+  
   .customer-metrics {
     grid-template-columns: 1fr;
   }
@@ -1383,20 +1629,13 @@ export default {
     grid-template-columns: 1fr;
   }
   
-  .metric-row {
-    grid-template-columns: 1fr;
-  }
-  
-  .channels-grid {
-    grid-template-columns: 1fr;
+  .stats-tabs {
+    overflow-x: auto;
+    white-space: nowrap;
   }
   
   .export-options {
-    flex-direction: column;
-  }
-  
-  .export-option {
-    min-width: unset;
+    grid-template-columns: 1fr;
   }
 }
 </style>

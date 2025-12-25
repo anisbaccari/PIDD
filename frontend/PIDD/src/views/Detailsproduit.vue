@@ -130,46 +130,53 @@
     </div>
   </div>
 </template>
-
 <script>
-import { productService } from '../services/productServices';
+import axios from 'axios'
+import { productService } from '../services/productServices'
 
 export default {
   name: 'ProductDetailsPage',
-  props: ['addToCartGlobal'],
+  props: ['user'],
+  
   data() {
     return {
       product: null,
       loading: false,
       error: null
-    };
+    }
   },
+  
   watch: {
     '$route.params.id': {
       handler() {
-        this.loadProductDetails();
+        this.loadProductDetails()
       },
       immediate: true
     }
   },
+  
   methods: {
     async loadProductDetails() {
-      this.loading = true;
-      this.error = null;
+      this.loading = true
+      this.error = null
       
       try {
-        const id = this.$route.params.id;
-        this.product = await productService.getById(id);
+        const id = this.$route.params.id
+        console.log(`🔄 Chargement produit ID: ${id}`)
+        
+        this.product = await productService.getById(id)
         
         if (!this.product || !this.product.id) {
-          throw new Error('Produit non trouvé');
+          throw new Error('Produit non trouvé')
         }
         
+        console.log('✅ Produit chargé:', this.product)
+        
       } catch (err) {
-        console.error('Erreur chargement détails:', err);
-        this.error = err.message;
+        console.error('❌ Erreur chargement détails:', err)
+        this.error = err.message
       } finally {
-        this.loading = false;
+        this.loading = false
       }
     },
     
@@ -178,59 +185,74 @@ export default {
         1: 'Homme',
         2: 'Femme',
         3: 'Enfant'
-      };
-      return categories[id] || 'Catégorie';
+      }
+      return categories[id] || 'Catégorie'
     },
     
     formatDate(dateString) {
-      if (!dateString) return 'Non spécifié';
-      const date = new Date(dateString);
+      if (!dateString) return 'Non spécifié'
+      const date = new Date(dateString)
       return date.toLocaleDateString('fr-FR', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric'
-      });
+      })
     },
     
-    addToCart() {
-      if (!this.product) return;
-      
-      const productToAdd = {
-        ...this.product,
-        quantity: 1
-      };
+    async addToCart() {
+      if (!this.product) return
 
-      if (this.addToCartGlobal) {
-        this.addToCartGlobal(productToAdd);
-      } else {
-        this.addToCartLocal(productToAdd);
-      }
-      
-      // Notification
-      this.$notify({
-        title: 'Ajouté au panier',
-        message: `${this.product.name} a été ajouté au panier`,
-        type: 'success',
-        duration: 3000
-      });
-    },
-    
-    addToCartLocal(product) {
-      const cart = JSON.parse(localStorage.getItem('monShop_cart') || '[]');
-      const existing = cart.find(p => p.id === product.id);
-
-      if (existing) {
-        existing.quantity += product.quantity;
-      } else {
-        cart.push(product);
+      // 🔐 Vérifier si l'utilisateur est connecté
+      if (!this.user) {
+        this.$notify?.({
+          title: 'Connexion requise',
+          message: 'Veuillez vous connecter pour ajouter au panier',
+          type: 'warning',
+          duration: 3000
+        })
+        this.$router.push('/login')
+        return
       }
 
-      localStorage.setItem('monShop_cart', JSON.stringify(cart));
+      try {
+        console.log(`🛒 Ajout au panier: ${this.product.name} (ID: ${this.product.id})`)
+        
+        // ✅ Axios utilise baseURL de main.js + token automatique via interceptor
+        await axios.post('/cart/item', {
+          productId: this.product.id,
+          quantity: 1
+        })
+
+        console.log('✅ Produit ajouté au panier')
+
+        this.$notify?.({
+          title: 'Ajouté au panier',
+          message: `${this.product.name} a été ajouté au panier`,
+          type: 'success',
+          duration: 3000
+        })
+
+        // 🔄 Informer le parent pour mettre à jour le compteur du panier
+        this.$emit('cart-updated')
+
+      } catch (err) {
+        console.error('❌ Erreur ajout panier:', {
+          message: err.message,
+          status: err.response?.status,
+          data: err.response?.data
+        })
+
+        this.$notify?.({
+          title: 'Erreur',
+          message: 'Impossible d\'ajouter le produit au panier',
+          type: 'error',
+          duration: 3000
+        })
+      }
     }
   }
-};
+}
 </script>
-
 <style scoped>
 .product-details-page {
   max-width: 1200px;

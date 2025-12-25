@@ -70,6 +70,7 @@
           class="paypal-button"
           @click="initiatePayPalPayment"
           :disabled="processing"
+          :class="{ 'processing': processing }"
         >
           <div class="paypal-button-content">
             <span class="paypal-button-logo">
@@ -77,16 +78,14 @@
             </span>
             <span class="paypal-button-text">
               <span v-if="!processing">Payer avec PayPal</span>
-              <span v-else>Redirection vers PayPal...</span>
+              <span v-else>Connexion à PayPal...</span>
             </span>
             <span class="paypal-amount">{{ formatPrice(amount) }}</span>
           </div>
+          <div v-if="processing" class="button-loading">
+            <div class="loading-spinner"></div>
+          </div>
         </button>
-        
-        <div v-if="processing" class="paypal-processing">
-          <div class="spinner"></div>
-          <p>Redirection vers le site sécurisé de PayPal...</p>
-        </div>
       </div>
       
       <!-- Détails de sécurité -->
@@ -151,8 +150,8 @@
         
         <div class="redirect-content">
           <div class="redirect-loading">
-            <div class="loading-spinner"></div>
-            <p>Connexion à PayPal...</p>
+            <div class="loading-spinner large"></div>
+            <p>Connexion sécurisée à PayPal...</p>
           </div>
           
           <div class="redirect-message">
@@ -161,9 +160,18 @@
           </div>
           
           <div class="redirect-details">
-            <p><strong>Marchand :</strong> MonShop</p>
-            <p><strong>Montant :</strong> {{ formatPrice(amount) }}</p>
-            <p><strong>Référence :</strong> CMD-{{ Math.random().toString(36).substring(2, 10).toUpperCase() }}</p>
+            <div class="detail-item">
+              <span class="detail-label">Marchand :</span>
+              <span class="detail-value">MonShop</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Montant :</span>
+              <span class="detail-value">{{ formatPrice(amount) }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Référence :</span>
+              <span class="detail-value">CMD-{{ Math.random().toString(36).substring(2, 10).toUpperCase() }}</span>
+            </div>
           </div>
         </div>
         
@@ -175,6 +183,11 @@
             Confirmer le paiement
           </button>
         </div>
+        
+        <div class="redirect-security">
+          <span class="security-icon">🔒</span>
+          <span>Connexion sécurisée • Données cryptées</span>
+        </div>
       </div>
     </div>
   </div>
@@ -183,12 +196,18 @@
 <script>
 export default {
   name: 'PayPalButton',
+
   props: {
     amount: {
       type: Number,
       required: true
+    },
+    orderNumber: {
+      type: String,
+      default: ''
     }
   },
+
   data() {
     return {
       paypalOption: 'pay_now',
@@ -197,47 +216,85 @@ export default {
       showPayPalRedirect: false
     }
   },
+
   methods: {
     formatPrice(price) {
       return new Intl.NumberFormat('fr-FR', {
         style: 'currency',
         currency: 'EUR'
-      }).format(price)
+      }).format(Number(price) || 0)
     },
-    
+
+    generateTransactionId() {
+      const date = new Date()
+      const timestamp = date.getTime().toString(36).toUpperCase()
+      const random = Math.random().toString(36).substring(2, 8).toUpperCase()
+      return `PAYPAL-${timestamp}-${random}`
+    },
+
     async initiatePayPalPayment() {
+      if (this.processing) return
+
       this.processing = true
-      
-      // Simulation du délai de traitement
-      await new Promise(resolve => setTimeout(resolve, 800))
-      
-      // Ouvrir le simulateur de redirection PayPal
+
+      // Simulation délai de connexion
+      await new Promise(resolve => setTimeout(resolve, 1200))
+
       this.showPayPalRedirect = true
       this.processing = false
     },
-    
+
     simulatePayPalSuccess() {
-      // Simulation de succès PayPal
-      const transactionId = 'PAY-' + Math.random().toString(36).substring(2, 15).toUpperCase()
+      const transactionId = this.generateTransactionId()
+      const payerEmail = `client-${Math.random().toString(36).substring(2, 8)}@example.com`
       
-      this.$emit('payment-success', {
+      // Émettre l'événement avec les données PayPal standardisées
+      this.$emit('payment-completed', {
+        transactionId,
+        provider: 'paypal',
         method: 'paypal',
-        transactionId: transactionId,
-        payerEmail: 'client@example.com',
-        payerId: 'PAYER_' + Math.random().toString(36).substring(2, 10).toUpperCase()
+        payerEmail,
+        payerId: `P${Math.random().toString(36).substring(2, 12).toUpperCase()}`,
+        status: 'completed',
+        amount: this.amount,
+        currency: 'EUR',
+        paymentOption: this.paypalOption,
+        saveInfo: this.savePaypalInfo,
+        timestamp: new Date().toISOString(),
+        metadata: {
+          orderNumber: this.orderNumber,
+          paymentGateway: 'PayPal',
+          transactionType: 'express_checkout'
+        }
       })
-      
+
       this.showPayPalRedirect = false
+      
+      // Feedback visuel
+      this.processing = true
+      setTimeout(() => {
+        this.processing = false
+      }, 500)
     },
-    
+
     cancelRedirect() {
       this.showPayPalRedirect = false
-      this.$emit('payment-cancelled')
+      
+      // Émettre l'événement d'annulation
+      this.$emit('payment-cancelled', {
+        provider: 'paypal',
+        timestamp: new Date().toISOString(),
+        reason: 'user_cancelled'
+      })
     },
-    
+
     payWithCard() {
-      // Option pour payer avec carte via PayPal
-      this.$emit('pay-with-card')
+      // Émettre l'événement pour passer à la carte
+      this.$emit('pay-with-card', {
+        provider: 'paypal',
+        action: 'pay_with_card_without_account',
+        timestamp: new Date().toISOString()
+      })
     }
   }
 }
@@ -248,14 +305,11 @@ export default {
   background: white;
   border-radius: 12px;
   padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* Header */
 .paypal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  text-align: center;
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
   border-bottom: 1px solid #e5e7eb;
@@ -263,8 +317,9 @@ export default {
 
 .paypal-logo {
   font-size: 2rem;
-  font-weight: bold;
-  letter-spacing: -1px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 0.5rem;
 }
 
 .paypal-blue {
@@ -277,84 +332,92 @@ export default {
 
 .paypal-tagline {
   color: #6b7280;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   margin: 0;
 }
 
-/* Benefits */
 .benefits {
-  display: flex;
-  justify-content: space-around;
-  margin: 1.5rem 0;
-  padding: 1rem;
-  background: #f8fafc;
-  border-radius: 8px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .benefit {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  text-align: center;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 8px;
 }
 
 .benefit-icon {
   font-size: 1.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .benefit-text {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #4b5563;
-  text-align: center;
+  font-weight: 500;
 }
 
-/* Options */
 .paypal-options {
-  margin: 1.5rem 0;
+  margin-bottom: 1.5rem;
 }
 
 .option-group {
   margin-bottom: 1rem;
   padding: 1rem;
-  border: 1px solid #e5e7eb;
+  background: #f9fafb;
   border-radius: 8px;
+  border: 1px solid #e5e7eb;
 }
 
 .option-label {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-weight: 600;
-  color: #1f2937;
+  gap: 0.75rem;
   cursor: pointer;
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+}
+
+.option-label input[type="radio"],
+.option-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #003087;
 }
 
 .option-description {
-  margin: 0.5rem 0 0 1.5rem;
-  font-size: 0.85rem;
   color: #6b7280;
+  font-size: 0.85rem;
+  margin: 0.25rem 0 0 2rem;
 }
 
-/* Bouton principal */
 .paypal-button-wrapper {
   margin: 2rem 0;
 }
 
 .paypal-button {
+  position: relative;
   width: 100%;
-  padding: 1rem;
-  background: linear-gradient(135deg, #ffc439, #f0c14b);
-  border: 1px solid #e0b238;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, #ffc439 0%, #ffb300 100%);
+  border: none;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
 }
 
 .paypal-button:hover:not(:disabled) {
-  background: linear-gradient(135deg, #f0c14b, #e0b238);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 196, 57, 0.3);
 }
 
 .paypal-button:disabled {
@@ -362,115 +425,135 @@ export default {
   cursor: not-allowed;
 }
 
+.paypal-button.processing {
+  background: linear-gradient(135deg, #ffc439 0%, #ffb300 100%);
+}
+
 .paypal-button-content {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  font-weight: bold;
+  justify-content: space-between;
   color: #111;
+  font-weight: 600;
+  position: relative;
+  z-index: 1;
 }
 
 .paypal-button-logo {
-  font-size: 1.2rem;
-  font-weight: bold;
+  font-size: 1.25rem;
+  font-weight: 700;
 }
 
 .paypal-button-text {
   font-size: 1.1rem;
+  text-align: center;
+  flex: 1;
 }
 
 .paypal-amount {
   font-size: 1.2rem;
+  font-weight: 700;
   color: #003087;
 }
 
-/* Traitement */
-.paypal-processing {
+.button-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 196, 57, 0.9);
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 1rem;
-  margin-top: 1rem;
-  padding: 1.5rem;
-  background: #f0f9ff;
-  border-radius: 8px;
+  justify-content: center;
+  z-index: 2;
 }
 
-.spinner {
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s linear infinite;
+}
+
+.loading-spinner.large {
   width: 40px;
   height: 40px;
-  border: 4px solid rgba(0, 48, 135, 0.1);
-  border-radius: 50%;
-  border-top-color: #003087;
-  animation: spin 1s ease-in-out infinite;
+  border-width: 4px;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
-.paypal-processing p {
-  margin: 0;
-  color: #003087;
-  font-weight: 500;
-}
-
-/* Sécurité */
 .security-details {
-  margin: 2rem 0;
-  padding: 1.5rem;
   background: #f0f9ff;
+  border: 1px solid #e0f2fe;
   border-radius: 8px;
-  border-left: 4px solid #003087;
+  padding: 1rem;
+  margin: 1.5rem 0;
 }
 
 .security-title {
   font-weight: 600;
-  color: #003087;
-  margin: 0 0 0.5rem 0;
+  color: #0369a1;
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
 }
 
 .security-list {
+  list-style: none;
+  padding: 0;
   margin: 0;
-  padding-left: 1.5rem;
-  color: #4b5563;
-  font-size: 0.9rem;
 }
 
 .security-list li {
-  margin: 0.25rem 0;
+  padding: 0.25rem 0;
+  color: #374151;
+  font-size: 0.85rem;
+  position: relative;
+  padding-left: 1.5rem;
 }
 
-/* Alternative */
+.security-list li:before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #10b981;
+  font-weight: bold;
+}
+
 .alternative-payment {
-  margin: 2rem 0;
+  text-align: center;
   padding: 1.5rem;
   background: #f8fafc;
   border-radius: 8px;
-  text-align: center;
+  margin: 1.5rem 0;
 }
 
 .alternative-title {
   font-weight: 600;
   color: #1f2937;
-  margin: 0 0 0.5rem 0;
+  margin-bottom: 0.5rem;
 }
 
 .alternative-description {
   color: #6b7280;
-  margin: 0 0 1rem 0;
   font-size: 0.9rem;
+  margin-bottom: 1rem;
 }
 
 .alternative-button {
-  padding: 0.75rem 1.5rem;
   background: white;
   border: 2px solid #003087;
   color: #003087;
-  border-radius: 6px;
-  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .alternative-button:hover {
@@ -478,37 +561,40 @@ export default {
   color: white;
 }
 
-/* FAQ */
 .faq-section {
-  margin-top: 2rem;
+  margin-top: 1.5rem;
 }
 
 .faq-item {
+  margin-bottom: 0.5rem;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  margin-bottom: 0.5rem;
   overflow: hidden;
 }
 
 .faq-question {
   padding: 1rem;
-  background: #f8fafc;
+  background: #f9fafb;
   cursor: pointer;
-  font-weight: 600;
+  font-weight: 500;
   color: #1f2937;
   list-style: none;
-  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.faq-question::after {
-  content: '▶';
-  position: absolute;
-  right: 1rem;
-  transition: transform 0.3s ease;
+.faq-question::-webkit-details-marker {
+  display: none;
 }
 
-.faq-item[open] .faq-question::after {
-  transform: rotate(90deg);
+.faq-question:after {
+  content: "➕";
+  font-size: 1.2rem;
+}
+
+.faq-item[open] .faq-question:after {
+  content: "➖";
 }
 
 .faq-answer {
@@ -516,6 +602,7 @@ export default {
   background: white;
   color: #4b5563;
   font-size: 0.9rem;
+  line-height: 1.5;
 }
 
 .faq-answer p {
@@ -527,7 +614,11 @@ export default {
   padding-left: 1.5rem;
 }
 
-/* Simulateur de redirection */
+.faq-answer li {
+  margin: 0.25rem 0;
+}
+
+/* Modal de redirection */
 .paypal-redirect-simulator {
   position: fixed;
   top: 0;
@@ -535,19 +626,37 @@ export default {
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
   z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .redirect-modal {
   background: white;
-  border-radius: 16px;
+  border-radius: 12px;
   width: 90%;
   max-width: 500px;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.4s ease;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .redirect-header {
@@ -555,99 +664,140 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem;
-  background: linear-gradient(135deg, #003087, #009cde);
-  color: white;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .redirect-logo {
   font-size: 1.5rem;
-  font-weight: bold;
+  font-weight: 700;
 }
 
 .redirect-close {
   background: none;
   border: none;
-  color: white;
   font-size: 2rem;
+  color: #6b7280;
   cursor: pointer;
   line-height: 1;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.redirect-close:hover {
+  background: #f3f4f6;
 }
 
 .redirect-content {
   padding: 2rem;
+}
+
+.redirect-loading {
   text-align: center;
+  margin-bottom: 2rem;
 }
 
-.loading-spinner {
-  width: 60px;
-  height: 60px;
-  border: 4px solid #e5e7eb;
-  border-top-color: #003087;
-  border-radius: 50%;
-  margin: 0 auto 1.5rem;
-  animation: spin 1s linear infinite;
-}
-
-.redirect-message p {
-  margin: 0.5rem 0;
+.redirect-loading p {
+  margin-top: 1rem;
   color: #4b5563;
+  font-weight: 500;
+}
+
+.redirect-message {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #6b7280;
+  line-height: 1.6;
 }
 
 .redirect-details {
-  margin: 1.5rem 0;
-  padding: 1rem;
   background: #f8fafc;
   border-radius: 8px;
-  text-align: left;
+  padding: 1rem;
+  margin-bottom: 2rem;
 }
 
-.redirect-details p {
+.detail-item {
+  display: flex;
+  justify-content: space-between;
   margin: 0.5rem 0;
-  color: #374151;
+}
+
+.detail-label {
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.detail-value {
+  font-weight: 500;
+  color: #1f2937;
 }
 
 .redirect-actions {
   display: flex;
   gap: 1rem;
-  padding: 1.5rem;
-  background: #f8fafc;
-  border-top: 1px solid #e5e7eb;
 }
 
 .redirect-cancel,
 .redirect-confirm {
   flex: 1;
-  padding: 0.75rem;
-  border-radius: 6px;
+  padding: 1rem;
+  border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
-  border: none;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .redirect-cancel {
-  background: #e5e7eb;
-  color: #374151;
+  background: white;
+  border: 2px solid #d1d5db;
+  color: #4b5563;
 }
 
 .redirect-cancel:hover {
-  background: #d1d5db;
+  background: #f3f4f6;
 }
 
 .redirect-confirm {
   background: #003087;
+  border: none;
   color: white;
 }
 
 .redirect-confirm:hover {
-  background: #002366;
+  background: #002266;
+}
+
+.redirect-security {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: #f0f9ff;
+  border-top: 1px solid #e0f2fe;
+  color: #0369a1;
+  font-size: 0.85rem;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
   .benefits {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .redirect-modal {
+    width: 95%;
+    margin: 1rem;
+  }
+  
+  .redirect-actions {
     flex-direction: column;
-    gap: 1rem;
   }
   
   .paypal-button-content {
@@ -655,8 +805,17 @@ export default {
     gap: 0.5rem;
   }
   
-  .redirect-actions {
-    flex-direction: column;
+  .paypal-button-text {
+    order: 2;
+  }
+  
+  .paypal-button-logo {
+    order: 1;
+  }
+  
+  .paypal-amount {
+    order: 3;
+    margin-top: 0.5rem;
   }
 }
 </style>

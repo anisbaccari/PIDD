@@ -194,8 +194,9 @@
               <div class="section-icon">💳</div>
               <h3>Moyen de paiement</h3>
             </div>
-            <PaymentMethod 
+            <PaymentMethod
               :amount="orderTotal"
+              :order-number="orderNumber"
               @payment-completed="handlePaymentCompleted"
               @payment-error="handlePaymentError"
             />
@@ -292,7 +293,7 @@
                 <span class="btn-icon">🎉</span>
                 Voir le détail de ma commande
               </span>
-             </button>
+            </button>
             
             <button 
               class="btn btn-outline"
@@ -353,14 +354,20 @@
           <div class="cart-items">
             <div v-for="(item, index) in cartItems" :key="index" class="cart-item">
               <div class="item-image">
-                <span v-if="item.image">🖼️</span>
-                <span v-else>📦</span>
+                <img
+                  :src="`/images/${item.product.img}`"
+                  :alt="item.product.name || 'Produit'"
+                  class="product-img"
+                  @error="handleImageError"
+                  loading="lazy"
+                />
               </div>
+
               <div class="item-details">
-                <h4 class="item-name">{{ item.name || 'Produit' }}</h4>
+                <h4 class="item-name">{{ item.product.name || 'Produit' }}</h4>
                 <div class="item-meta">
                   <span class="item-quantity">Quantité: {{ item.quantity || 1 }}</span>
-                  <span class="item-price">{{ formatPrice(item.price || 0) }}</span>
+                  <span class="item-price">{{ formatPrice(item.unitPrice * item.quantity) }}</span>
                 </div>
               </div>
             </div>
@@ -410,8 +417,8 @@
     </div>
   </div>
 </template>
-
 <script>
+import axios from 'axios';
 import PaymentMethod from '@/components/PaymentMethod.vue'
 
 export default {
@@ -419,24 +426,7 @@ export default {
   components: {
     PaymentMethod
   },
-  props: {
-    user: {
-      type: Object,
-      default: () => null
-    },
-    cartItems: {
-      type: Array,
-      default: () => []
-    },
-    getCartTotal: {
-      type: Function,
-      default: () => 0
-    },
-    clearCart: {
-      type: Function,
-      default: () => {}
-    }
-  },
+
   data() {
     return {
       currentStep: 1,
@@ -494,8 +484,13 @@ export default {
         }
       ],
       orderDetails: null,
+      cartSnapshot: null,
       isProcessing: false,
-      hasCompletedPayment: false
+      hasCompletedPayment: false,
+      cartItems: [],
+      loading: true,
+      orderNumber: null,
+      user: null // Ajout de la propriété user
     }
   },
   computed: {
@@ -503,49 +498,183 @@ export default {
       return this.deliveryOptions.find(opt => opt.id === this.selectedDelivery) || this.deliveryOptions[0]
     },
     
-    subtotal() {
-      return this.getCartTotal ? this.getCartTotal() : 0
-    },
+    /* subtotal() {
+      // Calcul précis du sous-total
+      if (!this.cartItems || this.cartItems.length === 0) return 0
+      
+      return this.cartItems.reduce((total, item) => {
+        const price = parseFloat(item.price) || parseFloat(item.unitPrice) || 0
+        const quantity = parseInt(item.quantity) || 1
+        return total + (price * quantity)
+      }, 0)
+    }, */
     
     orderTotal() {
-      return this.subtotal + this.selectedDeliveryOption.price
-    },
-    
+    // Utiliser this.subtotal qui vient de l'API
+    const sub = parseFloat(this.subtotal) || 0
+    const delivery = parseFloat(this.selectedDeliveryOption?.price) || 0
+    return sub + delivery
+  },
     isDeliveryStepValid() {
-      return (
-        this.deliveryAddress.fullName.trim() &&
-        this.deliveryAddress.phone.trim() &&
-        this.deliveryAddress.street.trim() &&
-        this.deliveryAddress.postalCode.trim() &&
-        this.deliveryAddress.city.trim() &&
-        this.deliveryAddress.country &&
-        this.selectedDelivery
-      )
+    return (
+      this.deliveryAddress.fullName.trim() &&
+      this.deliveryAddress.phone.trim() &&
+      this.deliveryAddress.street.trim() &&
+      this.deliveryAddress.postalCode.trim() &&
+      this.deliveryAddress.city.trim() &&
+      this.deliveryAddress.country &&
+      this.selectedDelivery
+    )
     },
     
     progressWidth() {
       return `${((this.currentStep - 1) / (this.steps.length - 1)) * 100}%`
     }
   },
-  mounted() {
+
+  async mounted() {
     console.log('🛒 CheckoutPage monté')
+
+    // 1️⃣ Récupérer les infos utilisateur si connecté
+    await this.fetchUserInfo()
     
-    // Initialiser avec les données utilisateur si disponibles
+    // 2️⃣ Récupérer la commande / panier AVANT tout calcul
+    await this.fetchCurrentOrder()
+
+    console.log('📦 Items dans panier:', this.cartItems)
+    console.log('💰 Sous-total calculé:', this.subtotal)
+
+    // 3️⃣ Pré-remplir les infos utilisateur si connecté
     if (this.user) {
-      this.deliveryAddress.fullName = `${this.user.prenom || ''} ${this.user.nom || ''}`.trim()
+      this.deliveryAddress.fullName =
+        `${this.user.lastName || ''} ${this.user.name || ''}`.trim()
       this.deliveryAddress.phone = this.user.telephone || ''
     }
+
+    // 4️⃣ Calculer la meilleure option de livraison (dépend du subtotal)
+    this.calculateBestDeliveryOption()
+
+    // 5️⃣ Générer le numéro de commande UNE SEULE FOIS
+    this.orderNumber = this.generateOrderId()
+    console.log('📝 Numéro de commande généré:', this.orderNumber)
     
+    this.loading = false
+  },
+
+  methods: {
+    async fetchUserInfo() {
+  try {
+    // Récupérer l'utilisateur depuis localStorage
+    const userStr = localStorage.getItem('user')
+    
+    if (userStr) {
+      this.user = JSON.parse(userStr)
+      console.log('👤 Utilisateur récupéré:', this.user)
+    } else {
+      console.warn('⚠️ Aucun utilisateur dans localStorage')
+      
+      // Optionnel: essayer de récupérer depuis l'API
+      try {
+        const response = await axios.get('/auth/me')
+        if (response.data?.user) {
+          this.user = response.data.user
+          localStorage.setItem('user', JSON.stringify(this.user))
+        }
+      } catch (err) {
+        console.warn('⚠️ Impossible de récupérer l\'utilisateur depuis l\'API')
+      }
+    }
+  } catch (error) {
+    console.warn('⚠️ Erreur fetchUserInfo:', error)
+    this.user = null
+  }
+},
+async fetchCurrentOrder() {
+  try {
+    console.log('🔄 Récupération du panier pour checkout...')
+    
+    // ✅ Utiliser axios directement (pas this.$axios)
+    const res = await axios.get('/cart')
+
+    console.log('📦 Réponse API /cart:', res.data)
+
     // Vérifier si le panier est vide
-    if (!this.cartItems || this.cartItems.length === 0) {
-      console.warn('⚠️ Panier vide, redirection vers le panier')
+    if (!res.data || !res.data.items || res.data.items.length === 0) {
+      console.warn('⚠️ Panier vide → redirection vers /cart')
+      alert('Votre panier est vide')
+      this.$router.push('/cart')
+      return
+    }
+
+    // ✅ Adapter la structure des données
+    this.cartItems = res.data.items.map(item => {
+      console.log('📦 Item:', item)
+      
+      return {
+        id: item.id,
+        quantity: item.quantity || 1,
+        unitPrice: parseFloat(item.unitPrice) || 0,
+        price: parseFloat(item.unitPrice) || 0, // Pour compatibilité
+        product: {
+          id: item.product?.id,
+          name: item.product?.name || 'Produit',
+          brand: item.product?.brand || '',
+          img: item.product?.img || 'placeholder.png',
+          price: parseFloat(item.product?.price) || parseFloat(item.unitPrice) || 0
+        }
+      }
+    })
+
+    // Utiliser le subtotal renvoyé par l'API (plus fiable)
+    this.subtotal = parseFloat(res.data.subtotal) || 0
+    
+    console.log('✅ Panier chargé pour checkout:', {
+      itemsCount: this.cartItems.length,
+      subtotal: this.subtotal,
+      items: this.cartItems
+    })
+
+  } catch (error) {
+    console.error('❌ Erreur récupération panier:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data
+    })
+    
+    // Gérer les différents cas d'erreur
+    if (error.response?.status === 401) {
+      alert('Vous devez être connecté pour accéder au paiement')
+      this.$router.push('/login')
+    } else if (error.response?.status === 404) {
+      alert('Votre panier est vide')
+      this.$router.push('/cart')
+    } else {
+      alert('Erreur lors du chargement de votre panier')
       this.$router.push('/cart')
     }
+  }
+},
+    getProductImage(item) {
+      if (item.product?.img) {
+        return `/images/${item.product.img}`
+      }
+      return '/images/placeholder.png'
+    },
     
-    // Calculer la meilleure option de livraison
-    this.calculateBestDeliveryOption()
-  },
-  methods: {
+    findProductById(productId) {
+      try {
+        const allProducts = JSON.parse(localStorage.getItem('allProducts') || '[]')
+        return allProducts.find(p => p.id === productId)
+      } catch (e) {
+        return null
+      }
+    },
+    
+    handleImageError(event) {
+      event.target.src = '/images/placeholder.png'
+      event.target.classList.add('error-image')
+    },
+    
     selectDeliveryOption(option) {
       this.selectedDelivery = option.id
       console.log('🚚 Option livraison sélectionnée:', option)
@@ -557,6 +686,7 @@ export default {
       } else {
         this.selectedDelivery = 'standard'
       }
+      console.log('📦 Option livraison choisie:', this.selectedDelivery)
     },
     
     goToPaymentStep() {
@@ -574,149 +704,298 @@ export default {
         event.target.parentElement.classList.remove('focused')
       }, 1000)
     },
-    
-    handlePaymentCompleted(paymentData) {
-      console.log('💳 Paiement terminé avec succès:', paymentData)
-      
-      this.hasCompletedPayment = true
-      
-      this.orderDetails = {
-        id: this.generateOrderId(),
-        date: new Date().toLocaleDateString('fr-FR'),
-        items: this.cartItems || [],
-        delivery: {
-          address: { ...this.deliveryAddress },
-          option: this.selectedDeliveryOption,
-          estimatedDelivery: this.calculateEstimatedDelivery()
-        },
-        payment: paymentData,
-        subtotal: this.subtotal,
-        deliveryPrice: this.selectedDeliveryOption.price,
-        total: this.orderTotal,
-        status: 'confirmed'
-      }
-      
-      this.currentStep = 3
-      console.log('✅ Passage à l\'étape confirmation')
-    },
-    
+     async handlePaymentCompleted(paymentData) {
+  try {
+    console.log('💳 Paiement confirmé:', paymentData)
+
+    // 1️⃣ Figer le panier AVANT toute modif
+    const cartWithPrices = this.cartItems.map(item => ({
+      ...item,
+      price: Number(item.price ?? item.unitPrice ?? 0),
+      unitPrice: Number(item.unitPrice ?? item.price ?? 0)
+    }))
+
+    this.cartSnapshot = JSON.parse(JSON.stringify(cartWithPrices))
+    console.log('📦 Panier figé:', this.cartSnapshot)
+
+    // 2️⃣ Construire l’objet commande local
+    this.orderDetails = {
+      id: this.orderNumber,
+      date: new Date().toISOString(),
+      items: this.cartSnapshot,
+      delivery: {
+        address: { ...this.deliveryAddress },
+        option: { ...this.selectedDeliveryOption },
+        estimatedDelivery: this.calculateEstimatedDelivery()
+      },
+      payment: paymentData,
+      subtotal: this.subtotal,
+      deliveryPrice: this.selectedDeliveryOption.price,
+      total: this.orderTotal,
+      status: 'paid'
+    }
+
+    // 3️⃣ Sauvegarder localement
+    localStorage.setItem('currentOrderDetails', JSON.stringify(this.orderDetails))
+
+    // 4️⃣ Confirmer en base DIRECTEMENT AVEC status = paid
+    await this.confirmOrderInDatabase({
+      orderId: this.orderNumber,
+      status: 'paid',
+      total: this.orderTotal,
+      items: this.cartSnapshot
+    })
+
+    // 5️⃣ Vider le panier en BD
+    await this.clearCartInDatabase()
+
+    // 6️⃣ UI → Confirmation
+    this.hasCompletedPayment = true
+    this.currentStep = 3
+
+    console.log('✅ Commande enregistrée PAYÉE en BD:', this.orderDetails)
+
+  } catch (error) {
+    console.error('❌ Erreur après paiement :', error)
+    this.handlePaymentError(error)
+  }
+}
+,
     handlePaymentError(error) {
       console.error('❌ Erreur de paiement:', error)
       alert(`Erreur lors du paiement: ${error.message || 'Veuillez réessayer'}`)
     },
-    
-    async completeOrder() {
-  if (this.isProcessing) return
-  
-  this.isProcessing = true
-  
-  try {
-    const orderId = this.orderDetails?.id || this.generateOrderId()
-    const trackingNumber = this.generateTrackingNumber()
-    
-    const orderData = {
-      orderId,
-      orderNumber: orderId,
-      amount: this.orderTotal,
-      paymentMethod: this.orderDetails?.payment?.method || 'credit_card',
-      deliveryMethod: this.selectedDeliveryOption.name,
-      deliveryAddress: this.deliveryAddress,
-      items: this.cartItems || [],
-      status: 'confirmed',
-      date: new Date().toISOString(),
-      subtotal: this.subtotal,
-      deliveryPrice: this.selectedDeliveryOption.price,
-      trackingNumber: trackingNumber,
-      estimatedDelivery: this.calculateEstimatedDelivery()
+    // ✅ NOUVELLE MÉTHODE: Confirmer la commande dans la BD
+  async confirmOrderInDatabase() {
+    try {
+      console.log('🔄 Confirmation de la commande dans la BD...')
+      
+      const orderData = {
+        paymentMethod: this.orderDetails.payment.method || 'carte',
+        shippingAddress: this.deliveryAddress,
+        shippingMethod: this.selectedDeliveryOption.name,
+        estimatedDelivery: this.calculateEstimatedDelivery(),
+        notes: `Commande créée via checkout - ${this.orderNumber}`
+      }
+      
+      console.log('📊 Données envoyées:', orderData)
+      
+      const response = await axios.post('/cart/confirm', orderData)
+      
+      console.log('✅ Réponse confirmation:', response.data)
+      
+      if (response.data.success && response.data.order) {
+        // Mettre à jour avec l'ID réel de la commande
+        this.orderDetails.id = response.data.order.id
+        this.orderDetails.orderNumber = response.data.order.orderNumber || this.orderNumber
+        
+        // Sauvegarder dans localStorage
+        localStorage.setItem('lastOrder', JSON.stringify(this.orderDetails))
+        localStorage.setItem(`order_${this.orderDetails.id}`, JSON.stringify(this.orderDetails))
+      }
+      
+    } catch (error) {
+      console.error('❌ Erreur confirmation commande:', error)
+      // Ne pas bloquer le processus même en cas d'erreur
     }
+  },
     
-    // Sauvegarder la commande dans localStorage
-    localStorage.setItem('lastOrder', JSON.stringify(orderData))
-    localStorage.setItem('lastOrderTimestamp', new Date().toISOString())
+     async completeOrder() {
+    if (this.isProcessing) return
+    this.isProcessing = true
+    console.log('🚀 Début de la finalisation de commande...')
     
-    // Vider le panier
-    this.clearCartLocal()
+    try {
+      // Préparer les données de la commande
+      const orderData = {
+        orderId: this.orderNumber,
+        orderNumber: this.orderNumber,
+        amount: this.orderTotal,
+        total: this.orderTotal,
+        subtotal: this.subtotal,
+        deliveryPrice: this.selectedDeliveryOption.price,
+        paymentMethod: this.orderDetails?.payment?.method || 'carte',
+        deliveryMethod: this.selectedDeliveryOption.name,
+        trackingNumber: this.generateTrackingNumber(),
+        estimatedDelivery: this.calculateEstimatedDelivery(),
+        date: new Date().toISOString(),
+        items: this.cartSnapshot || [],
+        status: 'paid',
+        shippingAddress: this.deliveryAddress,
+        customer: this.user ? {
+          id: this.user.id,
+          name: this.user.name,
+          lastName: this.user.lastName,
+          email: this.user.email,
+          telephone: this.user.telephone
+        } : null
+      }
+      
+      console.log('📊 Données de commande à sauvegarder:', orderData)
+      
+      // Sauvegarder AVANT de vider le panier
+      localStorage.setItem('lastOrder', JSON.stringify(orderData))
+      localStorage.setItem('currentOrder', JSON.stringify(orderData))
+      localStorage.setItem(`order_${orderData.orderId}`, JSON.stringify(orderData))
+      
+      console.log('💾 Données sauvegardées dans localStorage')
+      
+      // Attendre un peu pour être sûr
+      await new Promise(resolve => setTimeout(resolve, 300))
+      
+      // Vider le localStorage du panier
+      this.clearLocalStorage()
+      
+      // Rediriger
+      console.log('🔄 Redirection vers la page de confirmation...')
+      await this.redirectToOrderConfirmation(orderData)
+      
+    } catch (error) {
+      console.error('🚨 Erreur lors de la finalisation:', error)
+      this.isProcessing = false
+      alert('Une erreur est survenue lors de la confirmation de votre commande. Veuillez réessayer.')
+    }
+  },
+  
     
-    // Simulation de délai de traitement
-    await new Promise(resolve => setTimeout(resolve, 800))
+    async redirectToOrderConfirmation(orderData) {
+      console.log('📍 Méthode redirectToOrderConfirmation appelée')
+      console.log('📦 Données de commande:', orderData)
+      
+      try {
+        // Vérifier que les données sont bien sauvegardées
+        const savedOrder = localStorage.getItem('lastOrder')
+        console.log('💾 Vérification données sauvegardées:', savedOrder ? 'OK' : 'MANQUANTES')
+        
+        // Essayer plusieurs méthodes de redirection
+        console.log('🔄 Tentative de redirection...')
+        
+        // Méthode 1: Utiliser le nom de route si disponible
+        try {
+          await this.$router.push({
+            name: 'OrderSuccess', // ou 'OrderConfirmation' selon votre router
+            query: {
+              orderId: orderData.orderId,
+              orderNumber: orderData.orderNumber,
+              amount: orderData.amount,
+              tracking: orderData.trackingNumber,
+              success: 'true'
+            }
+          })
+          console.log('✅ Redirection via router.push réussie')
+          return
+        } catch (routerError) {
+          console.warn('⚠️ Redirection par nom échouée:', routerError)
+        }
+        
+        // Méthode 2: Utiliser le chemin
+        try {
+          await this.$router.push({
+            path: '/order/confirmation',
+            query: {
+              orderId: orderData.orderId,
+              orderNumber: orderData.orderNumber,
+              amount: orderData.amount,
+              tracking: orderData.trackingNumber
+            }
+          })
+          console.log('✅ Redirection via chemin réussie')
+          return
+        } catch (pathError) {
+          console.warn('⚠️ Redirection par chemin échouée:', pathError)
+        }
+        
+        // Méthode 3: Fallback avec window.location
+        console.log('🔄 Fallback avec window.location...')
+        const queryString = new URLSearchParams({
+          orderId: orderData.orderId,
+          orderNumber: orderData.orderNumber,
+          amount: orderData.amount,
+          tracking: orderData.trackingNumber
+        }).toString()
+        
+        window.location.href = `/order/success?${queryString}`
+        
+      } catch (error) {
+        console.error('❌ Toutes les méthodes de redirection ont échoué:', error)
+        
+        // Dernier recours: message et redirection vers l'accueil
+        alert(`Commande confirmée ! Votre numéro de commande est: ${orderData.orderId}`)
+        this.$router.push('/')
+      }
+    },
     
-    // Rediriger vers la page de confirmation avec TOUTES les données
-    this.redirectToOrderConfirmation(orderData)
-    
-  } catch (error) {
-    console.error('🚨 Erreur lors de la finalisation:', error)
-    alert('Une erreur est survenue. Veuillez réessayer.')
-    this.isProcessing = false
-  }
-},
     generateTrackingNumber() {
-  const date = new Date()
-  const year = date.getFullYear().toString().substring(2)
-  const month = (date.getMonth() + 1).toString().padStart(2, '0')
-  const day = date.getDate().toString().padStart(2, '0')
-  const random = Math.random().toString(36).substring(2, 8).toUpperCase()
-  return `MONSHOP-${year}${month}${day}-${random}`
-},
+      const date = new Date()
+      const year = date.getFullYear().toString().substring(2)
+      const month = (date.getMonth() + 1).toString().padStart(2, '0')
+      const day = date.getDate().toString().padStart(2, '0')
+      const random = Math.random().toString(36).substring(2, 8).toUpperCase()
+      return `TRK-${year}${month}${day}-${random}`
+    },
+    // ✅ NOUVELLE MÉTHODE: Vider le panier dans la BD
+  async clearCartInDatabase() {
+    try {
+      console.log('🗑️ Vidage du panier dans la BD...')
+      
+      await axios.delete('/cart')
+      
+      console.log('✅ Panier vidé dans la BD')
+      
+      // Émettre l'événement de mise à jour
+      if (window.EventBus) {
+        window.EventBus.$emit('cart-updated')
+      }
+      
+    } catch (error) {
+      console.error('❌ Erreur vidage panier:', error)
+      // Ne pas bloquer même en cas d'erreur
+    }
+  },
+  // ✅ NOUVELLE MÉTHODE: Vider le localStorage
+  clearLocalStorage() {
+    console.log('🗑️ Nettoyage du localStorage...')
+    
+    const keysToRemove = [
+      'cart',
+      'monShop_cart',
+      'shoppingCart',
+      'panier',
+      'cart_anonymous',
+      'currentOrderDetails'
+    ]
+    
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key)
+    })
+    
+    console.log('✅ localStorage nettoyé')
+  },
+  
     clearCartLocal() {
       try {
-        // Nettoyer plusieurs clés possibles de localStorage
+        console.log('🗑️ Nettoyage du panier...')
+        
+        // Supprimer toutes les versions possibles du panier
         localStorage.removeItem('cart')
         localStorage.removeItem('monShop_cart')
         localStorage.removeItem('shoppingCart')
+        localStorage.removeItem('panier')
         
-        // Émettre un événement pour notifier le parent
+        // Émettre l'événement
         this.$emit('cart-cleared')
         
-        // Appeler la fonction clearCart du parent si elle existe
+        // Appeler la fonction de nettoyage si fournie
         if (this.clearCart && typeof this.clearCart === 'function') {
           this.clearCart()
         }
         
-        console.log('🛒 Panier nettoyé')
+        console.log('✅ Panier nettoyé avec succès')
       } catch (error) {
-        console.warn('⚠️ Erreur nettoyage panier:', error)
+        console.warn('⚠️ Erreur lors du nettoyage du panier:', error)
       }
     },
     
-  redirectToOrderConfirmation(orderData) {
-  console.log('🔄 Redirection vers confirmation avec données:', orderData)
-  
-  try {
-    // Stocker les données dans localStorage pour la page confirmation
-    localStorage.setItem('currentOrder', JSON.stringify(orderData))
-    
-    // Rediriger vers la page de confirmation avec TOUTES les données
-    this.$router.push({
-      name: 'OrderConfirmation',
-      query: {
-        orderId: orderData.orderId,
-        orderNumber: orderData.orderNumber,
-        amount: orderData.amount,
-        paymentMethod: orderData.paymentMethod,
-        deliveryMethod: orderData.deliveryMethod,
-        trackingNumber: orderData.trackingNumber,
-        estimatedDelivery: orderData.estimatedDelivery
-      },
-      params: {
-        orderData: JSON.stringify(orderData)
-      }
-    })
-    
-  } catch (routerError) {
-    console.error('❌ Erreur de redirection router:', routerError)
-    
-    // Fallback: Redirection directe avec les données dans l'URL
-    try {
-      localStorage.setItem('currentOrder', JSON.stringify(orderData))
-      window.location.href = `/order/confirmation?orderId=${orderData.orderId}&tracking=${orderData.trackingNumber}`
-      
-    } catch (fallbackError) {
-      console.error('❌ Fallback échoué:', fallbackError)
-      alert(`Commande confirmée ! Numéro: ${orderData.orderId}`)
-      this.$router.push('/')
-    }
-  }
-},
     generateOrderId() {
       const prefix = 'CMD'
       const timestamp = Date.now().toString(36).toUpperCase()
@@ -767,7 +1046,8 @@ export default {
       
       return new Intl.NumberFormat('fr-FR', {
         style: 'currency',
-        currency: 'EUR'
+        currency: 'EUR',
+        minimumFractionDigits: 2
       }).format(num)
     }
   }
@@ -775,25 +1055,22 @@ export default {
 </script>
 
 <style scoped>
+/* Styles de base */
 .checkout-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #f8fafc;
 }
 
-/* En-tête */
 .checkout-header {
   background: white;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 1rem 0;
 }
 
 .header-content {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 1rem 2rem;
+  padding: 0 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -802,27 +1079,23 @@ export default {
 .brand {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
   text-decoration: none;
-  font-weight: 700;
-  font-size: 1.5rem;
-  color: #3b82f6;
+  color: #1f2937;
+  font-weight: 600;
+  font-size: 1.25rem;
 }
 
 .brand-icon {
-  font-size: 1.8rem;
+  font-size: 1.5rem;
 }
 
 .secure-badge {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: #f0f9ff;
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  color: #3b82f6;
-  font-size: 0.9rem;
-  font-weight: 500;
+  color: #6b7280;
+  font-size: 0.875rem;
 }
 
 /* Barre de progression */
@@ -836,31 +1109,28 @@ export default {
   height: 4px;
   background: #e5e7eb;
   border-radius: 2px;
-  overflow: hidden;
   margin-bottom: 2rem;
+  position: relative;
 }
 
 .progress-fill {
+  position: absolute;
   height: 100%;
-  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  background: #10b981;
   border-radius: 2px;
-  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: width 0.3s ease;
 }
 
 .progress-steps {
   display: flex;
   justify-content: space-between;
-  position: relative;
 }
 
 .progress-step {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
-  position: relative;
-  z-index: 2;
-  flex: 1;
+  gap: 0.5rem;
 }
 
 .step-indicator {
@@ -868,68 +1138,61 @@ export default {
 }
 
 .step-circle {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: #e5e7eb;
-  color: #9ca3af;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 0.95rem;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  background: white;
+  border: 2px solid #e5e7eb;
+  color: #9ca3af;
+  transition: all 0.3s ease;
 }
 
 .progress-step.active .step-circle {
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  border-color: #10b981;
+  background: #10b981;
   color: white;
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
-  transform: scale(1.1);
 }
 
 .progress-step.current .step-circle {
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3); }
-  50% { box-shadow: 0 4px 25px rgba(59, 130, 246, 0.5); }
+  border-color: #10b981;
+  color: #10b981;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
 }
 
 .step-info {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  text-align: center;
 }
 
 .step-number {
-  font-size: 0.8rem;
+  display: block;
+  font-size: 0.75rem;
   color: #9ca3af;
-  font-weight: 500;
   margin-bottom: 0.25rem;
 }
 
 .step-title {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #4b5563;
-}
-
-.progress-step.active .step-title {
-  color: #3b82f6;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
 }
 
 /* Layout principal */
 .checkout-layout {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 2rem 3rem;
+  padding: 0 2rem;
   display: grid;
-  grid-template-columns: 1fr 350px;
+  grid-template-columns: 1fr 400px;
   gap: 2rem;
+  margin-bottom: 4rem;
 }
 
+/* Colonne principale */
 .checkout-main {
   display: flex;
   flex-direction: column;
@@ -938,21 +1201,9 @@ export default {
 
 .step-container {
   background: white;
-  border-radius: 16px;
-  padding: 2.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  animation: slideIn 0.4s ease;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .step-header {
@@ -960,53 +1211,53 @@ export default {
 }
 
 .step-title {
-  font-size: 1.8rem;
-  font-weight: 700;
+  font-size: 1.5rem;
+  font-weight: 600;
   color: #1f2937;
-  margin: 0 0 0.5rem 0;
+  margin-bottom: 0.5rem;
 }
 
 .step-subtitle {
-  font-size: 1rem;
   color: #6b7280;
-  margin: 0;
+  font-size: 0.95rem;
 }
 
 /* Cartes de section */
 .section-card {
-  margin-bottom: 2rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .section-header {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
   margin-bottom: 1.5rem;
 }
 
 .section-icon {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
 }
 
 .section-header h3 {
-  font-size: 1.2rem;
+  font-size: 1.125rem;
   font-weight: 600;
   color: #1f2937;
   margin: 0;
 }
 
-/* Formulaires */
+/* Formulaire */
 .address-form {
-  background: #f8fafc;
-  border-radius: 12px;
-  padding: 2rem;
-  border: 1px solid #e5e7eb;
+  margin-top: 1rem;
 }
 
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
 }
 
 .form-group {
@@ -1015,94 +1266,64 @@ export default {
 }
 
 .form-group.full-width {
-  grid-column: 1 / -1;
+  grid-column: span 2;
 }
 
 .form-label {
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   font-weight: 500;
-  color: #4b5563;
+  color: #374151;
   margin-bottom: 0.5rem;
-  display: block;
 }
 
 .form-input {
-  padding: 0.875rem 1rem;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
   font-size: 0.95rem;
-  color: #1f2937;
-  background: white;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .form-input:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
-}
-
-.form-group.focused .form-input {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
-}
-
-.form-input::placeholder {
-  color: #9ca3af;
-}
-
-select.form-input {
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 1rem center;
-  padding-right: 3rem;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
 }
 
 /* Options de livraison */
 .delivery-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
 }
 
 .delivery-card {
-  background: white;
-  border: 2px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 1.5rem;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   display: flex;
   align-items: center;
   gap: 1rem;
-  position: relative;
+  padding: 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .delivery-card:hover {
-  border-color: #9ca3af;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  border-color: #8b5cf6;
+  background: #f8fafc;
 }
 
 .delivery-card.selected {
-  border-color: #3b82f6;
-  background: linear-gradient(135deg, #f0f9ff, #e6f7ff);
-  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15);
-  transform: translateY(-2px);
+  border-color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.05);
 }
 
 .delivery-card.premium {
-  border-color: #f59e0b;
-}
-
-.delivery-card.premium.selected {
-  background: linear-gradient(135deg, #fffbeb, #fef3c7);
+  border-left: 4px solid #8b5cf6;
 }
 
 .delivery-icon {
-  font-size: 2rem;
-  flex-shrink: 0;
+  font-size: 1.5rem;
 }
 
 .delivery-content {
@@ -1124,31 +1345,26 @@ select.form-input {
 }
 
 .delivery-price {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #059669;
-}
-
-.delivery-card.premium .delivery-price {
-  color: #d97706;
+  font-weight: 600;
+  color: #8b5cf6;
 }
 
 .delivery-description {
-  font-size: 0.875rem;
   color: #6b7280;
-  margin: 0 0 0.75rem 0;
-  line-height: 1.4;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
 }
 
 .delivery-meta {
   display: flex;
   gap: 1rem;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #9ca3af;
 }
 
 .delivery-selector {
-  flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
 
 .selector-dot {
@@ -1156,288 +1372,223 @@ select.form-input {
   height: 20px;
   border-radius: 50%;
   border: 2px solid #d1d5db;
-  position: relative;
+  transition: all 0.2s ease;
 }
 
 .selector-dot.selected {
-  border-color: #3b82f6;
-  background: #3b82f6;
+  border-color: #8b5cf6;
+  background: #8b5cf6;
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1);
 }
 
-.selector-dot.selected::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 8px;
-  height: 8px;
+/* Panneau latéral */
+.checkout-sidebar {
+  position: sticky;
+  top: 2rem;
+  height: fit-content;
+}
+
+.sidebar-card {
   background: white;
-  border-radius: 50%;
-}
-
-/* Récapitulatif */
-.summary-card {
-  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
   border-radius: 12px;
   padding: 1.5rem;
-  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
 }
 
-.summary-content {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.summary-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.summary-item:last-child {
-  border-bottom: none;
-}
-
-.summary-label {
-  font-size: 0.9rem;
-  color: #6b7280;
-}
-
-.summary-value {
-  font-size: 0.9rem;
-  font-weight: 500;
+.sidebar-title {
+  font-size: 1.125rem;
+  font-weight: 600;
   color: #1f2937;
-  text-align: right;
-}
-
-/* Confirmation */
-.confirmation-container {
-  text-align: center;
-}
-
-.success-animation {
-  margin-bottom: 2rem;
-}
-
-.success-circle {
-  width: 80px;
-  height: 80px;
-  background: linear-gradient(135deg, #10b981, #059669);
-  border-radius: 50%;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: scaleIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-@keyframes scaleIn {
-  0% { transform: scale(0); opacity: 0; }
-  70% { transform: scale(1.1); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-.checkmark {
-  color: white;
-  font-size: 2.5rem;
-  font-weight: bold;
-  animation: checkmark 0.3s ease 0.6s both;
-}
-
-@keyframes checkmark {
-  0% { transform: scale(0); }
-  50% { transform: scale(1.2); }
-  100% { transform: scale(1); }
-}
-
-.confirmation-title {
-  font-size: 2.2rem;
-  font-weight: 800;
-  color: #1f2937;
-  margin: 0 0 0.75rem 0;
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.confirmation-subtitle {
-  font-size: 1.1rem;
-  color: #6b7280;
-  margin: 0 0 2rem 0;
-}
-
-.order-card {
-  background: white;
-  border-radius: 16px;
-  padding: 2rem;
-  margin: 2rem 0;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-}
-
-.order-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #f3f4f6;
 }
 
-.order-header h3 {
-  font-size: 1.3rem;
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0;
-}
-
-.order-badge {
-  background: #f0f9ff;
-  color: #3b82f6;
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.order-details {
+.cart-items {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  margin-bottom: 2rem;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
 }
 
-.detail-row {
+.cart-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  gap: 1rem;
   padding: 0.75rem 0;
-  border-bottom: 1px solid #f9fafb;
+  border-bottom: 1px solid #f3f4f6;
 }
 
-.detail-row:last-child {
-  border-bottom: none;
+.item-image {
+  width: 60px;
+  height: 60px;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
-.detail-label {
-  font-size: 0.95rem;
+.product-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.item-details {
+  flex: 1;
+}
+
+.item-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 0.25rem;
+}
+
+.item-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
   color: #6b7280;
 }
 
-.detail-value {
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: #1f2937;
-}
-
-.detail-value.price {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #10b981;
-}
-
-.order-timeline {
-  position: relative;
-  padding-left: 30px;
-  margin-top: 2rem;
-}
-
-.order-timeline::before {
-  content: '';
-  position: absolute;
-  left: 15px;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: #e5e7eb;
-}
-
-.timeline-item {
-  position: relative;
+.price-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
   margin-bottom: 1.5rem;
 }
 
-.timeline-item:last-child {
-  margin-bottom: 0;
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  color: #4b5563;
 }
 
-.timeline-dot {
-  position: absolute;
-  left: -30px;
-  top: 4px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #d1d5db;
-  border: 3px solid white;
+.price-row.total {
+  padding-top: 0.75rem;
+  border-top: 1px solid #e5e7eb;
+  font-weight: 600;
+  color: #1f2937;
 }
 
-.timeline-item.active .timeline-dot {
-  background: #10b981;
-  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
+.total-price {
+  color: #8b5cf6;
+  font-size: 1.125rem;
 }
 
-.timeline-content h4 {
+.free {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.sidebar-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f3f4f6;
+}
+
+.protection-badge,
+.guarantee-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.help-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.help-icon {
+  font-size: 1.5rem;
+}
+
+.help-content {
+  flex: 1;
+}
+
+.help-content h4 {
   font-size: 1rem;
   font-weight: 600;
   color: #1f2937;
-  margin: 0 0 0.25rem 0;
+  margin-bottom: 0.5rem;
 }
 
-.timeline-content p {
-  font-size: 0.9rem;
+.help-content p {
   color: #6b7280;
-  margin: 0;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.help-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #8b5cf6;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.help-link:hover {
+  text-decoration: underline;
+}
+
+/* Navigation */
+.step-navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 0;
+  border-top: 1px solid #e5e7eb;
 }
 
 /* Boutons */
 .btn {
-  padding: 0.875rem 1.75rem;
-  border-radius: 10px;
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 500;
   font-size: 0.95rem;
   cursor: pointer;
-  border: 2px solid transparent;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none !important;
+  transition: all 0.2s ease;
+  border: none;
+  font-family: inherit;
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  background: #8b5cf6;
   color: white;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #2563eb, #4f46e5);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.3);
+  background: #7c3aed;
+  transform: translateY(-1px);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .btn-outline {
   background: white;
   color: #4b5563;
-  border-color: #e5e7eb;
+  border: 1px solid #d1d5db;
 }
 
 .btn-outline:hover:not(:disabled) {
-  background: #f8fafc;
-  border-color: #d1d5db;
-  transform: translateY(-2px);
+  background: #f9fafb;
+  border-color: #9ca3af;
 }
 
 .btn-lg {
@@ -1445,12 +1596,12 @@ select.form-input {
   font-size: 1rem;
 }
 
-.btn-confirm {
-  min-width: 300px;
+.btn-next {
+  margin-left: auto;
 }
 
 .btn-icon {
-  font-size: 1.1rem;
+  font-size: 1.25rem;
 }
 
 .btn-loading {
@@ -1465,261 +1616,265 @@ select.form-input {
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   border-top-color: white;
-  animation: spin 0.8s linear infinite;
+  animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
+/* Page de confirmation */
+.confirmation-container {
+  text-align: center;
+}
+
+.success-animation {
+  margin-bottom: 2rem;
+}
+
+.success-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #10b981;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  animation: scaleIn 0.5s ease;
+}
+
+@keyframes scaleIn {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.checkmark {
+  font-size: 2.5rem;
+  color: white;
+  font-weight: bold;
+}
+
+.confirmation-header {
+  margin-bottom: 3rem;
+}
+
+.confirmation-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 1rem;
+}
+
+.confirmation-subtitle {
+  color: #6b7280;
+  font-size: 1.125rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.order-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  text-align: left;
+}
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.order-header h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.order-badge {
+  background: #f3f4f6;
+  color: #374151;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.order-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f9fafb;
+}
+
+.detail-label {
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.detail-value {
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.detail-value.price {
+  color: #8b5cf6;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.order-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  position: relative;
+  padding-left: 1.5rem;
+}
+
+.order-timeline::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #e5e7eb;
+}
+
+.timeline-item {
+  display: flex;
+  gap: 1rem;
+  position: relative;
+}
+
+.timeline-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid #e5e7eb;
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.timeline-item.active .timeline-dot {
+  border-color: #10b981;
+  background: #10b981;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+}
+
+.timeline-content {
+  flex: 1;
+}
+
+.timeline-content h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 0.25rem;
+}
+
+.timeline-content p {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
 .confirmation-actions {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  align-items: center;
-  margin: 2rem 0;
+  margin-bottom: 2rem;
 }
 
 .confirmation-footer {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
-  margin-top: 2rem;
 }
 
 .info-box {
-  background: #f8fafc;
-  border-radius: 12px;
-  padding: 1.5rem;
   display: flex;
-  align-items: flex-start;
   gap: 1rem;
-  border: 1px solid #e5e7eb;
+  align-items: flex-start;
+  background: #f9fafb;
+  padding: 1rem;
+  border-radius: 8px;
+  text-align: left;
 }
 
 .info-icon {
-  font-size: 1.5rem;
-  flex-shrink: 0;
+  font-size: 1.25rem;
 }
 
 .info-content h4 {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: #1f2937;
-  margin: 0 0 0.5rem 0;
+  margin-bottom: 0.25rem;
 }
 
 .info-content p {
-  font-size: 0.9rem;
   color: #6b7280;
+  font-size: 0.875rem;
   margin: 0;
-  line-height: 1.4;
 }
 
-.step-navigation {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 2rem;
-  border-top: 1px solid #e5e7eb;
-}
-
-/* Sidebar */
-.checkout-sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.sidebar-card {
+/* Récapitulatif */
+.summary-card {
   background: white;
-  border-radius: 16px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  position: sticky;
-  top: 6rem;
-}
-
-.sidebar-title {
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0 0 1.5rem 0;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #f3f4f6;
-}
-
-.cart-items {
-  margin-bottom: 1.5rem;
-}
-
-.cart-item {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid #f9fafb;
-}
-
-.cart-item:last-child {
-  border-bottom: none;
-}
-
-.item-image {
-  width: 50px;
-  height: 50px;
-  background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2rem;
-  flex-shrink: 0;
-}
-
-.item-details {
-  flex: 1;
-}
-
-.item-name {
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: #1f2937;
-  margin: 0 0 0.25rem 0;
-  line-height: 1.2;
-}
-
-.item-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.item-quantity {
-  font-size: 0.8rem;
-  color: #6b7280;
-}
-
-.item-price {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #1f2937;
-}
-
-.price-breakdown {
+  padding: 1.5rem;
   margin-bottom: 1.5rem;
 }
 
-.price-row {
+.summary-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid #f9fafb;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
 }
 
-.price-row:last-child {
-  border-bottom: none;
+.summary-icon {
+  font-size: 1.25rem;
 }
 
-.price-row span:first-child {
-  font-size: 0.9rem;
-  color: #6b7280;
-}
-
-.price-row span:last-child {
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: #1f2937;
-}
-
-.price-row .free {
-  color: #10b981;
-  font-weight: 600;
-}
-
-.price-row.total {
-  padding-top: 1rem;
-  border-top: 2px solid #e5e7eb;
-  margin-top: 0.5rem;
-}
-
-.total-price {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #3b82f6;
-}
-
-.sidebar-footer {
+.summary-content {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  margin-top: 1.5rem;
 }
 
-.protection-badge,
-.guarantee-badge {
+.summary-item {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
-  color: #4b5563;
-  padding: 0.5rem;
-  background: #f8fafc;
-  border-radius: 8px;
+  justify-content: space-between;
 }
 
-.protection-icon,
-.guarantee-icon {
-  font-size: 1rem;
+.summary-label {
+  color: #6b7280;
+  font-size: 0.875rem;
 }
 
-.help-card {
-  background: linear-gradient(135deg, #f0f9ff, #e6f7ff);
-  border-radius: 16px;
-  padding: 1.5rem;
-  border: 1px solid #bfdbfe;
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-}
-
-.help-icon {
-  font-size: 1.5rem;
-  flex-shrink: 0;
-}
-
-.help-content h4 {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0 0 0.5rem 0;
-}
-
-.help-content p {
-  font-size: 0.9rem;
-  color: #4b5563;
-  margin: 0 0 0.75rem 0;
-  line-height: 1.4;
-}
-
-.help-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: #3b82f6;
-  text-decoration: none;
+.summary-value {
   font-weight: 500;
-  font-size: 0.9rem;
-  transition: color 0.3s ease;
-}
-
-.help-link:hover {
-  color: #2563eb;
-}
-
-.help-link-icon {
-  font-size: 1rem;
+  color: #1f2937;
+  text-align: right;
+  max-width: 200px;
 }
 
 /* Responsive */
@@ -1729,55 +1884,68 @@ select.form-input {
   }
   
   .checkout-sidebar {
-    order: -1;
-  }
-  
-  .sidebar-card {
     position: static;
   }
 }
 
 @media (max-width: 768px) {
-  .header-content,
+  .checkout-layout,
   .progress-container,
-  .checkout-layout {
+  .header-content {
     padding: 0 1rem;
   }
   
-  .step-container {
-    padding: 1.5rem;
+  .progress-steps {
+    gap: 0.5rem;
+  }
+  
+  .step-title {
+    font-size: 0.75rem;
   }
   
   .form-grid {
     grid-template-columns: 1fr;
   }
   
-  .delivery-grid {
+  .form-group.full-width {
+    grid-column: span 1;
+  }
+  
+  .confirmation-footer {
     grid-template-columns: 1fr;
   }
   
-  .confirmation-title {
-    font-size: 1.8rem;
+  .order-timeline::before {
+    left: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .step-container {
+    padding: 1rem;
   }
   
-  .btn-confirm {
-    min-width: 100%;
+  .section-card {
+    padding: 1rem;
   }
   
-  .progress-steps {
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .step-navigation {
     flex-direction: column;
     gap: 1rem;
   }
   
-  .progress-step {
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 1rem;
+  .btn-next {
+    margin-left: 0;
+    width: 100%;
   }
   
-  .step-info {
-    align-items: flex-start;
+  .confirmation-actions {
+    gap: 0.75rem;
   }
 }
 </style>

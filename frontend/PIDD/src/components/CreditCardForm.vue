@@ -369,11 +369,12 @@ export default {
         const paymentResult = await this.processWithStripe()
         
         if (paymentResult.success) {
-          this.$emit('payment-success', {
-            method: 'credit_card',
-            transactionId: paymentResult.transactionId,
-            cardLast4: this.cardData.number.slice(-4)
-          })
+          this.$emit('payment-completed', {
+  method: 'credit_card',
+  transactionId: paymentResult.transactionId,
+  cardLast4: this.cardData.number.slice(-4),
+  amount: this.amount
+})
         } else {
           throw new Error(paymentResult.error || 'Paiement échoué')
         }

@@ -324,6 +324,7 @@
 </template>
 
 <script>
+  import axios from 'axios'
 import { productService } from '../services/productServices';
 
 export default {
@@ -545,61 +546,51 @@ export default {
       return `${Math.round(discount)}%`;
     },
     
-    async addToCart() {
-      if (!this.product || !this.product.quantity || this.addingToCart) return;
-      
-      this.addingToCart = true;
-      
-      try {
-        const productToAdd = {
-          ...this.product,
-          quantity: this.quantity,
-          selectedVariants: { ...this.selectedVariants },
-          addedAt: new Date().toISOString()
-        };
-
-        if (this.addToCartGlobal) {
-          await this.addToCartGlobal(productToAdd);
-        } else {
-          await this.addToCartLocal(productToAdd);
-        }
-        
-        this.showToastMessage(
-          `✅ ${this.quantity} "${this.product.name}" ajouté${this.quantity > 1 ? 's' : ''} au panier`,
-          'success'
-        );
-        
-        // Reset quantity after successful add
-        setTimeout(() => {
-          this.quantity = 1;
-        }, 500);
-        
-      } catch (err) {
-        console.error('Erreur ajout panier:', err);
-        this.showToastMessage('❌ Erreur lors de l\'ajout au panier', 'error');
-      } finally {
-        this.addingToCart = false;
-      }
-    },
     
-    async addToCartLocal(product) {
-      return new Promise((resolve) => {
-        const cart = JSON.parse(localStorage.getItem('monShop_cart') || '[]');
-        const existingIndex = cart.findIndex(item => item.id === product.id);
-        
-        if (existingIndex > -1) {
-          cart[existingIndex].quantity += product.quantity;
-        } else {
-          cart.push(product);
+async addToCart() {
+  if (!this.product || this.quantity <= 0 || this.addingToCart) return
+
+  if (!this.user) {
+    this.showToastMessage('Veuillez vous connecter', 'error')
+    this.$router.push('/login')
+    return
+  }
+
+  this.addingToCart = true
+
+  try {
+    await axios.post(
+      'http://localhost:3000/cart/item',
+      {
+        productId: this.product.id,
+        quantity: this.quantity
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
         }
-        
-        localStorage.setItem('monShop_cart', JSON.stringify(cart));
-        
-        // Émettre un événement pour mettre à jour d'autres composants
-        window.dispatchEvent(new CustomEvent('cart-updated'));
-        resolve();
-      });
-    },
+      }
+    )
+
+    this.showToastMessage(
+      `✅ ${this.quantity} "${this.product.name}" ajouté${this.quantity > 1 ? 's' : ''} au panier`,
+      'success'
+    )
+
+    this.quantity = 1
+
+    // informer le parent / store
+    this.$emit('cart-updated')
+
+  } catch (err) {
+    console.error('❌ Erreur ajout panier:', err)
+    this.showToastMessage('❌ Erreur lors de l’ajout au panier', 'error')
+  } finally {
+    this.addingToCart = false
+  }
+}
+,
+
     
     buyNow() {
       if (!this.product?.quantity) return;

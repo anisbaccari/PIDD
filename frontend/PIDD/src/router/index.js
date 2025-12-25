@@ -6,7 +6,8 @@ import CategoryPage from '../views/CategoryPage.vue'
 import ProductPage from '../views/ProductPage.vue'
 import Profilview from '../views/Profilview.vue'
 import Detailsproduit from '../views/Detailsproduit.vue'
-import Adminview from '../views/Adminview.vue'
+import Adminview from '../views/AdminView.vue'
+
 
 import AdminProducts from '../views/AdminProducts.vue'
 import CartPage from '../views/CartPage.vue'
@@ -14,13 +15,14 @@ import CartPage from '../views/CartPage.vue'
 // Import des nouvelles vues de paiement
 import CheckoutPage from '../views/CheckoutPage.vue'
 
-import CheckoutPage1 from '../views/CheckoutPage1.vue'
+//import CheckoutPage1 from '../views/CheckoutPage1.vue'
 //import PaymentSuccess from '../views/PaymentSuccess.vue'
 
 // Import des composants d'authentification
 import LoginForm from '../components/LoginForm.vue'
 import RegisterForm from '../components/RegisterForm.vue'
 import OrderConfirmation from '../components/OrderConfirmation.vue'
+import AllCategorie from '../views/AllCategories.vue'
 
 const routes = [
   { 
@@ -64,7 +66,12 @@ const routes = [
     component: Profilview,
     props: true
   },
-  
+  { 
+    path: '/allcategories', 
+    name: 'AllCategories', 
+    component: AllCategorie,
+    props: true
+  },
   { 
     path: '/login', 
     name: 'Login', 
@@ -129,16 +136,7 @@ const routes = [
       title: 'Finaliser votre commande'
     }
   },
-  {
-   path: '/checkout',
-    name: 'Checkout1',
-    component: CheckoutPage1,
-    props: true,
-    meta: { 
-      requiresAuth: true,
-      title: 'Finaliser votre commande'
-    }
-  },
+ 
 
   
   // Redirection par défaut

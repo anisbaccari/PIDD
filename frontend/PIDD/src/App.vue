@@ -1,36 +1,33 @@
 <script>
-import api from './api';
-import AppFooter from './components/AppFooter.vue';
+import axios from 'axios'
+import AppFooter from './components/AppFooter.vue'
+import UserMenu from './components/UserMenu.vue'
 
-import UserMenu from './components/UserMenu.vue';
-
-
-// Créer un Event Bus simple pour Vue 3 (remplace $root.$on)
+// Event Bus pour Vue 3
 const EventBus = {
   events: {},
   $on(event, callback) {
     if (!this.events[event]) {
-      this.events[event] = [];
+      this.events[event] = []
     }
-    this.events[event].push(callback);
+    this.events[event].push(callback)
   },
   $emit(event, data) {
     if (this.events[event]) {
-      this.events[event].forEach(callback => callback(data));
+      this.events[event].forEach(callback => callback(data))
     }
   },
   $off(event, callback) {
     if (this.events[event]) {
-      const index = this.events[event].indexOf(callback);
+      const index = this.events[event].indexOf(callback)
       if (index > -1) {
-        this.events[event].splice(index, 1);
+        this.events[event].splice(index, 1)
       }
     }
   }
-};
+}
 
-// Rendre l'Event Bus global
-window.EventBus = EventBus;
+window.EventBus = EventBus
 
 export default {
   components: { AppFooter, UserMenu },
@@ -38,368 +35,186 @@ export default {
   data() {
     return {
       user: null,
-      cartItems: JSON.parse(localStorage.getItem("cart_anonymous")) || [], // Panier anonyme par défaut
-      isLoadingUser: false,
-      previousUserId: null
-    };
+      cartItemsCount: 0, // 🔥 Nombre d'articles dans le panier BD
+      isLoadingUser: false
+    }
   },
 
   methods: {
-    /* --- AUTHENTIFICATION --- */
+    /* === AUTHENTIFICATION === */
     setUser(user) {
-      console.log('🔄 App.vue: setUser appelé avec:', user);
+      console.log('🔄 setUser:', user)
+      this.user = user
       
-      // Si on avait un utilisateur précédent, sauvegarder son panier
-      if (this.user && this.user.id) {
-        this.saveUserCart(this.user.id);
-      }
-      
-      // Si c'est un NOUVEL utilisateur (différent du précédent)
-      if (user && user.id && this.previousUserId !== user.id) {
-        console.log(`🔄 Changement d'utilisateur: ${this.previousUserId} -> ${user.id}`);
-        
-        // Charger le panier du nouvel utilisateur
-        this.loadUserCart(user.id);
-      } 
-      // Si déconnexion (user devient null)
-      else if (!user && this.user) {
-        console.log('🔓 Déconnexion - Sauvegarde du panier anonyme');
-        this.saveAnonymousCart();
-      }
-      // Si même utilisateur (rechargement de page, etc.)
-      else if (user && user.id === this.previousUserId) {
-        console.log('🔄 Même utilisateur - Panier inchangé');
-        // Le panier est déjà chargé, on ne fait rien
-      }
-      
-      this.user = user;
-      
-      // Sauvegarder l'utilisateur dans localStorage
       if (user) {
-        localStorage.setItem('user', JSON.stringify(user));
-        this.previousUserId = user.id; // Mettre à jour l'ID précédent
+        localStorage.setItem('user', JSON.stringify(user))
+        // Charger le compteur du panier depuis la BD
+        this.fetchCartCount()
       } else {
-        localStorage.removeItem('user');
-        this.previousUserId = null;
+        localStorage.removeItem('user')
+        this.cartItemsCount = 0
       }
       
-      this.$forceUpdate();
+      this.$forceUpdate()
     },
 
     getUser() {
-      return this.user;
+      return this.user
     },
 
-    /* --- FONCTIONS PANIER PAR UTILISATEUR --- */
-    // Sauvegarder le panier d'un utilisateur spécifique
-    saveUserCart(userId) {
-      if (!userId) return;
-      const cartKey = `cart_user_${userId}`;
-      localStorage.setItem(cartKey, JSON.stringify(this.cartItems));
-      console.log(`💾 Panier sauvegardé pour l'utilisateur ${userId}`);
-    },
-
-    // Charger le panier d'un utilisateur spécifique
-    loadUserCart(userId) {
-      if (!userId) return;
-      const cartKey = `cart_user_${userId}`;
-      const savedCart = localStorage.getItem(cartKey);
-      
-      if (savedCart) {
-        try {
-          this.cartItems = JSON.parse(savedCart);
-          console.log(`📂 Panier chargé pour l'utilisateur ${userId}:`, this.cartItems.length, 'articles');
-        } catch (error) {
-          console.error('❌ Erreur parsing panier:', error);
-          this.cartItems = [];
-        }
-      } else {
-        // Nouvel utilisateur = panier vide
-        this.cartItems = [];
-        console.log(`🆕 Nouvel utilisateur ${userId} - Panier vide`);
-      }
-      
-      localStorage.removeItem("cart_anonymous"); // Nettoyer le panier anonyme
-    },
-
-    // Sauvegarder le panier anonyme (utilisateurs non connectés)
-    saveAnonymousCart() {
-      localStorage.setItem("cart_anonymous", JSON.stringify(this.cartItems));
-      console.log('💾 Panier anonyme sauvegardé');
-    },
-
-    // Charger le panier anonyme
-    loadAnonymousCart() {
-      const anonymousCart = localStorage.getItem("cart_anonymous");
-      if (anonymousCart) {
-        try {
-          this.cartItems = JSON.parse(anonymousCart);
-          console.log('📂 Panier anonyme chargé:', this.cartItems.length, 'articles');
-        } catch (error) {
-          console.error('❌ Erreur parsing panier anonyme:', error);
-          this.cartItems = [];
-        }
-      } else {
-        this.cartItems = [];
-      }
-    },
-
-    /* --- FONCTIONS PANIER (modifiées pour gérer l'utilisateur) --- */
-    addToCart(product) {
-      const existing = this.cartItems.find(p => p.id === product.id);
-
-      if (existing) {
-        existing.quantity++;
-      } else {
-        this.cartItems.push({ ...product, quantity: 1 });
+    /* === PANIER BD === */
+    async fetchCartCount() {
+      if (!this.user) {
+        this.cartItemsCount = 0
+        return
       }
 
-      // Sauvegarder dans le bon emplacement
-      this.saveCurrentCart();
-    },
-
-    updateCartQuantity(id, quantity) {
-      const item = this.cartItems.find(i => i.id === id);
-      if (!item) return;
-
-      if (quantity <= 0) {
-        this.removeFromCart(id);
-        return;
+      try {
+        console.log('🔄 Chargement du compteur panier...')
+        
+        const res = await axios.get('/cart')
+        
+        const totalItems = res.data?.totalItems || 0
+        this.cartItemsCount = totalItems
+        
+        console.log(`🛒 Panier: ${totalItems} articles`)
+        
+      } catch (err) {
+        console.error('❌ Erreur compteur panier:', err)
+        this.cartItemsCount = 0
       }
-
-      item.quantity = quantity;
-      this.saveCurrentCart();
-    },
-
-    removeFromCart(id) {
-      this.cartItems = this.cartItems.filter(i => i.id !== id);
-      this.saveCurrentCart();
-    },
-
-    clearCart() {
-      this.cartItems = [];
-      this.saveCurrentCart();
-    },
-
-    // Sauvegarder le panier au bon endroit selon l'utilisateur
-    saveCurrentCart() {
-      if (this.user && this.user.id) {
-        this.saveUserCart(this.user.id);
-      } else {
-        this.saveAnonymousCart();
-      }
-      
-      // Émettre un événement pour notifier les composants
-      window.EventBus.$emit('cart-updated');
-    },
-
-    getCartTotal() {
-      return this.cartItems.reduce(
-        (sum, item) => sum + item.price * item.quantity,
-        0
-      );
     },
 
     getTotalItems() {
-      return this.cartItems.reduce((sum, item) => sum + item.quantity, 0);
+      return this.cartItemsCount
     },
 
-    /* --- VÉRIFICATION UTILISATEUR --- */
+    /* === VÉRIFICATION UTILISATEUR === */
     async checkUserAuthentication() {
-      console.log('🔍 Vérification authentification...');
+      console.log('🔍 Vérification authentification...')
       
-      const storedUser = localStorage.getItem('user');
-      const token = localStorage.getItem('token');
-      
-      console.log('🔑 Token dans localStorage:', token);
-      console.log('👤 User dans localStorage:', storedUser);
+      const storedUser = localStorage.getItem('user')
+      const token = localStorage.getItem('token')
       
       if (!token) {
-        console.log('❌ Pas de token, déconnexion');
-        this.user = null;
-        localStorage.removeItem('user');
-        this.previousUserId = null;
-        
-        // Charger le panier anonyme
-        this.loadAnonymousCart();
-        return;
+        console.log('❌ Pas de token')
+        this.user = null
+        this.cartItemsCount = 0
+        localStorage.removeItem('user')
+        return
       }
-      
-      // Si on a déjà un user dans localStorage
+
+      // Charger l'utilisateur depuis localStorage
       if (storedUser) {
         try {
-          const parsedUser = JSON.parse(storedUser);
+          this.user = JSON.parse(storedUser)
+          console.log('✅ User chargé:', this.user)
           
-          // Vérifier si c'est un nouvel utilisateur
-          const isDifferentUser = this.previousUserId !== parsedUser.id;
-          
-          if (isDifferentUser && parsedUser.id) {
-            // Sauvegarder l'ancien panier si nécessaire
-            if (this.previousUserId) {
-              this.saveUserCart(this.previousUserId);
-            }
-            
-            // Charger le panier du nouvel utilisateur
-            this.loadUserCart(parsedUser.id);
-          }
-          
-          this.user = parsedUser;
-          this.previousUserId = parsedUser.id;
-          console.log('✅ User chargé depuis localStorage:', this.user);
-          return;
+          // Charger le compteur du panier
+          await this.fetchCartCount()
+          return
         } catch (err) {
-          console.error('❌ Erreur parsing user:', err);
-          localStorage.removeItem('user');
-          this.previousUserId = null;
-          this.loadAnonymousCart();
+          console.error('❌ Erreur parsing user:', err)
+          localStorage.removeItem('user')
         }
       }
-      
+
       // Sinon, essayer de récupérer depuis l'API
-      this.isLoadingUser = true;
+      this.isLoadingUser = true
       
       try {
-        const endpoints = [
-          '/auth/me',
-          '/api/auth/me',
-          '/user/me',
-          '/users/me',
-          '/profile',
-          '/api/profile'
-        ];
-        
-        let userData = null;
+        const endpoints = ['/auth/me', '/api/auth/me']
+        let userData = null
         
         for (const endpoint of endpoints) {
           try {
-            console.log(`🔄 Tentative GET ${endpoint}`);
-            const res = await api.get(endpoint, {
-              headers: { Authorization: `Bearer ${token}` }
-            });
-            
-            console.log(`✅ Réponse de ${endpoint}:`, res.data);
+            console.log(`🔄 GET ${endpoint}`)
+            const res = await axios.get(endpoint)
             
             if (res.data) {
-              userData = res.data.user || res.data.data || res.data;
+              userData = res.data.user || res.data.data || res.data
               if (userData && (userData.username || userData.email || userData.id)) {
-                console.log(`✅ User trouvé dans ${endpoint}:`, userData);
-                break;
+                console.log(`✅ User trouvé:`, userData)
+                break
               }
             }
           } catch (err) {
-            console.log(`❌ ${endpoint} échoué:`, err.message);
-            continue;
+            console.log(`❌ ${endpoint} échoué`)
+            continue
           }
         }
         
         if (userData) {
-          // Vérifier si c'est un nouvel utilisateur
-          const isDifferentUser = this.previousUserId !== userData.id;
+          this.user = userData
+          localStorage.setItem('user', JSON.stringify(userData))
           
-          if (isDifferentUser && userData.id) {
-            // Sauvegarder l'ancien panier si nécessaire
-            if (this.previousUserId) {
-              this.saveUserCart(this.previousUserId);
-            }
-            
-            // Charger le panier du nouvel utilisateur
-            this.loadUserCart(userData.id);
-          }
-          
-          this.user = userData;
-          this.previousUserId = userData.id;
-          localStorage.setItem('user', JSON.stringify(userData));
-          console.log('👤 User défini:', this.user);
+          // Charger le compteur du panier
+          await this.fetchCartCount()
         } else {
-          console.log('⚠️ Aucun endpoint API ne fonctionne');
-          this.user = null;
-          this.previousUserId = null;
-          this.loadAnonymousCart();
+          this.user = null
+          this.cartItemsCount = 0
         }
         
       } catch (err) {
-        console.error('❌ Erreur vérification API:', err);
-        this.user = null;
-        this.previousUserId = null;
-        this.loadAnonymousCart();
+        console.error('❌ Erreur API:', err)
+        this.user = null
+        this.cartItemsCount = 0
       } finally {
-        this.isLoadingUser = false;
+        this.isLoadingUser = false
       }
     },
 
-    // Forcer le rafraîchissement
     refreshUser() {
-      console.log('🔄 Rafraîchissement user demandé');
-      this.checkUserAuthentication();
+      console.log('🔄 Rafraîchissement user')
+      this.checkUserAuthentication()
     },
 
-    // Déconnexion
     logoutUser() {
-      console.log('🚪 Déconnexion');
+      console.log('🚪 Déconnexion')
       
-      // Sauvegarder le panier de l'utilisateur avant déconnexion
-      if (this.user && this.user.id) {
-        this.saveUserCart(this.user.id);
-      }
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      this.user = null
+      this.cartItemsCount = 0
       
-      // Basculer vers le panier anonyme
-      this.loadAnonymousCart();
-      
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      this.user = null;
-      this.previousUserId = null;
-      
-      this.$router.push('/');
+      this.$router.push('/')
     }
   },
 
   async mounted() {
-    console.log('🚀 App.vue monté');
-    
-    // Charger d'abord le panier anonyme (par défaut)
-    this.loadAnonymousCart();
+    console.log('🚀 App.vue monté')
     
     // Vérifier l'authentification
-    await this.checkUserAuthentication();
+    await this.checkUserAuthentication()
     
-    // Écouter les événements de login avec Event Bus
+    // Écouter les événements
     window.EventBus.$on('user-logged-in', (userData) => {
-      console.log('🎯 Événement user-logged-in reçu:', userData);
+      console.log('🎯 user-logged-in:', userData)
       if (userData) {
-        this.setUser(userData);
+        this.setUser(userData)
       } else {
-        this.checkUserAuthentication();
+        this.checkUserAuthentication()
       }
-    });
+    })
     
-    // Écouter les événements de logout
     window.EventBus.$on('user-logged-out', () => {
-      console.log('🎯 Événement user-logged-out reçu');
-      this.logoutUser();
-    });
+      console.log('🎯 user-logged-out')
+      this.logoutUser()
+    })
     
-    // Écouter les événements de mise à jour du panier
+    // 🔥 IMPORTANT: Recharger le compteur quand le panier est mis à jour
     window.EventBus.$on('cart-updated', () => {
-      console.log('🛒 Événement cart-updated reçu');
-      this.$forceUpdate();
-    });
+      console.log('🛒 cart-updated')
+      this.fetchCartCount()
+    })
   },
 
   beforeUnmount() {
-    // Sauvegarder le panier avant de quitter
-    if (this.user && this.user.id) {
-      this.saveUserCart(this.user.id);
-    } else {
-      this.saveAnonymousCart();
-    }
-    
-    // Nettoyer les écouteurs d'événements
-    window.EventBus.$off('user-logged-in');
-    window.EventBus.$off('user-logged-out');
-    window.EventBus.$off('cart-updated');
+    window.EventBus.$off('user-logged-in')
+    window.EventBus.$off('user-logged-out')
+    window.EventBus.$off('cart-updated')
   }
-};
+}
 </script>
 
 <template>
@@ -416,18 +231,20 @@ export default {
 
       <div class="nav-links">
         <router-link to="/" class="nav-link">Accueil</router-link>
-         <router-link v-if="this.user && this.user.is_admin" to="/admin" class="nav-link">Admin</router-link>
+        <router-link v-if="user && user.is_admin" to="/admin" class="nav-link">
+          Admin
+        </router-link>
         <router-link to="/category/1" class="nav-link">Homme</router-link>
         <router-link to="/category/2" class="nav-link">Femme</router-link>
         <router-link to="/category/3" class="nav-link">Enfants</router-link>
-        <router-link to="/cart" class="nav-link">Panier ({{ getTotalItems() }})</router-link>
-        
+        <router-link to="/cart" class="nav-link">
+          Panier ({{ getTotalItems() }})
+        </router-link>
       </div>
 
       <div class="nav-login">
-  <UserMenu :user="user" />
-</div>
-
+        <UserMenu :user="user" />
+      </div>
     </nav>
 
     <!-- Contenu principal -->
@@ -435,13 +252,6 @@ export default {
       :user="user"
       :setUser="setUser"
       :getUser="getUser"
-      :cartItems="cartItems"
-      :addToCartGlobal="addToCart"
-      :updateCartQuantity="updateCartQuantity"
-      :removeFromCart="removeFromCart"
-      :clearCart="clearCart"
-      :getCartTotal="getCartTotal"
-      :getTotalItems="getTotalItems"
       :refreshUser="refreshUser"
     />
 
@@ -504,49 +314,7 @@ body {
   align-items: center;
 }
 
-.login-button {
-  padding: 0.5rem 1rem;
-  background: #3b82f6;
-  color: white !important;
-  border-radius: 8px;
-  text-decoration: none;
-  transition: all 0.3s ease;
-}
-
-.login-button:hover {
-  background: #2563eb;
-  transform: translateY(-1px);
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.welcome {
-  color: #3b82f6;
-  font-weight: 500;
-  font-size: 0.9rem;
-}
-
-.logout-btn {
-  padding: 0.5rem 1rem;
-  background: #ef4444;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.logout-btn:hover {
-  background: #dc2626;
-  transform: translateY(-1px);
-}
-
-/* Loader utilisateur */
+/* Loader */
 .user-loading {
   position: fixed;
   top: 0;

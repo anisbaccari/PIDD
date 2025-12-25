@@ -33,7 +33,7 @@
       
       <p class="success-subtitle">
         <span class="subtitle-icon">🎉</span>
-        Merci pour votre achat{{ user ? `, ${user.prenom}` : '' }} ! Votre commande a été enregistrée avec succès.
+        Merci pour votre achat{{ user ? `, ${user.name}` : '' }} ! Votre commande a été enregistrée avec succès.
       </p>
       
       <div class="order-number-display">
@@ -153,7 +153,13 @@
             <div v-for="(item, index) in orderData.items" :key="index" class="order-item">
               <div class="item-image-animated">
                 <div class="image-circle">
-                  <span class="item-emoji">📦</span>
+                  <img
+                    :src="getProductImage(item)"
+                    :alt="item.name || 'Produit'"
+                    @error="handleImageError"
+                    loading="lazy"
+                    class="product-image"
+                  />
                 </div>
                 <div class="image-glow"></div>
               </div>
@@ -309,26 +315,51 @@ export default {
           year: 'numeric'
         })
       }
-      return 'dimanche 7 décembre 2025'
+      return new Date().toLocaleDateString('fr-FR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      })
     },
     
     estimatedDeliveryDate() {
-      return this.orderData?.estimatedDelivery || 'mercredi 10 décembre'
-    },
-    
-    formattedAmount() {
-      if (this.orderData?.amount) {
-        return new Intl.NumberFormat('fr-FR', {
-          style: 'currency',
-          currency: 'EUR',
-          minimumFractionDigits: 2
-        }).format(this.orderData.amount)
+      if (this.orderData?.estimatedDelivery) {
+        return this.orderData.estimatedDelivery
       }
-      return '0,00 €'
+      
+      // Calculer une date estimée
+      const today = new Date()
+      const deliveryDate = new Date(today)
+      deliveryDate.setDate(deliveryDate.getDate() + 5)
+      
+      return deliveryDate.toLocaleDateString('fr-FR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long'
+      })
     },
     
+ formattedAmount() {
+    if (this.orderData?.total) {
+      return new Intl.NumberFormat('fr-FR', {
+        style: 'currency',
+        currency: 'EUR',
+        minimumFractionDigits: 2
+      }).format(this.orderData.total)
+    } else if (this.orderData?.amount) {
+      // Fallback sur 'amount' si 'total' n'existe pas
+      return new Intl.NumberFormat('fr-FR', {
+        style: 'currency',
+        currency: 'EUR',
+        minimumFractionDigits: 2
+      }).format(this.orderData.amount)
+    }
+    return '0,00 €'
+  },
+  
     trackingNumber() {
-      return this.orderData?.trackingNumber || 'MONSHOP-115121-R9IBY6'
+      return this.orderData?.trackingNumber || this.generateTrackingNumber()
     },
     
     deliveryMethod() {
@@ -339,14 +370,14 @@ export default {
       const methods = {
         'credit_card': 'Carte bancaire',
         'paypal': 'PayPal',
-        'apple_pay': 'Apple Pay',
-        'google_pay': 'Google Pay'
+        'carte': 'Carte bancaire',
+        'virement': 'Virement bancaire'
       }
       return methods[this.orderData?.paymentMethod] || 'Paiement'
     },
     
     orderId() {
-      return this.orderData?.orderId || this.$route.query.orderId || 'CMD-123456'
+      return this.orderData?.orderId || this.$route.query.orderId || 'CMD-' + Date.now().toString().slice(-6)
     },
     
     summaryRows() {
@@ -359,10 +390,14 @@ export default {
     },
     
     priceRows() {
+      const subtotal = this.orderData?.subtotal || (this.orderData?.amount || 0) - (this.orderData?.deliveryPrice || 0)
+      const delivery = this.orderData?.deliveryPrice || 0
+      const total = this.orderData?.amount || 0
+      
       return [
-        { label: 'Sous-total', value: this.formatPrice(this.orderData?.subtotal || 0), class: '' },
-        { label: 'Livraison', value: this.formatPrice(this.orderData?.deliveryPrice || 0), class: '' },
-        { label: 'Total', value: this.formattedAmount, class: 'total' }
+        { label: 'Sous-total', value: this.formatPrice(subtotal), class: '' },
+        { label: 'Livraison', value: this.formatPrice(delivery), class: '' },
+        { label: 'Total', value: this.formatPrice(total), class: 'total' }
       ]
     }
   },
@@ -371,57 +406,223 @@ export default {
     localStorage.removeItem('monShop_cart')
     localStorage.removeItem('cart')
     
+    // Précharger les images
+    this.$nextTick(() => {
+      setTimeout(() => {
+        this.preloadImages()
+      }, 500)
+    })
+    
     // Simulation d'animation de progression
     setTimeout(() => {
       this.timelineSteps[1].active = true
     }, 1000)
   },
   methods: {
-    loadOrderData() {
-      const savedOrder = localStorage.getItem('currentOrder') || localStorage.getItem('lastOrder')
+    getProductImage(item) {
+      // Essayer plusieurs chemins possibles pour l'image
+      if (item.img) {
+        return `/images/${item.img}`
+      }
       
-      if (savedOrder) {
+      if (item.image) {
+        return `/images/${item.image}`
+      }
+      
+      // Si l'item a un objet product
+      if (item.product) {
+        if (item.product.img) {
+          return `/images/${item.product.img}`
+        }
+        if (item.product.image) {
+          return `/images/${item.product.image}`
+        }
+      }
+      
+      // Image par défaut
+      return '/images/placeholder.png'
+    },
+    
+    handleImageError(event) {
+      console.warn('⚠️ Image non chargée:', event.target.src)
+      event.target.src = '/images/placeholder.png'
+      event.target.classList.add('error-image')
+    },
+    async loadOrderData() {
+  // 1. Vérifier d'abord dans l'URL
+  const query = this.$route.query
+  console.log('🔍 Query params:', query)
+  
+  if (query.orderId || query.orderNumber) {
+    const orderId = query.orderId || query.orderNumber
+    
+    // Vérifier dans localStorage avec plusieurs clés
+    const storageKeys = [
+      `order_${orderId}`,
+      'lastOrder',
+      'currentOrder',
+      'currentOrderDetails'
+    ]
+    
+    for (const key of storageKeys) {
+      const stored = localStorage.getItem(key)
+      if (stored) {
         try {
-          this.orderData = JSON.parse(savedOrder)
+          const parsed = JSON.parse(stored)
+          // Vérifier si c'est la bonne commande
+          if (parsed.orderId === orderId || parsed.id === orderId) {
+            this.orderData = this.formatOrderData(parsed)
+            console.log(`✅ Commande chargée depuis ${key}:`, this.orderData)
+            return
+          }
         } catch (e) {
-          console.error('Erreur parsing order data:', e)
+          console.warn(`⚠️ Erreur parsing ${key}:`, e)
         }
+      }
+    }
+    
+    // Si pas trouvé dans localStorage, créer depuis query params
+    this.orderData = {
+      orderId: orderId,
+      orderNumber: query.orderNumber || orderId,
+      amount: parseFloat(query.amount) || 0,
+      paymentMethod: query.paymentMethod || 'carte',
+      deliveryMethod: query.deliveryMethod || 'Livraison standard',
+      trackingNumber: query.tracking || this.generateTrackingNumber(),
+      date: new Date().toISOString(),
+      status: 'confirmed',
+      // Si vous avez besoin du total, calculez-le
+      total: parseFloat(query.amount) || 0,
+      subtotal: parseFloat(query.amount) || 0,
+      deliveryPrice: 0
+    }
+    console.log('✅ Commande créée depuis query params:', this.orderData)
+    return
+  }
+  
+  // 2. Fallback: dernier ordre dans localStorage
+  const lastOrder = localStorage.getItem('lastOrder')
+  if (lastOrder) {
+    try {
+      this.orderData = this.formatOrderData(JSON.parse(lastOrder))
+      console.log('✅ Commande chargée depuis lastOrder:', this.orderData)
+      return
+    } catch (e) {
+      console.error('❌ Erreur parsing lastOrder:', e)
+    }
+  }
+  
+  // 3. Données par défaut
+  this.orderData = this.getDefaultOrderData()
+  console.log('⚠️ Commande par défaut créée:', this.orderData)
+},
+    
+    preloadImages() {
+      if (!this.orderData?.items) return
+      
+      this.orderData.items.forEach(item => {
+        const imgUrl = this.getProductImage(item)
+        if (imgUrl && !imgUrl.includes('placeholder')) {
+          const img = new Image()
+          img.src = imgUrl
+        }
+      })
+    },
+    
+    formatOrderData(order) {
+      console.log('📦 Formatage des données de commande:', order)
+      
+      // Extraire les items correctement
+      let items = []
+      
+      if (order.items && Array.isArray(order.items)) {
+        items = order.items
+      } else if (order.orderItems && Array.isArray(order.orderItems)) {
+        items = order.orderItems
       }
       
-      if (!this.orderData && this.$route.query) {
-        this.orderData = {
-          orderId: this.$route.query.orderId,
-          amount: parseFloat(this.$route.query.amount) || 0,
-          paymentMethod: this.$route.query.paymentMethod,
-          deliveryMethod: this.$route.query.deliveryMethod,
-          trackingNumber: this.$route.query.trackingNumber,
-          estimatedDelivery: this.$route.query.estimatedDelivery
+      // Formater chaque item
+      const formattedItems = items.map(item => {
+        const product = item.product || item
+        return {
+          id: product.id || item.id,
+          name: product.name || item.name || 'Produit',
+          price: product.price || item.unitPrice || item.price || 0,
+          quantity: item.quantity || 1,
+          img: product.img || product.image || item.img || item.image,
+          image: product.img || product.image || item.img || item.image,
+          product: product
         }
-      }
+      })
       
-      if (!this.orderData) {
-        this.orderData = {
-          orderId: 'CMD-' + Date.now().toString().slice(-6),
-          amount: 0,
-          paymentMethod: 'credit_card',
-          deliveryMethod: 'Livraison standard',
-          trackingNumber: this.generateTrackingNumber(),
-          estimatedDelivery: 'mercredi 10 décembre'
-        }
+      return {
+        id: order.id,
+        orderId: order.orderNumber || order.id,
+        orderNumber: order.orderNumber || `CMD-${order.id}`,
+        amount: order.totalPrice || order.amount || 0,
+        subtotal: order.subtotal || (order.totalPrice || 0) - (order.deliveryPrice || 0),
+        deliveryPrice: order.deliveryPrice || order.shippingPrice || 0,
+        paymentMethod: order.paymentMethod,
+        deliveryMethod: order.shippingMethod || order.deliveryMethod || 'Livraison standard',
+        deliveryAddress: order.shippingAddress || order.deliveryAddress || {},
+        trackingNumber: order.trackingNumber || this.generateTrackingNumber(),
+        estimatedDelivery: order.estimatedDelivery || this.calculateEstimatedDelivery(),
+        date: order.createdAt || order.date || new Date().toISOString(),
+        items: formattedItems,
+        status: order.status || 'confirmed'
       }
+    },
+getDefaultOrderData() {
+  // Récupérer le montant depuis localStorage si disponible
+  let amount = 0
+  try {
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]')
+    if (cart.length > 0) {
+      amount = cart.reduce((total, item) => {
+        const price = parseFloat(item.price) || 0
+        const qty = parseInt(item.quantity) || 1
+        return total + (price * qty)
+      }, 0)
+    }
+  } catch (e) {
+    console.warn('⚠️ Erreur calcul panier:', e)
+  }
+  
+  return {
+    orderId: 'CMD-' + Date.now().toString().slice(-6),
+    orderNumber: 'CMD-' + Date.now().toString().slice(-6),
+    amount: amount,
+    total: amount,
+    subtotal: amount,
+    deliveryPrice: 0,
+    paymentMethod: 'credit_card',
+    deliveryMethod: 'Livraison standard',
+    trackingNumber: this.generateTrackingNumber(),
+    estimatedDelivery: this.calculateEstimatedDelivery(),
+    items: JSON.parse(localStorage.getItem('cart') || '[]'),
+    date: new Date().toISOString()
+  }
+},
+    
+    calculateEstimatedDelivery() {
+      const today = new Date()
+      const deliveryDate = new Date(today)
+      deliveryDate.setDate(deliveryDate.getDate() + 5)
+      
+      return deliveryDate.toLocaleDateString('fr-FR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long'
+      })
     },
     
     generateTrackingNumber() {
-      if (this.orderData?.trackingNumber) {
-        return this.orderData.trackingNumber
-      }
-      
       const date = new Date()
       const year = date.getFullYear().toString().substring(2)
       const month = (date.getMonth() + 1).toString().padStart(2, '0')
       const day = date.getDate().toString().padStart(2, '0')
       const random = Math.random().toString(36).substring(2, 8).toUpperCase()
-      return `MONSHOP-${year}${month}${day}-${random}`
+      return `TRK-${year}${month}${day}-${random}`
     },
     
     copyTrackingNumber() {
@@ -435,6 +636,7 @@ export default {
         })
         .catch(err => {
           console.error('Erreur lors de la copie:', err)
+          // Fallback pour les anciens navigateurs
           const textArea = document.createElement('textarea')
           textArea.value = trackingNumber
           document.body.appendChild(textArea)
@@ -476,7 +678,7 @@ Statut: Confirmée
 
 INFORMATIONS CLIENT
 --------------------------------
-${this.user ? `${this.user.nom} ${this.user.prenom}` : 'Client'}
+${this.user ? `${this.user.nom || ''} ${this.user.prenom || ''}`.trim() || this.user.name : 'Client'}
 ${this.user?.email || ''}
 ${this.user?.telephone || ''}
 
@@ -491,7 +693,7 @@ INFORMATIONS DE LIVRAISON
 Numéro de suivi: ${this.trackingNumber}
 Livraison estimée: ${this.estimatedDeliveryDate}
 ${this.orderData?.deliveryAddress ? 
-  `Adresse de livraison: ${this.orderData.deliveryAddress.street}, ${this.orderData.deliveryAddress.postalCode} ${this.orderData.deliveryAddress.city}` : 
+  `Adresse de livraison: ${this.orderData.deliveryAddress.street || ''}, ${this.orderData.deliveryAddress.postalCode || ''} ${this.orderData.deliveryAddress.city || ''}` : 
   'Adresse: Non spécifiée'}
 
 ARTICLES COMMANDÉS
@@ -516,11 +718,14 @@ Merci pour votre confiance !
     },
     
     formatPrice(price) {
+      const num = parseFloat(price)
+      if (isNaN(num)) return '0,00 €'
+      
       return new Intl.NumberFormat('fr-FR', {
         style: 'currency',
         currency: 'EUR',
         minimumFractionDigits: 2
-      }).format(price)
+      }).format(num)
     },
     
     particleStyle(n) {
@@ -1294,46 +1499,61 @@ Merci pour votre confiance !
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
 }
 
+/* CORRECTION DES IMAGES */
 .item-image-animated {
   position: relative;
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
 }
 
 .image-circle {
-  width: 70px;
-  height: 70px;
-  background: linear-gradient(135deg, #8b5cf6, #6366f1);
-  border-radius: 50%;
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f3f4f6;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2rem;
   position: relative;
   z-index: 1;
 }
 
-.image-glow {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 80px;
-  height: 80px;
-  background: linear-gradient(135deg, #8b5cf6, #6366f1);
-  border-radius: 50%;
-  filter: blur(10px);
-  opacity: 0.3;
-  animation: glow-pulse 2s ease-in-out infinite;
+/* IMPORTANT: Remplacement de .image-glow par une version plus subtile */
+.product-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+  transition: transform 0.3s ease;
 }
 
-@keyframes glow-pulse {
-  0%, 100% {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 0.3;
-  }
-  50% {
-    transform: translate(-50%, -50%) scale(1.1);
-    opacity: 0.5;
-  }
+.order-item:hover .product-image {
+  transform: scale(1.05);
+}
+
+/* Retirer ou corriger .image-glow qui cause la superposition */
+.image-glow {
+  display: none; /* Désactivé car cause des superpositions */
+}
+
+/* Nouveau style pour l'effet de brillance sans superposition */
+.image-circle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, transparent, rgba(139, 92, 246, 0.1));
+  pointer-events: none;
+}
+
+.error-image {
+  opacity: 0.6;
+  filter: grayscale(100%);
 }
 
 .item-details {
@@ -1839,6 +2059,23 @@ Merci pour votre confiance !
   .timeline-line {
     left: 30px;
   }
+  
+  .order-item {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+    padding: 1rem;
+  }
+  
+  .item-image-animated {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .item-meta {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1879,6 +2116,23 @@ Merci pour votre confiance !
   .copy-btn-animated {
     align-self: stretch;
     justify-content: center;
+  }
+  
+  .order-success-page {
+    padding: 1rem;
+  }
+  
+  .floating-card {
+    padding: 1rem;
+  }
+  
+  .actions-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .action-card {
+    flex-direction: column;
+    text-align: center;
   }
 }
 
