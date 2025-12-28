@@ -7,7 +7,7 @@ import profileRoutes from './routes/profileRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import categorieRoutes from './routes/categorieRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
-import panierRoutes from './routes/panierRoutes.js';
+//import panierRoutes from './routes/panierRoutes.js';
 import adminOrderRoutes from './routes/adminOrderRoutes.js';  // Importez le nouveau fichier ES6
 import homeRoute from './routes/homeRoute.js';
 import adminDashboardRoutes from './routes/adminDashboardController.js';
