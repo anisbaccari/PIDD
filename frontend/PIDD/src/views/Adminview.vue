@@ -11,7 +11,7 @@
       <div class="stat-card">
         <div class="stat-icon">📊</div>
         <div class="stat-content">
-          <h3>Total Produits</h3>
+          <h3>Total ventes</h3>
           <p class="stat-value">{{ stats?.totalProducts || '0' }}</p>
         </div>
       </div>
@@ -112,20 +112,28 @@ export default {
     await this.loadDashboardStats()
   },
   methods: {
-    async loadDashboardStats() {
-      this.loading = true
-      try {
-        // Ici vous ferez vos appels API pour les statistiques
-        // Exemple :
-         const response = await axios.get('/admin/stats')
-        this.stats = response.data
-        
-      } catch (error) {
-        console.error('Erreur chargement stats:', error)
-      } finally {
-        this.loading = false
+   async loadDashboardStats() {
+    this.loading = true
+    try {
+      // 1. Appel vers ton contrôleur (vérifie l'URL dans ton fichier routes)
+      const response = await axios.get('/admin/stats/general');
+      
+      if (response.data.success) {
+        // 2. On mappe les données du contrôleur vers tes variables de stats
+        const s = response.data.stats;
+        this.stats = {
+          totalProducts: s.totalOrders, // Tu peux aussi appeler getProductStats pour le stock
+          pendingOrders: s.ordersByStatus?.pending || 0,
+          monthlyRevenue: s.totalRevenue,
+          totalUsers: s.activeCustomers
+        };
       }
-    },
+    } catch (error) {
+      console.error('Erreur chargement stats:', error);
+    } finally {
+      this.loading = false;
+    }
+  },
     
     createNewProduct() {
       this.$router.push('/admin/products?action=create')

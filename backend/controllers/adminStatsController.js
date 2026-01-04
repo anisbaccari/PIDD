@@ -1635,17 +1635,3 @@ function getStatusLabel(status) {
   return labels[status] || status;
 }
 
-/**
- * Routes à ajouter dans votre fichier routes/admin.js :
- * 
- * fastify.get('/admin/stats/general', getGeneralStats);
- * fastify.get('/admin/stats/revenue-evolution', getRevenueEvolution);
- * fastify.get('/admin/stats/top-products', getTopProducts);
- * fastify.get('/admin/stats/categories', getSalesByCategory);
- * fastify.get('/admin/stats/customers', getCustomerStats);
- * fastify.get('/admin/stats/products', getProductStats);
- * fastify.get('/admin/stats/dashboard', getDashboardStats);
- * fastify.get('/admin/stats/realtime', getRealtimeStats);
- * fastify.get('/admin/stats/test', testStats);
- * fastify.get('/admin/stats/export', exportStats);
- */

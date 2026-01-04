@@ -1,51 +1,42 @@
 <template>
   <div class="admin-analytics">
     <!-- Header -->
-    <div class="analytics-header">
-      <button 
-        @click="goToDashboard"
-        class="group flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300"
-      >
-        <span class="text-xl">🏠</span>
-        <span>Dashboard</span>
-      </button>
-      
-      <button 
-        @click="goToCommandes"
-        class="group flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300"
-      >
-        <span>Gestion des commandes</span>
-      </button>
-      
-      <h1>Tableau de bord Statistiques</h1>
-      
-      <div class="date-range">
-        <button 
-          v-for="range in dateRanges" 
-          :key="range.id"
-          @click="selectDateRange(range.id)"
-          :class="['range-btn', { active: selectedRange === range.id }]"
-        >
-          {{ range.label }}
-        </button>
-        <input 
-          type="date" 
-          v-model="customStartDate" 
-          @change="loadStats"
-          class="date-input"
-          :max="today"
-        />
-        <span>au</span>
-        <input 
-          type="date" 
-          v-model="customEndDate" 
-          @change="loadStats"
-          class="date-input"
-          :max="today"
-          :min="customStartDate"
-        />
+    <header class="analytics-header">
+      <div class="header-top">
+        <div class="nav-group">
+          <button @click="goToDashboard" class="btn-nav">
+            <span class="icon">🏠</span>
+            <span>Produits</span>
+          </button>
+          
+          <button @click="goToCommandes" class="btn-nav">
+            <span class="icon">📦</span>
+            <span>Commandes</span>
+          </button>
+        </div>
+
+        <h1 class="page-title">Statistiques de Vente</h1>
+
+        <div class="date-controls">
+          <div class="range-presets">
+            <button 
+              v-for="range in dateRanges" 
+              :key="range.id"
+              @click="selectDateRange(range.id)"
+              :class="['range-btn', { active: selectedRange === range.id }]"
+            >
+              {{ range.label }}
+            </button>
+          </div>
+          
+          <div class="custom-dates">
+            <input type="date" v-model="customStartDate" @change="loadStats" class="date-input" :max="today" />
+            <span class="date-separator">au</span>
+            <input type="date" v-model="customEndDate" @change="loadStats" class="date-input" :max="today" :min="customStartDate" />
+          </div>
+        </div>
       </div>
-    </div>
+    </header>
 
     <!-- Loading -->
     <div v-if="loading" class="loading-overlay">
@@ -605,7 +596,7 @@ export default {
     },
     
     goToDashboard() {
-      this.$router.push('/admin/dashboard');
+      this.$router.push('/admin/products');
     },
     
     goToCommandes() {
@@ -765,64 +756,193 @@ export default {
 </script>
 
 <style scoped>
-.admin-analytics {
-  padding: 2rem;
-  background: #f8fafc;
-  min-height: 100vh;
+.analytics-header {
+  background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+  color: white;
+  padding: 1.5rem 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  margin-bottom: 2rem;
 }
 
-.analytics-header {
-  background: white;
-  padding: 1.5rem 2rem;
-  border-radius: 12px;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+.header-top {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
-.analytics-header h1 {
-  margin: 0;
-  color: #1f2937;
-  font-size: 1.8rem;
-  font-weight: 600;
-}
-
-.date-range {
+.nav-group {
   display: flex;
-  gap: 0.5rem;
+  gap: 1rem;
   align-items: center;
+}
+
+.btn-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-nav:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn-nav .icon {
+  font-size: 1.1rem;
+}
+
+.page-title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0;
+  color: white;
+  letter-spacing: -0.5px;
+}
+
+.date-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1.25rem;
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+}
+
+.range-presets {
+  display: flex;
+  gap: 0.75rem;
   flex-wrap: wrap;
 }
 
 .range-btn {
-  padding: 0.5rem 1rem;
-  background: #f8fafc;
-  border: 1px solid #d1d5db;
+  padding: 0.6rem 1.2rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 6px;
-  color: #4b5563;
-  cursor: pointer;
-  transition: all 0.3s ease;
+  color: rgba(255, 255, 255, 0.9);
   font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .range-btn:hover {
-  background: #f1f5f9;
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .range-btn.active {
-  background: #3b82f6;
-  color: white;
-  border-color: #3b82f6;
+  background: white;
+  color: #1a237e;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.custom-dates {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .date-input {
-  padding: 0.5rem;
-  border: 1px solid #d1d5db;
+  padding: 0.6rem 0.9rem;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #e0e0e0;
   border-radius: 6px;
-  font-family: inherit;
   font-size: 0.9rem;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.date-input:focus {
+  outline: none;
+  border-color: #5c6bc0;
+  box-shadow: 0 0 0 3px rgba(92, 107, 192, 0.2);
+}
+
+.date-separator {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .analytics-header {
+    padding: 1.25rem;
+  }
+  
+  .date-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .range-presets {
+    justify-content: center;
+  }
+  
+  .custom-dates {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .btn-nav {
+    justify-content: center;
+  }
+  
+  .page-title {
+    font-size: 1.75rem;
+    text-align: center;
+  }
+  
+  .range-presets {
+    justify-content: center;
+  }
+  
+  .custom-dates {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .analytics-header {
+    padding: 1rem;
+  }
+  
+  .page-title {
+    font-size: 1.5rem;
+  }
+  
+  .range-btn {
+    padding: 0.5rem 0.9rem;
+    font-size: 0.85rem;
+  }
+  
+  .date-input {
+    width: 100%;
+    max-width: 200px;
+  }
 }
 
 /* KPI Cards */

@@ -37,10 +37,10 @@
             
           </router-link>
           
-          <router-link to="/admin/users" class="nav-item" active-class="active">
+        <!--   <router-link to="/admin/users" class="nav-item" active-class="active">
             <span class="nav-icon">👥</span>
             <span class="nav-text">Utilisateurs</span>
-          </router-link>
+          </router-link> -->
         </div>
 
         <div class="nav-section">
