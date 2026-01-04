@@ -16,6 +16,7 @@ import cartRoutes from './routes/cartRoutes.js';
 import adminStatsRoutes from './routes/adminStatsRoutes.js';
 import {initDatabase} from './database/initDb.js';
 import { sequelize } from './database/mysql.js';
+import seoRoutes from './routes/seoRoutes.js';
 
 // Import models
 import './models/User.js';
@@ -62,6 +63,9 @@ await fastify.register(adminDashboardRoutes, { prefix: '/admin/dashboard' });
 await fastify.register(adminStatsRoutes, { prefix: '/admin/stats' });
 await fastify.register(adminOrderRoutes, { prefix: '/admin/orders' });// Enregistrez les routes d'orders
 await fastify.register(homeRoute, { prefix: '/hello' })
+
+// Enregistrer les routes SEO
+fastify.register(seoRoutes)
 
 // ========== DÉMARRAGE ==========
 // Dans la fonction start(), ajoutez après await fastify.listen():
