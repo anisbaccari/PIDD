@@ -6,7 +6,7 @@
       <p class="admin-welcome">Bienvenue, {{ user?.username || 'Administrateur' }}</p>
     </div>
 
-    <!-- Statistiques rapides 
+    <!-- Statistiques rapides -->
     <div class="admin-stats">
       <div class="stat-card">
         <div class="stat-icon">📊</div>
@@ -36,7 +36,7 @@
           <p class="stat-value">{{ stats?.totalUsers || '0' }}</p>
         </div>
       </div>
-    </div> -->
+    </div> 
 
     <!-- Actions principales -->
     <div class="admin-actions">
@@ -93,6 +93,7 @@
 </template>
 
 <script>
+  import axios from 'axios';
 export default {
   name: 'Adminview',
   props: ['user', 'setUser', 'getUser'],
@@ -116,16 +117,9 @@ export default {
       try {
         // Ici vous ferez vos appels API pour les statistiques
         // Exemple :
-        // const response = await api.get('/admin/stats')
-        // this.stats = response.data
+         const response = await axios.get('/admin/stats')
+        this.stats = response.data
         
-        // Pour l'instant, on met des données fictives
-        this.stats = {
-          totalProducts: 150,
-          pendingOrders: 12,
-          monthlyRevenue: 4500,
-          totalUsers: 85
-        }
       } catch (error) {
         console.error('Erreur chargement stats:', error)
       } finally {

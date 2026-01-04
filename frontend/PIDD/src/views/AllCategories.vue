@@ -35,7 +35,7 @@
           </div>
           <div class="category-overlay">
             <h2 class="category-large-name">{{ category.name }}</h2>
-            <p class="category-count">{{ getProductCount(category.id) }} produits</p>
+           <!--  <p class="category-count">{{ getProductCount(category.id) }} produits</p> -->
             <span class="explore-text">Explorer →</span>
           </div>
         </router-link>
@@ -46,199 +46,287 @@
 </template>
 
 <script>
-// Import des images par défaut si elles existent, sinon utiliser des placeholders
-// Vérifiez si ces fichiers existent dans votre projet
-let defaultHommeImg = null;
-let defaultFemmeImg = null;
-let defaultEnfantImg = null;
+import { ref, onMounted } from 'vue'
+import { useHead } from '@unhead/vue'
+import axios from 'axios' // 🔥 Utiliser axios au lieu de fetch
+
+// Import des images par défaut
+let defaultHommeImg = null
+let defaultFemmeImg = null
+let defaultEnfantImg = null
 
 try {
-  defaultHommeImg = require('../assets/homme.png');
+  defaultHommeImg = require('../assets/homme.png')
 } catch (e) {
-  console.warn('Image homme.png non trouvée, utilisation d\'un placeholder');
+  console.warn('Image homme.png non trouvée')
 }
 
 try {
-  defaultFemmeImg = require('../assets/femme.png');
+  defaultFemmeImg = require('../assets/femme.png')
 } catch (e) {
-  console.warn('Image femme.png non trouvée, utilisation d\'un placeholder');
+  console.warn('Image femme.png non trouvée')
 }
 
 try {
-  defaultEnfantImg = require('../assets/enfant.png');
+  defaultEnfantImg = require('../assets/enfant.png')
 } catch (e) {
-  console.warn('Image enfant.png non trouvée, utilisation d\'un placeholder');
+  console.warn('Image enfant.png non trouvée')
 }
 
 export default {
   name: 'AllCategories',
-  props: ['user', 'setUser'],
-  data() {
-    return {
-      categories: [],
-      allProducts: [],
-      popularProducts: [],
-      loading: true,
-      productsLoading: true,
+  props: {
+    user: Object,
+    setUser: Function
+  },
+
+  setup() {
+    const categories = ref([])
+    const allProducts = ref([])
+    const productCountByCategory = ref({}) // 🔥 NOUVEAU : Compteur pré-calculé
+    const loading = ref(true)
+
+    const defaultImages = {
+      'homme': defaultHommeImg || 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      'femme': defaultFemmeImg || 'https://images.unsplash.com/photo-1539008835657-9e8e9680c956?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      'enfant': defaultEnfantImg || 'https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+      'default': 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
+    }
+
+    const siteUrl = window.location.origin || 'https://monshop.com'
+
+    useHead({
+      title: 'Toutes nos Collections de T-Shirts | MonShop Belgique',
       
-      // Images par défaut avec URLs de placeholder
-      defaultImages: {
-        'homme': defaultHommeImg || 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-        'femme': defaultFemmeImg || 'https://images.unsplash.com/photo-1539008835657-9e8e9680c956?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-        'enfant': defaultEnfantImg || 'https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-        'default': 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
-      }
+      meta: [
+        { 
+          name: 'description', 
+          content: 'Explorez toutes nos collections de t-shirts premium : Homme, Femme, Enfant. Qualité supérieure, styles variés, livraison gratuite dès 50€ en Belgique.' 
+        },
+        { 
+          name: 'keywords', 
+          content: 'collections tshirt, tshirt homme, tshirt femme, tshirt enfant, catalogue, boutique belgique' 
+        },
+        
+        { property: 'og:type', content: 'website' },
+        { property: 'og:title', content: 'Toutes nos Collections de T-Shirts | MonShop' },
+        { 
+          property: 'og:description', 
+          content: 'Explorez toutes nos collections de t-shirts premium pour homme, femme et enfant. Livraison gratuite dès 50€.' 
+        },
+        { property: 'og:image', content: `${siteUrl}/images/facebook.png` },
+        { property: 'og:url', content: `${siteUrl}/allcategories` },
+        { property: 'og:locale', content: 'fr_BE' },
+        
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: 'Toutes nos Collections | MonShop' },
+        { 
+          name: 'twitter:description', 
+          content: 'Collections complètes de t-shirts premium pour toute la famille.' 
+        },
+        { name: 'twitter:image', content: `${siteUrl}/images/X.png` }
+      ],
+      
+      link: [
+        { rel: 'canonical', href: `${siteUrl}/allcategories` }
+      ],
+      
+      script: [
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            "name": "Toutes nos Collections",
+            "description": "Collections complètes de t-shirts premium pour homme, femme et enfant",
+            "url": `${siteUrl}/allcategories`,
+            "mainEntity": {
+              "@type": "ItemList",
+              "numberOfItems": 3,
+              "itemListElement": [
+                {
+                  "@type": "ListItem",
+                  "position": 1,
+                  "name": "T-shirts Homme",
+                  "url": `${siteUrl}/category/1`
+                },
+                {
+                  "@type": "ListItem",
+                  "position": 2,
+                  "name": "T-shirts Femme",
+                  "url": `${siteUrl}/category/2`
+                },
+                {
+                  "@type": "ListItem",
+                  "position": 3,
+                  "name": "T-shirts Enfants",
+                  "url": `${siteUrl}/category/3`
+                }
+              ]
+            }
+          })
+        },
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Accueil",
+                "item": siteUrl
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "Toutes les collections",
+                "item": `${siteUrl}/allcategories`
+              }
+            ]
+          })
+        }
+      ]
+    })
+
+    return {
+      categories,
+      allProducts,
+      productCountByCategory,
+      loading,
+      defaultImages
     }
   },
+
   methods: {
     async loadCategories() {
       try {
-        this.loading = true;
-        
-        // Récupération des catégories depuis l'API
-        const response = await fetch('/api/categories');
-        if (!response.ok) throw new Error('Erreur de chargement des catégories');
-        
-        let categories = await response.json();
-        
-        // Si pas de catégories ou API non disponible, utiliser les 3 catégories principales
-        if (!categories || categories.length === 0) {
-          categories = [
-            { id: 1, name: "T-shirts Homme", type: "homme" },
-            { id: 2, name: "T-shirts Femme", type: "femme" },
-            { id: 3, name: "T-shirts Enfants", type: "enfant" }
-          ];
-        }
-        
-        // Prendre seulement les 3 premières catégories principales
-        this.categories = categories.slice(0, 3);
-        
-      } catch (error) {
-        console.error('Erreur lors du chargement des catégories:', error);
-        
-        // Catégories par défaut en cas d'erreur
+        this.loading = true
+
+        // 🔥 CATÉGORIES PAR DÉFAUT
         this.categories = [
           { id: 1, name: "T-shirts Homme", type: "homme" },
           { id: 2, name: "T-shirts Femme", type: "femme" },
           { id: 3, name: "T-shirts Enfants", type: "enfant" }
-        ];
+        ]
+
+        console.log('✅ Catégories chargées:', this.categories)
+
+      } catch (error) {
+        console.error('❌ Erreur chargement catégories:', error)
       } finally {
-        this.loading = false;
+        this.loading = false
       }
     },
-    
+
     async loadProducts() {
       try {
-        this.productsLoading = true;
+        console.log('🔄 Chargement des produits...')
+
+        // 🔥 UTILISER AXIOS AVEC LA BONNE ROUTE
+        const response = await axios.get('/product')
         
-        // Récupération des produits depuis l'API
-        const response = await fetch('/api/products');
-        if (!response.ok) throw new Error('Erreur de chargement des produits');
-        
-        this.allProducts = await response.json();
-        
-        // Déterminer les produits populaires (4 premiers)
-        this.popularProducts = this.allProducts.slice(0, 4);
-        
+        console.log('📊 Réponse API:', response.data)
+
+        // 🔥 GÉRER DIFFÉRENTS FORMATS DE RÉPONSE
+        if (response.data?.success) {
+          this.allProducts = response.data.data || []
+        } else if (Array.isArray(response.data)) {
+          this.allProducts = response.data
+        } else if (response.data?.products) {
+          this.allProducts = response.data.products
+        } else {
+          console.warn('⚠️ Format de réponse inattendu:', response.data)
+          this.allProducts = []
+        }
+
+        console.log(`✅ ${this.allProducts.length} produits chargés`)
+
+        if (this.allProducts.length > 0) {
+          console.log('📦 Premier produit:', {
+            id: this.allProducts[0].id,
+            name: this.allProducts[0].name,
+            category: this.allProducts[0].category,
+            categoryId: this.allProducts[0].categoryId
+          })
+        }
+
+        // 🔥 CALCULER LES COMPTEURS PAR CATÉGORIE
+        this.calculateProductCounts()
+
       } catch (error) {
-        console.error('Erreur lors du chargement des produits:', error);
+        console.error('❌ Erreur chargement produits:', error)
         
-        // Produits par défaut en cas d'erreur
-        this.allProducts = [
-          { id: 1, name: "T-shirt Noir Classique", price: 29.99, categoryId: 1, image: 'noir.png' },
-          { id: 2, name: "T-shirt Blanc Sport", price: 25.00, categoryId: 1, image: 'blanc.png' },
-          { id: 3, name: "T-shirt Gris Urban", price: 23.00, categoryId: 1, image: 'gris.png' },
-          { id: 4, name: "T-shirt Femme Rose", price: 27.50, categoryId: 2, image: 'rosefemme.png' },
-          { id: 4, name: "T-shirt Femme Rose", price: 27.50, categoryId: 2, image: 'rosefemme.png' },
-          { id: 4, name: "T-shirt Femme Rose", price: 27.50, categoryId: 2, image: 'rose.png' },
-          { id: 5, name: "T-shirt Enfant Bleu", price: 19.99, categoryId: 3, image: 'enfantbleu.png' },
-          { id: 6, name: "T-shirt Enfant Rouge", price: 19.99, categoryId: 3, image: 'enfantrouge.png' }
-        ];
+        if (error.response) {
+          console.error('📊 Détails erreur:', {
+            status: error.response.status,
+            data: error.response.data,
+            url: error.config?.url
+          })
+        }
         
-        this.popularProducts = this.allProducts.slice(0, 4);
-      } finally {
-        this.productsLoading = false;
+        this.allProducts = []
       }
     },
-    
+
+    // 🔥 NOUVELLE MÉTHODE : Calculer les compteurs
+    calculateProductCounts() {
+      console.log('🔢 Calcul des compteurs par catégorie...')
+
+      // Réinitialiser les compteurs
+      this.productCountByCategory = {
+        1: 0,
+        2: 0,
+        3: 0
+      }
+
+      // Compter les produits par catégorie
+      this.allProducts.forEach(product => {
+        // 🔥 Gérer les deux noms de champs possibles
+        const categoryId = product.category || product.categoryId
+        
+        if (categoryId && this.productCountByCategory[categoryId] !== undefined) {
+          this.productCountByCategory[categoryId]++
+        }
+      })
+
+      console.log('📊 Compteurs calculés:', this.productCountByCategory)
+    },
+
     getCategoryImage(category) {
-      // Si la catégorie a une image dans la BD, l'utiliser
       if (category.image && category.image !== '') {
-        return `/images/categories/${category.image}`;
+        return `/images/categories/${category.image}`
       }
-      
-      // Sinon, utiliser l'image par défaut selon le type de catégorie
-      const categoryType = category.type ? category.type.toLowerCase() : 
-                          category.name.toLowerCase().includes('homme') ? 'homme' :
-                          category.name.toLowerCase().includes('femme') ? 'femme' :
-                          category.name.toLowerCase().includes('enfant') ? 'enfant' : 'default';
-      
-      return this.defaultImages[categoryType] || this.defaultImages.default;
+
+      const categoryType = category.type ? category.type.toLowerCase() :
+        category.name.toLowerCase().includes('homme') ? 'homme' :
+        category.name.toLowerCase().includes('femme') ? 'femme' :
+        category.name.toLowerCase().includes('enfant') ? 'enfant' : 'default'
+
+      return this.defaultImages[categoryType] || this.defaultImages.default
     },
-    
-    getProductImage(product) {
-      // Si le produit a une image dans la BD, l'utiliser
-      if (product.image && product.image !== '') {
-        return `/images/products/${product.image}`;
-      }
-      
-      // Sinon, utiliser une image de placeholder basée sur le nom du produit
-      const productName = product.name ? product.name.toLowerCase() : '';
-      
-      if (productName.includes('noir')) {
-        return 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
-      } else if (productName.includes('blanc')) {
-        return 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
-      } else if (productName.includes('gris')) {
-        return 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
-      } else if (productName.includes('rose')) {
-        return 'https://images.unsplash.com/photo-1539008835657-9e8e9680c956?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
-      } else if (productName.includes('bleu')) {
-        return 'https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
-      } else if (productName.includes('rouge')) {
-        return 'https://images.unsplash.com/photo-1519244703995-f4e0f30006d5?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
-      }
-      
-      // Image par défaut
-      return 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
-    },
-    
+
     handleImageError(event) {
-      const categoryType = event.target.dataset.categoryType || 'default';
-      event.target.src = this.defaultImages[categoryType] || this.defaultImages.default;
+      const categoryType = event.target.dataset.categoryType || 'default'
+      event.target.src = this.defaultImages[categoryType] || this.defaultImages.default
     },
-    
-    handleProductImageError(event) {
-      event.target.src = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
-    },
-    
+
+    // 🔥 MÉTHODE CORRIGÉE
     getProductCount(categoryId) {
-      if (!this.allProducts || this.allProducts.length === 0) return 0;
-      return this.allProducts.filter(p => p.categoryId === categoryId).length;
-    },
-    
-    formatPrice(price) {
-      return new Intl.NumberFormat('fr-FR', {
-        style: 'currency',
-        currency: 'EUR'
-      }).format(price);
-    },
-    
-    logout() {
-      if (this.setUser) {
-        this.setUser(null);
-      }
-      localStorage.removeItem('token');
-      this.$router.push('/');
+      console.log(`🔍 Comptage pour catégorie ${categoryId}:`, this.productCountByCategory[categoryId])
+      return this.productCountByCategory[categoryId] || 0
     }
   },
+
   async mounted() {
-    await this.loadCategories();
-    await this.loadProducts();
+    console.log('🚀 AllCategories monté')
+    
+    await this.loadCategories()
+    await this.loadProducts()
   }
 }
 </script>
-
 <style scoped>
 .all-categories-page {
   min-height: 100vh;

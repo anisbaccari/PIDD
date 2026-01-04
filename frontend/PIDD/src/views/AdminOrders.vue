@@ -303,13 +303,7 @@
                   <tr v-for="item in selectedOrder.items" :key="item.id">
                     <td>
                       <div class="product-info">
-                        <img 
-                          v-if="item.product.img" 
-                          :src="getProductImage(item.product.img)" 
-                          :alt="item.product.name" 
-                          class="product-img"
-                          @error="handleImageError"
-                        >
+                      
                         <div>
                           <div class="product-name">{{ item.product.name }}</div>
                           <div class="product-category">{{ item.product.category }}</div>

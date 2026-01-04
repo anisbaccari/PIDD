@@ -9,7 +9,15 @@
       </nav>
 
       <h1 class="title">{{ categoryName }}</h1>
-
+      <!-- 🔥 NOUVEAU : Section partage social de la page -->
+    <section class="home-share-section">
+      <ShareButtons
+        :url="siteUrl"
+        title="MonShop - T-Shirts Premium Belgique"
+        description="Découvrez notre collection exclusive de t-shirts premium pour toute la famille. Livraison gratuite dès 50€."
+        :image="`${siteUrl}/images/facebook.png`"
+      />
+    </section>
       <!-- Loading state -->
       <div v-if="loading" class="loading-state">
         <div class="spinner"></div>
@@ -60,6 +68,10 @@
 </template>
 
 <script>
+  import { useHead } from '@unhead/vue'
+  import ShareButtons from '../components/ShareButtons.vue'
+
+
 import axios from 'axios'
 
 // Import des images
@@ -74,7 +86,20 @@ import gris from '../assets/gris.png'
 
 export default {
   name: 'CategoryPage',
+  // 🔥 IMPORTANT : Déclarer le composant
+  components: {
+    ShareButtons
+  },
   props: ['user', 'setUser', 'addToCartGlobal'],
+  
+  setup() {
+    useHead({
+      title: 'Boutique de T-shirts | MonShop',
+      meta: [
+        { name: 'description', content: 'T-shirts premium pour homme, femme et enfant.' }
+      ]
+    })
+  },
   data() {
     return {
       products: [],

@@ -140,10 +140,19 @@
 </template>
 
 <script>
+import { useHead } from '@unhead/vue'
 import axios from 'axios'
 
 export default {
   name: 'CartPage',
+  setup() {
+    useHead({
+      title: 'Mon Panier | MonShop',
+      meta: [
+        { name: 'description', content: 'Voir et gérer les articles dans votre panier.' }
+      ]
+    })
+  },
 
   data() {
     return {

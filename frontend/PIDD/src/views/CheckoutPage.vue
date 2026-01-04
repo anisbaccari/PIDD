@@ -417,7 +417,9 @@
     </div>
   </div>
 </template>
+
 <script>
+import { useHead } from '@unhead/vue'
 import axios from 'axios';
 import PaymentMethod from '@/components/PaymentMethod.vue'
 
@@ -425,6 +427,14 @@ export default {
   name: 'CheckoutPage',
   components: {
     PaymentMethod
+  },
+  setup() {
+    useHead({
+      title: 'Paiement et Livraison | MonShop',
+      meta: [
+        { name: 'description', content: 'Finalisez votre commande en toute sécurité avec nos options de livraison flexibles.' }
+      ]
+    })
   },
 
   data() {
@@ -704,101 +714,59 @@ async fetchCurrentOrder() {
         event.target.parentElement.classList.remove('focused')
       }, 1000)
     },
-     async handlePaymentCompleted(paymentData) {
+    
+ async handlePaymentCompleted(paymentData) {
   try {
-    console.log('💳 Paiement confirmé:', paymentData)
+    this.isProcessing = true;
+    console.log('💳 Paiement reçu, finalisation de la commande...');
 
-    // 1️⃣ Figer le panier AVANT toute modif
-    const cartWithPrices = this.cartItems.map(item => ({
-      ...item,
-      price: Number(item.price ?? item.unitPrice ?? 0),
-      unitPrice: Number(item.unitPrice ?? item.price ?? 0)
-    }))
+    // 1. On prépare les données complètes pour le serveur
+    const orderData = {
+      paymentMethod: paymentData.method || 'carte',
+      shippingAddress: this.deliveryAddress,
+      shippingMethod: this.selectedDeliveryOption.name,
+      estimatedDelivery: this.calculateEstimatedDelivery(),
+      orderNumber: this.orderNumber // Utilise le numéro généré au mounted
+    };
 
-    this.cartSnapshot = JSON.parse(JSON.stringify(cartWithPrices))
-    console.log('📦 Panier figé:', this.cartSnapshot)
+    // 2. Un SEUL appel au backend pour valider le statut 'paid'
+    const response = await axios.post('/cart/confirm', orderData);
 
-    // 2️⃣ Construire l’objet commande local
-    this.orderDetails = {
-      id: this.orderNumber,
-      date: new Date().toISOString(),
-      items: this.cartSnapshot,
-      delivery: {
-        address: { ...this.deliveryAddress },
-        option: { ...this.selectedDeliveryOption },
-        estimatedDelivery: this.calculateEstimatedDelivery()
-      },
-      payment: paymentData,
-      subtotal: this.subtotal,
-      deliveryPrice: this.selectedDeliveryOption.price,
-      total: this.orderTotal,
-      status: 'paid'
+    if (response.data.success) {
+      console.log('✅ Commande confirmée en base de données');
+
+      // 3. On prépare l'objet pour l'écran de confirmation (Step 3)
+      this.orderDetails = {
+        id: response.data.order?.id || this.orderNumber,
+        date: new Date().toISOString(),
+        items: [...this.cartItems],
+        delivery: {
+          address: { ...this.deliveryAddress },
+          option: { ...this.selectedDeliveryOption }
+        },
+        total: this.orderTotal,
+        status: 'paid'
+      };
+
+      // 4. Nettoyage local uniquement (On ne fait PAS d'appel DELETE /cart)
+      this.clearLocalStorage();
+
+      // 5. Passage à l'étape finale
+      this.hasCompletedPayment = true;
+      this.currentStep = 3;
+      
+    } else {
+      throw new Error(response.data.error || 'Erreur serveur');
     }
-
-    // 3️⃣ Sauvegarder localement
-    localStorage.setItem('currentOrderDetails', JSON.stringify(this.orderDetails))
-
-    // 4️⃣ Confirmer en base DIRECTEMENT AVEC status = paid
-    await this.confirmOrderInDatabase({
-      orderId: this.orderNumber,
-      status: 'paid',
-      total: this.orderTotal,
-      items: this.cartSnapshot
-    })
-
-    // 5️⃣ Vider le panier en BD
-    await this.clearCartInDatabase()
-
-    // 6️⃣ UI → Confirmation
-    this.hasCompletedPayment = true
-    this.currentStep = 3
-
-    console.log('✅ Commande enregistrée PAYÉE en BD:', this.orderDetails)
 
   } catch (error) {
-    console.error('❌ Erreur après paiement :', error)
-    this.handlePaymentError(error)
+    console.error('❌ Erreur finalisation commande:', error);
+    // C'est ce message que tu voyais :
+    alert('Le paiement a réussi, mais nous avons eu un problème pour enregistrer votre commande en base de données. Ne repayez pas, contactez le support.');
+  } finally {
+    this.isProcessing = false;
   }
-}
-,
-    handlePaymentError(error) {
-      console.error('❌ Erreur de paiement:', error)
-      alert(`Erreur lors du paiement: ${error.message || 'Veuillez réessayer'}`)
-    },
-    // ✅ NOUVELLE MÉTHODE: Confirmer la commande dans la BD
-  async confirmOrderInDatabase() {
-    try {
-      console.log('🔄 Confirmation de la commande dans la BD...')
-      
-      const orderData = {
-        paymentMethod: this.orderDetails.payment.method || 'carte',
-        shippingAddress: this.deliveryAddress,
-        shippingMethod: this.selectedDeliveryOption.name,
-        estimatedDelivery: this.calculateEstimatedDelivery(),
-        notes: `Commande créée via checkout - ${this.orderNumber}`
-      }
-      
-      console.log('📊 Données envoyées:', orderData)
-      
-      const response = await axios.post('/cart/confirm', orderData)
-      
-      console.log('✅ Réponse confirmation:', response.data)
-      
-      if (response.data.success && response.data.order) {
-        // Mettre à jour avec l'ID réel de la commande
-        this.orderDetails.id = response.data.order.id
-        this.orderDetails.orderNumber = response.data.order.orderNumber || this.orderNumber
-        
-        // Sauvegarder dans localStorage
-        localStorage.setItem('lastOrder', JSON.stringify(this.orderDetails))
-        localStorage.setItem(`order_${this.orderDetails.id}`, JSON.stringify(this.orderDetails))
-      }
-      
-    } catch (error) {
-      console.error('❌ Erreur confirmation commande:', error)
-      // Ne pas bloquer le processus même en cas d'erreur
-    }
-  },
+},
     
      async completeOrder() {
     if (this.isProcessing) return

@@ -131,12 +131,22 @@
   </div>
 </template>
 <script>
+
+import { useHead } from '@unhead/vue'
 import axios from 'axios'
 import { productService } from '../services/productServices'
 
 export default {
   name: 'ProductDetailsPage',
   props: ['user'],
+  setup() {
+    useHead({
+      title: 'Détails du produit | MonShop',
+      meta: [
+        { name: 'description', content: 'Découvrez les détails complets de notre produit.' }
+      ]
+    })
+  },
   
   data() {
     return {

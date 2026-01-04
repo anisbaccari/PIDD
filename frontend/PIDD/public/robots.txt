@@ -1,0 +1,70 @@
+# public/robots.txt - Version améliorée
+
+User-agent: *
+Allow: /
+Allow: /*.css$
+Allow: /*.js$
+Allow: /*.png$
+Allow: /*.jpg$
+Allow: /*.svg$
+
+# Bloquer les paramètres d'URL inutiles
+Disallow: /*?*
+Disallow: /search
+Disallow: /search/
+Disallow: /*?sort=
+Disallow: /*?filter=
+Disallow: /*?page=
+Disallow: /*?q=
+
+# Zones privées
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /profil/
+Disallow: /cart/
+Disallow: /checkout/
+Disallow: /api/
+Disallow: /login
+Disallow: /register
+Disallow: /password-reset
+
+# Bloquer les fichiers techniques
+Disallow: /node_modules/
+Disallow: /vendor/
+Disallow: /config/
+Disallow: /.env
+Disallow: /composer.json
+Disallow: /package.json
+
+# Paramètres de crawl
+Crawl-delay: 1
+Request-rate: 1/1
+
+# Sitemaps
+Sitemap: https://monshop.com/sitemap.xml
+Sitemap: https://monshop.com/sitemap-products.xml
+Sitemap: https://monshop.com/sitemap-categories.xml
+Sitemap: https://monshop.com/sitemap-pages.xml
+
+# Spécifiques par moteur
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 2
+
+User-agent: Slurp
+Allow: /
+Crawl-delay: 3
+
+User-agent: DuckDuckBot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Baiduspider
+Disallow: /
+
+User-agent: YandexBot
+Disallow: /

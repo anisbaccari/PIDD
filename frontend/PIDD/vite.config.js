@@ -10,4 +10,10 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  // --- AJOUTEZ CETTE SECTION ---
+  server: {
+    allowedHosts: [
+      'unexcessively-ceratoid-martha.ngrok-free.dev'
+    ]
+  }
 })

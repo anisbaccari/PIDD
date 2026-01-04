@@ -46,10 +46,14 @@
       <!-- Product Header with Actions -->
       <div class="product-header">
         <div class="header-actions">
-          <button @click="shareProduct" class="header-action-btn" title="Partager">
-            <span class="action-icon">📤</span>
-            Partager
-          </button>
+          <!-- 🔥 Nouveau : Composant de partage -->
+          <ShareButtons
+            :url="currentPageUrl"
+            :title="product.name"
+            :description="`${product.name} - ${formatPrice(product.price)}`"
+            :image="fullProductImageUrl"
+            compact
+          />
           <button @click="toggleWishlist" class="header-action-btn" :title="wishlistText">
             <span class="action-icon">{{ wishlistIcon }}</span>
             {{ wishlistText }}
@@ -311,7 +315,17 @@
         </router-link>
       </div>
     </div>
+    
 
+    <!-- Section de partage étendue (après la description) -->
+      <div class="social-share-section">
+        <ShareButtons
+          :url="currentPageUrl"
+          :title="product.name"
+          :description="`Découvrez ${product.name} à ${formatPrice(product.price)} sur MonShop. ${product.description}`"
+          :image="fullProductImageUrl"
+        />
+      </div>
     <!-- Toast Notification -->
     <transition name="slide-up">
       <div v-if="showToast" :class="['toast', toastType]">
@@ -324,386 +338,643 @@
 </template>
 
 <script>
-  import axios from 'axios'
-import { productService } from '../services/productServices';
+  import ShareButtons from '../components/ShareButtons.vue'
+import { ref, computed, watch, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useHead } from '@unhead/vue'
+import axios from 'axios'
+import { productService } from '../services/productServices'
 
+components: {
+  ShareButtons  // ← Doit être présent
+}
 export default {
   name: 'ProductPage',
+
+  // 🔥 COMPOSANTS - DOIT ÊTRE ICI, PAS AILLEURS
+  components: {
+    ShareButtons
+  },
   props: ['addToCartGlobal', 'user'],
-  
-  data() {
-    return {
-      product: null,
-      quantity: 1,
-      loading: false,
-      error: null,
-      selectedVariants: {},
-      addingToCart: false,
-      isInWishlist: false,
-      showToast: false,
-      toastMessage: '',
-      toastType: 'success',
-      relatedProducts: [],
-      zoomedImage: false
-    };
-  },
 
-  computed: {
-    stockStatusClass() {
-      if (!this.product) return '';
-      if (this.product.quantity > 10) return 'in-stock';
-      if (this.product.quantity > 0) return 'low-stock';
-      return 'out-of-stock';
-    },
-    
-    stockStatusText() {
-      if (!this.product) return '';
-      if (this.product.quantity > 10) return 'En stock';
-      if (this.product.quantity > 0) return 'Stock limité';
-      return 'Rupture de stock';
-    },
-    
-    addToCartText() {
-      if (!this.product?.quantity) return 'Rupture de stock';
-      if (this.addingToCart) return 'Ajout en cours...';
-      return 'Ajouter au panier';
-    },
-    
-    wishlistIcon() {
-      return this.isInWishlist ? '❤️' : '🤍';
-    },
-    
-    wishlistText() {
-      return this.isInWishlist ? 'Dans la liste' : 'Ajouter à la liste';
-    },
-    
-    toastIcon() {
-      const icons = {
-        success: '✅',
-        error: '❌',
-        info: 'ℹ️',
-        warning: '⚠️'
-      };
-      return icons[this.toastType] || icons.info;
-    },
-    
-    quickSpecs() {
-      if (!this.product) return [];
-      const specs = [];
-      
-      if (this.product.brand) {
-        specs.push({ icon: '🏷️', label: 'Marque', value: this.product.brand });
-      }
-      if (this.product.material) {
-        specs.push({ icon: '🧵', label: 'Matière', value: this.product.material });
-      }
-      if (this.product.color) {
-        specs.push({ icon: '🎨', label: 'Couleur', value: this.product.color });
-      }
-      if (this.product.size) {
-        specs.push({ icon: '📏', label: 'Taille', value: this.product.size });
-      }
-      
-      return specs;
-    }
-  },
+  setup(props) {
+    const route = useRoute()
+    const router = useRouter()
 
-  watch: {
-    '$route.params.id': {
-      handler(newId) {
-        if (newId) {
-          this.loadProduct();
+    // ============================================
+    // ÉTAT RÉACTIF
+    // ============================================
+    const product = ref(null)
+    const quantity = ref(1)
+    const loading = ref(false)
+    const error = ref(null)
+    const selectedVariants = ref({})
+    const addingToCart = ref(false)
+    const isInWishlist = ref(false)
+    const showToast = ref(false)
+    const toastMessage = ref('')
+    const toastType = ref('success')
+    const relatedProducts = ref([])
+    const zoomedImage = ref(false)
+
+    // ============================================
+    // COMPUTED - URLs ABSOLUES
+    // ============================================
+    const siteUrl = computed(() => {
+      // En production, utilisez votre vraie URL
+      return window.location.origin || 'https://monshop.com'
+    })
+
+    const fullProductImageUrl = computed(() => {
+      if (!product.value?.img) {
+        return `${siteUrl.value}/images/logo.png`
+      }
+      if (product.value.img.startsWith('http')) {
+        return product.value.img
+      }
+      return `${siteUrl.value}/images/${product.value.img}`
+    })
+
+    const currentPageUrl = computed(() => {
+      return `${siteUrl.value}/product/${route.params.id}`
+    })
+
+    // ============================================
+    // 🎯 META TAGS DYNAMIQUES (CRUCIAL POUR SEO)
+    // ============================================
+    const metaTags = computed(() => {
+      if (!product.value) {
+        return {
+          title: 'Chargement... | MonShop',
+          meta: []
         }
-      },
-      immediate: true
-    }
-  },
+      }
 
-  methods: {
-    async loadProduct() {
-      this.loading = true;
-      this.error = null;
-      this.product = null;
+      const title = `${product.value.name} - ${formatPrice(product.value.price)} | MonShop`
+      const description = product.value.description 
+        ? product.value.description.substring(0, 155) + '...'
+        : `Achetez ${product.value.name} à ${formatPrice(product.value.price)}. T-shirt premium en coton de qualité supérieure. Livraison rapide en Belgique.`
+
+      return {
+        title,
+        meta: [
+          // SEO de base
+          { name: 'description', content: description },
+          { name: 'keywords', content: `${product.value.name}, tshirt, ${getCategoryName(product.value.category)}, MonShop, Belgique` },
+          
+          // Open Graph (Facebook, LinkedIn, WhatsApp)
+          { property: 'og:type', content: 'product' },
+          { property: 'og:site_name', content: 'MonShop' },
+          { property: 'og:title', content: title },
+          { property: 'og:description', content: description },
+          { property: 'og:image', content: fullProductImageUrl.value },
+          { property: 'og:image:secure_url', content: fullProductImageUrl.value },
+          { property: 'og:image:width', content: '800' },
+          { property: 'og:image:height', content: '800' },
+          { property: 'og:image:alt', content: product.value.name },
+          { property: 'og:url', content: currentPageUrl.value },
+          { property: 'og:locale', content: 'fr_BE' },
+          { property: 'product:price:amount', content: product.value.price },
+          { property: 'product:price:currency', content: 'EUR' },
+          { property: 'product:availability', content: product.value.quantity > 0 ? 'in stock' : 'out of stock' },
+          
+          // Twitter Card
+          { name: 'twitter:card', content: 'summary_large_image' },
+          { name: 'twitter:site', content: '@MonShop' },
+          { name: 'twitter:title', content: title },
+          { name: 'twitter:description', content: description },
+          { name: 'twitter:image', content: fullProductImageUrl.value },
+          { name: 'twitter:image:alt', content: product.value.name },
+          
+          // Pinterest
+          { name: 'pinterest:description', content: description }
+        ],
+        
+        // Canonical URL
+        link: [
+          { rel: 'canonical', href: currentPageUrl.value }
+        ],
+        
+        // 🔥 Schema.org JSON-LD (Rich Snippets Google)
+        script: [
+          {
+            type: 'application/ld+json',
+            children: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Product",
+              "name": product.value.name,
+              "image": [fullProductImageUrl.value],
+              "description": description,
+              "sku": `PROD-${product.value.id}`,
+              "brand": {
+                "@type": "Brand",
+                "name": product.value.brand || "MonShop"
+              },
+              "offers": {
+                "@type": "Offer",
+                "url": currentPageUrl.value,
+                "priceCurrency": "EUR",
+                "price": product.value.price,
+                "availability": product.value.quantity > 0 
+                  ? "https://schema.org/InStock" 
+                  : "https://schema.org/OutOfStock",
+                "priceValidUntil": new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
+                "seller": {
+                  "@type": "Organization",
+                  "name": "MonShop"
+                }
+              },
+              "aggregateRating": product.value.rating ? {
+                "@type": "AggregateRating",
+                "ratingValue": product.value.rating,
+                "reviewCount": product.value.reviewCount || 0,
+                "bestRating": 5,
+                "worstRating": 1
+              } : undefined
+            })
+          },
+          // Breadcrumbs Schema
+          {
+            type: 'application/ld+json',
+            children: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "BreadcrumbList",
+              "itemListElement": [
+                {
+                  "@type": "ListItem",
+                  "position": 1,
+                  "name": "Accueil",
+                  "item": siteUrl.value
+                },
+                {
+                  "@type": "ListItem",
+                  "position": 2,
+                  "name": getCategoryName(product.value.category),
+                  "item": `${siteUrl.value}/category/${product.value.category}`
+                },
+                {
+                  "@type": "ListItem",
+                  "position": 3,
+                  "name": product.value.name,
+                  "item": currentPageUrl.value
+                }
+              ]
+            })
+          }
+        ]
+      }
+    })
+
+    // Appliquer les meta tags
+    watch(metaTags, (newMeta) => {
+      useHead(newMeta)
+    }, { immediate: true })
+
+    // ============================================
+    // COMPUTED - STATUT & FORMATAGE
+    // ============================================
+    const stockStatusClass = computed(() => {
+      if (!product.value) return ''
+      if (product.value.quantity > 10) return 'in-stock'
+      if (product.value.quantity > 0) return 'low-stock'
+      return 'out-of-stock'
+    })
+
+    const stockStatusText = computed(() => {
+      if (!product.value) return ''
+      if (product.value.quantity > 10) return 'En stock'
+      if (product.value.quantity > 0) return 'Stock limité'
+      return 'Rupture de stock'
+    })
+
+    const addToCartText = computed(() => {
+      if (!product.value?.quantity) return 'Rupture de stock'
+      if (addingToCart.value) return 'Ajout en cours...'
+      return 'Ajouter au panier'
+    })
+
+    const wishlistIcon = computed(() => isInWishlist.value ? '❤️' : '🤍')
+    const wishlistText = computed(() => isInWishlist.value ? 'Dans la liste' : 'Ajouter à la liste')
+
+    const toastIcon = computed(() => {
+      const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' }
+      return icons[toastType.value] || icons.info
+    })
+
+    const quickSpecs = computed(() => {
+      if (!product.value) return []
+      const specs = []
       
+      if (product.value.brand) specs.push({ icon: '🏷️', label: 'Marque', value: product.value.brand })
+      if (product.value.material) specs.push({ icon: '🧵', label: 'Matière', value: product.value.material })
+      if (product.value.color) specs.push({ icon: '🎨', label: 'Couleur', value: product.value.color })
+      if (product.value.size) specs.push({ icon: '📏', label: 'Taille', value: product.value.size })
+      
+      return specs
+    })
+
+    // ============================================
+    // MÉTHODES - CHARGEMENT
+    // ============================================
+    const loadProduct = async () => {
+      loading.value = true
+      error.value = null
+      product.value = null
+
       try {
-        const id = this.$route.params.id;
-        
+        const id = route.params.id
+
         if (!id || id === 'undefined') {
-          throw new Error('ID de produit invalide');
+          throw new Error('ID de produit invalide')
         }
 
-        const response = await productService.getById(id);
-        
-        // Gestion des différentes structures de réponse
+        const response = await productService.getById(id)
+
         if (response && typeof response === 'object') {
           if (response.success && response.data) {
-            this.product = response.data;
+            product.value = response.data
           } else if (response.id) {
-            this.product = response;
+            product.value = response
           } else if (response.product) {
-            this.product = response.product;
+            product.value = response.product
           } else {
-            throw new Error('Format de réponse invalide');
+            throw new Error('Format de réponse invalide')
           }
         } else {
-          throw new Error('Réponse API invalide');
+          throw new Error('Réponse API invalide')
         }
-        
-        if (!this.product || !this.product.id) {
-          throw new Error('Produit non trouvé');
+
+        if (!product.value || !product.value.id) {
+          throw new Error('Produit non trouvé')
         }
-        
-        this.checkWishlistStatus();
-        await this.loadRelatedProducts();
-        
+
+        checkWishlistStatus()
+        await loadRelatedProducts()
+
       } catch (err) {
-        console.error('Erreur chargement produit:', err);
-        this.handleError(err);
+        console.error('❌ Erreur chargement produit:', err)
+        handleError(err)
       } finally {
-        this.loading = false;
+        loading.value = false
       }
-    },
-    
-    async loadRelatedProducts() {
+    }
+
+    const loadRelatedProducts = async () => {
       try {
-        if (!this.product?.category) return;
-        
-        const products = await productService.getByCategory(this.product.category);
-        this.relatedProducts = Array.isArray(products) 
-          ? products.filter(p => p.id !== this.product.id)
-          : [];
-          
+        if (!product.value?.category) return
+
+        const products = await productService.getByCategory(product.value.category)
+        relatedProducts.value = Array.isArray(products)
+          ? products.filter(p => p.id !== product.value.id)
+          : []
+
       } catch (err) {
-        console.error('Erreur chargement produits similaires:', err);
+        console.error('❌ Erreur produits similaires:', err)
       }
-    },
-    
-    checkWishlistStatus() {
-      if (!this.user || !this.product) return;
-      const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
-      this.isInWishlist = wishlist.some(item => item.id === this.product.id);
-    },
-    
-    handleError(err) {
+    }
+
+    const checkWishlistStatus = () => {
+      if (!props.user || !product.value) return
+      const wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]')
+      isInWishlist.value = wishlist.some(item => item.id === product.value.id)
+    }
+
+    // ============================================
+    // MÉTHODES - PANIER & ACTIONS
+    // ============================================
+    const addToCart = async () => {
+      if (!product.value || quantity.value <= 0 || addingToCart.value) return
+
+      if (!props.user) {
+        showToastMessage('Veuillez vous connecter', 'error')
+        router.push('/login')
+        return
+      }
+
+      addingToCart.value = true
+
+      try {
+        await axios.post('/cart/item', {
+          productId: product.value.id,
+          quantity: quantity.value
+        })
+
+        showToastMessage(
+          `✅ ${quantity.value} "${product.value.name}" ajouté${quantity.value > 1 ? 's' : ''} au panier`,
+          'success'
+        )
+
+        quantity.value = 1
+
+        // Émettre événement pour EventBus
+        if (window.EventBus) {
+          window.EventBus.$emit('cart-updated')
+        }
+
+      } catch (err) {
+        console.error('❌ Erreur ajout panier:', err)
+        showToastMessage('❌ Erreur lors de l\'ajout au panier', 'error')
+      } finally {
+        addingToCart.value = false
+      }
+    }
+
+    const buyNow = () => {
+      if (!product.value?.quantity) return
+
+      addToCart().then(() => {
+        router.push('/cart')
+      })
+    }
+
+    // ============================================
+    // 📱 PARTAGE SOCIAL AMÉLIORÉ
+    // ============================================
+    const shareProduct = async () => {
+      if (!product.value) return
+
+      const shareData = {
+        title: product.value.name,
+        text: `${product.value.name} - ${formatPrice(product.value.price)} sur MonShop 🛍️`,
+        url: currentPageUrl.value
+      }
+
+      // 1. API native (si disponible)
+      if (navigator.share) {
+        try {
+          await navigator.share(shareData)
+          showToastMessage('Merci du partage ! 🎉', 'success')
+          return
+        } catch (err) {
+          if (err.name === 'AbortError') {
+            return // Utilisateur a annulé
+          }
+          console.log('Partage natif non supporté, fallback...')
+        }
+      }
+
+      // 2. Fallback : Copier + Afficher les options
+      try {
+        await navigator.clipboard.writeText(currentPageUrl.value)
+        
+        // Afficher les options de partage manuel
+        const confirmShare = confirm(
+          `Lien copié ! 📋\n\n` +
+          `Voulez-vous ouvrir WhatsApp pour partager ?\n\n` +
+          `(Vous pouvez aussi coller le lien sur Facebook, Instagram, etc.)`
+        )
+
+        if (confirmShare) {
+          // Ouvrir WhatsApp avec le message pré-rempli
+          const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
+            `${shareData.text}\n${shareData.url}`
+          )}`
+          window.open(whatsappUrl, '_blank')
+        }
+
+        showToastMessage('Lien copié ! 📋', 'success')
+
+      } catch (err) {
+        console.error('❌ Erreur copie:', err)
+        showToastMessage('Impossible de copier le lien', 'error')
+      }
+    }
+
+    // Options de partage social direct
+    const shareOnSocial = (platform) => {
+      if (!product.value) return
+
+      const url = encodeURIComponent(currentPageUrl.value)
+      const title = encodeURIComponent(product.value.name)
+      const description = encodeURIComponent(
+        `${product.value.name} - ${formatPrice(product.value.price)}`
+      )
+      const image = encodeURIComponent(fullProductImageUrl.value)
+
+      const urls = {
+        facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}`,
+        twitter: `https://twitter.com/intent/tweet?url=${url}&text=${title}&hashtags=MonShop,TshirtPremium`,
+        linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${url}`,
+        whatsapp: `https://wa.me/?text=${title}%20${url}`,
+        pinterest: `https://pinterest.com/pin/create/button/?url=${url}&media=${image}&description=${description}`,
+        email: `mailto:?subject=${title}&body=${description}%0A%0A${url}`
+      }
+
+      if (urls[platform]) {
+        window.open(urls[platform], '_blank', 'width=600,height=500')
+      }
+    }
+
+    // ============================================
+    // MÉTHODES - UTILITAIRES
+    // ============================================
+    const toggleWishlist = () => {
+      if (!props.user) {
+        showToastMessage('Connectez-vous pour ajouter à votre liste', 'info')
+        router.push('/login')
+        return
+      }
+
+      let wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]')
+
+      if (isInWishlist.value) {
+        wishlist = wishlist.filter(item => item.id !== product.value.id)
+        showToastMessage('Retiré de votre liste de souhaits', 'info')
+      } else {
+        wishlist.push({
+          id: product.value.id,
+          name: product.value.name,
+          price: product.value.price,
+          img: product.value.img,
+          addedAt: new Date().toISOString()
+        })
+        showToastMessage('Ajouté à votre liste de souhaits', 'success')
+      }
+
+      localStorage.setItem('wishlist', JSON.stringify(wishlist))
+      isInWishlist.value = !isInWishlist.value
+
+      window.dispatchEvent(new CustomEvent('wishlist-updated'))
+    }
+
+    const addToCompare = () => {
+      let compareList = JSON.parse(localStorage.getItem('compareList') || '[]')
+
+      if (compareList.some(item => item.id === product.value.id)) {
+        showToastMessage('Produit déjà dans la comparaison', 'info')
+        return
+      }
+
+      if (compareList.length >= 4) {
+        showToastMessage('Maximum 4 produits pour la comparaison', 'warning')
+        return
+      }
+
+      compareList.push({
+        id: product.value.id,
+        name: product.value.name,
+        price: product.value.price,
+        category: product.value.category,
+        img: product.value.img
+      })
+
+      localStorage.setItem('compareList', JSON.stringify(compareList))
+      showToastMessage('Ajouté à la comparaison', 'success')
+
+      window.dispatchEvent(new CustomEvent('compare-updated'))
+    }
+
+    const showToastMessage = (message, type = 'success') => {
+      toastMessage.value = message
+      toastType.value = type
+      showToast.value = true
+
+      setTimeout(() => {
+        showToast.value = false
+      }, 3000)
+    }
+
+    const validateQuantity = () => {
+      if (quantity.value < 1) quantity.value = 1
+      if (product.value?.quantity && quantity.value > product.value.quantity) {
+        quantity.value = product.value.quantity
+      }
+    }
+
+    const increaseQuantity = () => {
+      if (product.value?.quantity && quantity.value < product.value.quantity) {
+        quantity.value++
+      }
+    }
+
+    const decreaseQuantity = () => {
+      if (quantity.value > 1) {
+        quantity.value--
+      }
+    }
+
+    const getCategoryName = (id) => {
+      const categories = { 1: 'Homme', 2: 'Femme', 3: 'Enfant' }
+      return categories[id] || 'Catégorie'
+    }
+
+    const formatPrice = (price) => {
+      if (!price) return '0,00 €'
+      const numPrice = typeof price === 'string' ? parseFloat(price) : price
+      return numPrice.toFixed(2).replace('.', ',') + ' €'
+    }
+
+    const formatNumber = (num) => {
+      return new Intl.NumberFormat('fr-FR').format(num)
+    }
+
+    const calculateDiscount = (original, current) => {
+      const discount = ((original - current) / original) * 100
+      return `${Math.round(discount)}%`
+    }
+
+    const selectVariant = (type, option) => {
+      selectedVariants.value[type] = option.value
+    }
+
+    const scrollToReviews = () => {
+      router.push(`/product/${product.value.id}/details#reviews`)
+    }
+
+    const printPage = () => {
+      window.print()
+    }
+
+    const openImageZoom = () => {
+      zoomedImage.value = !zoomedImage.value
+    }
+
+    const handleImageError = (event) => {
+      event.target.src = '/images/placeholder.jpg'
+      event.target.onerror = null
+    }
+
+    const handleError = (err) => {
       if (err.response) {
         switch (err.response.status) {
           case 404:
-            this.error = 'Ce produit n\'existe pas ou a été supprimé.';
-            break;
+            error.value = 'Ce produit n\'existe pas ou a été supprimé.'
+            break
           case 500:
-            this.error = 'Erreur serveur. Veuillez réessayer plus tard.';
-            break;
+            error.value = 'Erreur serveur. Veuillez réessayer plus tard.'
+            break
           default:
-            this.error = `Erreur serveur (${err.response.status})`;
+            error.value = `Erreur serveur (${err.response.status})`
         }
       } else if (err.request) {
-        this.error = 'Impossible de contacter le serveur. Vérifiez votre connexion internet.';
+        error.value = 'Impossible de contacter le serveur. Vérifiez votre connexion internet.'
       } else {
-        this.error = err.message || 'Une erreur inattendue est survenue';
+        error.value = err.message || 'Une erreur inattendue est survenue'
       }
-    },
-    
-    validateQuantity() {
-      if (this.quantity < 1) this.quantity = 1;
-      if (this.product?.quantity && this.quantity > this.product.quantity) {
-        this.quantity = this.product.quantity;
-      }
-    },
-    
-    increaseQuantity() {
-      if (this.product?.quantity && this.quantity < this.product.quantity) {
-        this.quantity++;
-      }
-    },
-    
-    decreaseQuantity() {
-      if (this.quantity > 1) {
-        this.quantity--;
-      }
-    },
-    
-    getCategoryName(id) {
-      const categories = {
-        1: 'Homme',
-        2: 'Femme',
-        3: 'Enfant'
-      };
-      return categories[id] || 'Catégorie';
-    },
-    
-    formatPrice(price) {
-      if (!price) return '0,00 €';
-      const numPrice = typeof price === 'string' ? parseFloat(price) : price;
-      return numPrice.toFixed(2).replace('.', ',') + ' €';
-    },
-    
-    formatNumber(num) {
-      return new Intl.NumberFormat('fr-FR').format(num);
-    },
-    
-    calculateDiscount(original, current) {
-      const discount = ((original - current) / original) * 100;
-      return `${Math.round(discount)}%`;
-    },
-    
-    
-async addToCart() {
-  if (!this.product || this.quantity <= 0 || this.addingToCart) return
+    }
 
-  if (!this.user) {
-    this.showToastMessage('Veuillez vous connecter', 'error')
-    this.$router.push('/login')
-    return
-  }
-
-  this.addingToCart = true
-
-  try {
-    await axios.post(
-      'http://localhost:3000/cart/item',
-      {
-        productId: this.product.id,
-        quantity: this.quantity
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        }
+    // ============================================
+    // LIFECYCLE
+    // ============================================
+    watch(() => route.params.id, (newId) => {
+      if (newId) {
+        loadProduct()
       }
-    )
+    }, { immediate: true })
 
-    this.showToastMessage(
-      `✅ ${this.quantity} "${this.product.name}" ajouté${this.quantity > 1 ? 's' : ''} au panier`,
-      'success'
-    )
+    onMounted(() => {
+      loadProduct()
+    })
 
-    this.quantity = 1
-
-    // informer le parent / store
-    this.$emit('cart-updated')
-
-  } catch (err) {
-    console.error('❌ Erreur ajout panier:', err)
-    this.showToastMessage('❌ Erreur lors de l’ajout au panier', 'error')
-  } finally {
-    this.addingToCart = false
-  }
-}
-,
-
-    
-    buyNow() {
-      if (!this.product?.quantity) return;
-      
-      this.addToCart().then(() => {
-        this.$router.push('/cart');
-      });
-    },
-    
-    toggleWishlist() {
-      if (!this.user) {
-        this.showToastMessage('Connectez-vous pour ajouter à votre liste', 'info');
-        this.$router.push('/login');
-        return;
-      }
-      
-      let wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
-      
-      if (this.isInWishlist) {
-        wishlist = wishlist.filter(item => item.id !== this.product.id);
-        this.showToastMessage('Retiré de votre liste de souhaits', 'info');
-      } else {
-        wishlist.push({
-          id: this.product.id,
-          name: this.product.name,
-          price: this.product.price,
-          img: this.product.img,
-          addedAt: new Date().toISOString()
-        });
-        this.showToastMessage('Ajouté à votre liste de souhaits', 'success');
-      }
-      
-      localStorage.setItem('wishlist', JSON.stringify(wishlist));
-      this.isInWishlist = !this.isInWishlist;
-      
-      // Émettre un événement pour mise à jour
-      window.dispatchEvent(new CustomEvent('wishlist-updated'));
-    },
-    
-    showToastMessage(message, type = 'success') {
-      this.toastMessage = message;
-      this.toastType = type;
-      this.showToast = true;
-      
-      setTimeout(() => {
-        this.showToast = false;
-      }, 3000);
-    },
-    
-    shareProduct() {
-      if (navigator.share) {
-        navigator.share({
-          title: this.product.name,
-          text: `Découvrez ${this.product.name} sur MonShop !`,
-          url: window.location.href
-        });
-      } else {
-        navigator.clipboard.writeText(window.location.href)
-          .then(() => this.showToastMessage('Lien copié dans le presse-papier', 'info'))
-          .catch(() => this.showToastMessage('Erreur de partage', 'error'));
-      }
-    },
-    
-    addToCompare() {
-      let compareList = JSON.parse(localStorage.getItem('compareList') || '[]');
-      
-      if (compareList.some(item => item.id === this.product.id)) {
-        this.showToastMessage('Produit déjà dans la comparaison', 'info');
-        return;
-      }
-      
-      if (compareList.length >= 4) {
-        this.showToastMessage('Maximum 4 produits pour la comparaison', 'warning');
-        return;
-      }
-      
-      compareList.push({
-        id: this.product.id,
-        name: this.product.name,
-        price: this.product.price,
-        category: this.product.category,
-        img: this.product.img
-      });
-      
-      localStorage.setItem('compareList', JSON.stringify(compareList));
-      this.showToastMessage('Ajouté à la comparaison', 'success');
-      
-      window.dispatchEvent(new CustomEvent('compare-updated'));
-    },
-    
-    selectVariant(type, option) {
-      this.selectedVariants[type] = option.value;
-    },
-    
-    scrollToReviews() {
-      // Scroll vers la section avis dans la page détaillée
-      this.$router.push(`/product/${this.product.id}/details#reviews`);
-    },
-    
-    printPage() {
-      window.print();
-    },
-    
-    openImageZoom() {
-      this.zoomedImage = !this.zoomedImage;
-    },
-    
-    handleImageError(event) {
-      event.target.src = '/images/placeholder.jpg';
-      event.target.onerror = null; // Prévenir les boucles infinies
+    // ============================================
+    // RETURN
+    // ============================================
+    return {
+      product,
+      quantity,
+      loading,
+      error,
+      selectedVariants,
+      addingToCart,
+      isInWishlist,
+      showToast,
+      toastMessage,
+      toastType,
+      relatedProducts,
+      zoomedImage,
+      siteUrl,
+      fullProductImageUrl,
+      currentPageUrl,
+      stockStatusClass,
+      stockStatusText,
+      addToCartText,
+      wishlistIcon,
+      wishlistText,
+      toastIcon,
+      quickSpecs,
+      loadProduct,
+      addToCart,
+      buyNow,
+      shareProduct,
+      shareOnSocial,
+      toggleWishlist,
+      addToCompare,
+      showToastMessage,
+      validateQuantity,
+      increaseQuantity,
+      decreaseQuantity,
+      getCategoryName,
+      formatPrice,
+      formatNumber,
+      calculateDiscount,
+      selectVariant,
+      scrollToReviews,
+      printPage,
+      openImageZoom,
+      handleImageError
     }
   }
-};
+}
 </script>
 
 <style scoped>
@@ -1824,5 +2095,10 @@ async addToCart() {
     width: 100%;
     justify-content: center;
   }
+  social-share-section {
+  margin: 3rem 0;
+  border-top: 1px solid #e0e0e0;
+  padding-top: 2rem;
+}
 }
 </style>

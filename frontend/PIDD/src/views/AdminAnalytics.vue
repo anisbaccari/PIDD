@@ -118,37 +118,7 @@
         </div>
       </div>
       
-      <!-- Top Products -->
-      <div class="chart-card">
-        <div class="chart-header">
-          <h3>Top 5 produits</h3>
-          <button @click="exportTopProducts" class="export-btn small">
-            📤 Export
-          </button>
-        </div>
-        <div class="top-products">
-          <div v-if="topProducts.length === 0" class="no-data">
-            Aucun produit vendu sur cette période
-          </div>
-          <div v-else v-for="(product, index) in topProducts" :key="product.id" class="product-rank">
-            <div class="rank-number">{{ index + 1 }}</div>
-            <img 
-              v-if="product.image" 
-              :src="getProductImage(product.image)" 
-              :alt="product.name" 
-              class="product-thumb"
-              @error="handleImageError"
-            >
-            <div class="product-info">
-              <div class="product-name">{{ product.name }}</div>
-              <div class="product-stats">
-                <span class="quantity">{{ product.quantity }} ventes</span>
-                <span class="revenue">{{ formatPrice(product.revenue) }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+     
       
       <!-- Categories Chart -->
       <div class="chart-card">
@@ -194,56 +164,10 @@
       </div>
       
       <div class="stats-content">
-        <!-- Customers Stats -->
-        <div v-if="activeTab === 'customers'" class="tab-pane">
-          <div class="customer-metrics">
-            <div class="metric-card">
-              <h4>Clients totaux</h4>
-              <p class="metric-value">{{ customerStats.totalCustomers || 0 }}</p>
-            </div>
-            <div class="metric-card">
-              <h4>Taux de rétention</h4>
-              <p class="metric-value">{{ customerStats.retentionRate || 0 }}%</p>
-            </div>
-            <div class="metric-card">
-              <h4>CLV moyen</h4>
-              <p class="metric-value">{{ formatPrice(customerStats.clv || 0) }}</p>
-            </div>
-          </div>
-          
-          <div class="customer-segments">
-            <h4>Segmentation clients</h4>
-            <div class="segments-grid">
-              <div class="segment-card">
-                <div class="segment-icon vip">👑</div>
-                <div class="segment-info">
-                  <h5>Clients VIP</h5>
-                  <p class="segment-count">{{ customerStats.vipCustomers || 0 }}</p>
-                  <p class="segment-revenue">{{ formatPrice(customerStats.vipRevenue || 0) }}</p>
-                </div>
-              </div>
-              <div class="segment-card">
-                <div class="segment-icon regular">👍</div>
-                <div class="segment-info">
-                  <h5>Réguliers</h5>
-                  <p class="segment-count">{{ customerStats.regularCustomers || 0 }}</p>
-                  <p class="segment-revenue">{{ formatPrice(customerStats.regularRevenue || 0) }}</p>
-                </div>
-              </div>
-              <div class="segment-card">
-                <div class="segment-icon new">🌟</div>
-                <div class="segment-info">
-                  <h5>Nouveaux</h5>
-                  <p class="segment-count">{{ customerStats.newCustomers || 0 }}</p>
-                  <p class="segment-revenue">{{ formatPrice(customerStats.newRevenue || 0) }}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      
         
         <!-- Products Stats -->
-        <div v-else-if="activeTab === 'products'" class="tab-pane">
+        <div v-if="activeTab === 'products'" class="tab-pane">
           <div class="products-table">
             <table>
               <thead>
@@ -252,7 +176,7 @@
                   <th>Ventes</th>
                   <th>Chiffre d'affaires</th>
                   <th>Stock</th>
-                  <th>Rotation</th>
+                  
                 </tr>
               </thead>
               <tbody>
@@ -262,13 +186,7 @@
                 <tr v-else v-for="product in productStats" :key="product.id">
                   <td>
                     <div class="product-cell">
-                      <img 
-                        v-if="product.image" 
-                        :src="getProductImage(product.image)" 
-                        :alt="product.name" 
-                        class="product-img"
-                        @error="handleImageError"
-                      >
+                    
                       <div>
                         <strong>{{ product.name }}</strong>
                         <p class="product-sku">{{ product.sku }}</p>
@@ -285,7 +203,7 @@
                       <span>{{ product.stock }}</span>
                     </div>
                   </td>
-                  <td>{{ product.turnover }} jours</td>
+                 
                 </tr>
               </tbody>
             </table>
@@ -529,15 +447,7 @@ export default {
       };
       
       try {
-        if (tabId === 'customers') {
-          const response = await axios.get('/admin/stats/customers', { 
-            params, 
-            headers: this.getAuthHeaders() 
-          });
-          if (response.data.success) {
-            this.customerStats = response.data.customerStats || {};
-          }
-        } else if (tabId === 'products') {
+        if (tabId === 'products') {
           const response = await axios.get('/admin/stats/products', { 
             params, 
             headers: this.getAuthHeaders() 

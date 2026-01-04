@@ -29,6 +29,19 @@
       </div>
     </section>
 
+    <h1>T-shirts premium pour homme</h1>
+    <p>Découvrez notre collection de t-shirts confortables et stylés pour homme.</p>
+
+    <!-- 🔥 NOUVEAU : Section partage social de la page -->
+    <section class="home-share-section">
+      <ShareButtons
+        :url="siteUrl"
+        title="MonShop - T-Shirts Premium Belgique"
+        description="Découvrez notre collection exclusive de t-shirts premium pour toute la famille. Livraison gratuite dès 50€."
+        :image="`${siteUrl}/images/facebook.png`"
+      />
+    </section>
+
     <!-- Produits populaires -->
     <section class="products-section">
       <div class="container">
@@ -75,18 +88,133 @@
 </template>
 
 <script>
+import ShareButtons from '../components/ShareButtons.vue'
+import { ref, computed, onMounted } from 'vue'
+import { useHead } from '@unhead/vue'
 import { productService } from '../services/productServices'
 import axios from 'axios'
 
 export default {
   name: 'HomePage',
-  props: ['user', 'addToCartGlobal'],
-  data() {
+  
+  // 🔥 IMPORTANT : Déclarer le composant
+  components: {
+    ShareButtons
+  },
+  
+  props: {
+    user: Object,
+    addToCartGlobal: Function
+  },
+
+  setup() {
+    const popularProducts = ref([])
+    const loading = ref(true)
+
+    // 🔥 AJOUTER siteUrl pour le template
+    const siteUrl = computed(() => {
+      return window.location.origin || 'https://monshop.com'
+    })
+
+    // ============================================
+    // 🎯 META TAGS SEO OPTIMISÉS
+    // ============================================
+    useHead({
+      title: 'MonShop - T-Shirts Premium Belgique | Homme, Femme, Enfant',
+      
+      meta: [
+        { 
+          name: 'description', 
+          content: 'Découvrez notre collection exclusive de t-shirts premium pour homme, femme et enfant. Qualité supérieure, livraison gratuite dès 50€ en Belgique. Plus de 500 modèles disponibles.' 
+        },
+        { 
+          name: 'keywords', 
+          content: 'tshirt premium, tshirt homme, tshirt femme, tshirt enfant, vêtements belgique, mode, coton bio, livraison gratuite' 
+        },
+        
+        { property: 'og:type', content: 'website' },
+        { property: 'og:site_name', content: 'MonShop' },
+        { property: 'og:title', content: 'MonShop - T-Shirts Premium Belgique' },
+        { 
+          property: 'og:description', 
+          content: 'Collection exclusive de t-shirts premium. Livraison gratuite dès 50€. Plus de 500 modèles pour homme, femme et enfant.' 
+        },
+        { property: 'og:image', content: `${siteUrl.value}/images/facebook.png` },
+        { property: 'og:image:width', content: '1200' },
+        { property: 'og:image:height', content: '630' },
+        { property: 'og:url', content: siteUrl.value },
+        { property: 'og:locale', content: 'fr_BE' },
+        
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:site', content: '@MonShop' },
+        { name: 'twitter:title', content: 'MonShop - T-Shirts Premium Belgique' },
+        { 
+          name: 'twitter:description', 
+          content: 'Collection exclusive de t-shirts premium. Livraison gratuite dès 50€.' 
+        },
+        { name: 'twitter:image', content: `${siteUrl.value}/images/X.png` },
+        
+        { name: 'geo.region', content: 'BE' },
+        { name: 'geo.placename', content: 'Belgique' }
+      ],
+      
+      link: [
+        { rel: 'canonical', href: siteUrl.value }
+      ],
+      
+      script: [
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "name": "MonShop",
+            "url": siteUrl.value,
+            "description": "Boutique de t-shirts premium pour homme, femme et enfant en Belgique",
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": `${siteUrl.value}/search?q={search_term_string}`,
+              "query-input": "required name=search_term_string"
+            }
+          })
+        },
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "MonShop",
+            "url": siteUrl.value,
+            "logo": `${siteUrl.value}/images/logo.png`,
+            "description": "Boutique de t-shirts premium en Belgique",
+            "address": {
+              "@type": "PostalAddress",
+              "addressCountry": "BE",
+              "addressLocality": "Bruxelles"
+            },
+            "contactPoint": {
+              "@type": "ContactPoint",
+              "telephone": "+32-XXX-XX-XX-XX",
+              "contactType": "Customer Service",
+              "availableLanguage": ["French", "Dutch"]
+            },
+            "sameAs": [
+              "https://www.facebook.com/monshop",
+              "https://www.instagram.com/monshop",
+              "https://twitter.com/monshop"
+            ]
+          })
+        }
+      ]
+    })
+
     return {
-      popularProducts: [],
-      loading: true
+      popularProducts,
+      loading,
+      siteUrl // 🔥 RETOURNER siteUrl pour le template
     }
   },
+
   methods: {
     async loadProducts() {
       try {
@@ -95,13 +223,13 @@ export default {
         const products = await productService.getAll()
         console.log(`✅ ${products.length} produits chargés`)
         
-        // Ajouter une propriété isNew pour les nouveaux produits (premiers 2)
         const productsWithNewFlag = products.slice(0, 8).map((product, index) => ({
           ...product,
-          isNew: index < 2 // Les 2 premiers sont marqués comme "Nouveau"
+          isNew: index < 2
         }))
         
         this.popularProducts = productsWithNewFlag
+        this.addProductsSchema()
         
       } catch (error) {
         console.error('❌ Erreur chargement produits:', error)
@@ -109,6 +237,44 @@ export default {
       } finally {
         this.loading = false
       }
+    },
+
+    addProductsSchema() {
+      if (this.popularProducts.length === 0) return
+
+      const siteUrl = window.location.origin || 'https://monshop.com'
+      
+      useHead({
+        script: [
+          {
+            type: 'application/ld+json',
+            children: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "ItemList",
+              "name": "Produits Populaires MonShop",
+              "numberOfItems": this.popularProducts.length,
+              "itemListElement": this.popularProducts.map((product, index) => ({
+                "@type": "ListItem",
+                "position": index + 1,
+                "item": {
+                  "@type": "Product",
+                  "name": product.name,
+                  "image": product.img?.startsWith('http') 
+                    ? product.img 
+                    : `${siteUrl}/images/${product.img}`,
+                  "url": `${siteUrl}/product/${product.id}`,
+                  "offers": {
+                    "@type": "Offer",
+                    "price": product.price,
+                    "priceCurrency": "EUR",
+                    "availability": "https://schema.org/InStock"
+                  }
+                }
+              }))
+            })
+          }
+        ]
+      })
     },
     
     async addToCart(product) {
@@ -121,27 +287,18 @@ export default {
 
         console.log(`🛒 Ajout au panier: ${product.name} (ID: ${product.id})`)
 
-        // ✅ Utilise la baseURL configurée dans main.js
         await axios.post('/cart/item', {
           productId: product.id,
           quantity: 1
         })
 
         console.log(`✅ Produit ajouté au panier: ${product.name}`)
-
-        // Notification visuelle (à remplacer par votre système de notifications)
         alert(`${product.name} ajouté au panier !`)
-
-        // Rafraîchir le compteur du panier dans le header
+        
         this.$emit('cart-updated')
 
       } catch (error) {
-        console.error('❌ Erreur ajout panier:', {
-          message: error.message,
-          status: error.response?.status,
-          data: error.response?.data
-        })
-        
+        console.error('❌ Erreur ajout panier:', error)
         alert('Erreur lors de l\'ajout au panier')
       }
     },
@@ -155,7 +312,6 @@ export default {
         return imgPath
       }
       
-      // Images locales
       return `/images/${imgPath}`
     },
     
@@ -585,7 +741,11 @@ export default {
     padding: 0 1rem;
   }
 }
-
+.home-share-section {
+  max-width: 1200px;
+  margin: 3rem auto;
+  padding: 0 1rem;
+}
 @media (max-width: 480px) {
   .products-grid {
     grid-template-columns: 1fr;
@@ -623,6 +783,12 @@ export default {
   color: #6b7280;
   font-size: 1.1rem;
 }
+
+
+
+  .home-share-section {
+    margin: 2rem auto;
+  }
 
 /* Option : Si vos images ont un fond blanc, décommentez ceci */
 /*
