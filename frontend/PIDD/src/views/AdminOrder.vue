@@ -54,7 +54,7 @@
                         class="item-btn"
                         @click="paidOrder(order.id)"
                     >
-                        paid
+                        confirm
                     </button>
         </div>
       </div>
