@@ -104,6 +104,7 @@ export default {
   
   props: {
     user: Object,
+    tmpUser: Object,
     addToCartGlobal: Function
   },
 
@@ -276,12 +277,19 @@ export default {
         ]
       })
     },
-    
+    addToTmp(product){
+        const newItem = {productid: product.id,quantity:1}
+        this.tmpUser.panier.push(newItem)
+        console.log(newItem)
+        console.log(this.tmpUser)
+
+    },
     async addToCart(product) {
       try {
         if (!this.user) {
-          alert('Veuillez vous connecter pour ajouter au panier')
-          this.$router.push('/login')
+          console.log(this.tmpUser)
+          this.addToTmp(product)
+          //this.$router.push('/login')
           return
         }
 

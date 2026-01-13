@@ -1,5 +1,5 @@
 import axios from 'axios';
-
+import api from '../api.js';
 const API_URL = 'http://localhost:3000/product';
 
 export const productService = {
@@ -8,7 +8,10 @@ export const productService = {
       console.log('🔄 productService.getAll() appelé');
       
       // UTILISEZ /allproduct (minuscules) comme défini dans vos routes
-      const res = await axios.get(`${API_URL}/allproduct`);
+      //const res = await axios.get(`${API_URL}/allproduct`);
+        const res = await api.get(`http://localhost:3000/product/allproduct`/* , {
+        headers: { Authorization: `Bearer ${token}` }
+      } */);
       console.log('📊 Réponse getAll:', res.data);
       
       // Votre contrôleur corrigé retourne { success: true, data: [...] }

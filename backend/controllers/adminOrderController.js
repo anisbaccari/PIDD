@@ -614,7 +614,6 @@ export async function deleteOrder(request, reply) {
         where: { orderId: orderId },
         transaction
       });
-      
       // Supprimer la commande
       await order.destroy({ transaction });
       

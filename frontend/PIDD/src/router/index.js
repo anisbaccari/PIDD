@@ -104,7 +104,6 @@ const routes = [
     component: CartPage,
     props: true
   },
-  // Dans router/index.js
 {
   path: '/admin/orders',
   name: 'AdminOrders',
@@ -162,7 +161,7 @@ const router = createRouter({
 // 🛡️ Garde de navigation pour l'authentification
 router.beforeEach((to, from, next) => {
   // Vérifier si la route nécessite une authentification
-  if (to.meta.requiresAuth) {
+/*   if (to.meta.requiresAuth) {
     // Vérifier si l'utilisateur est connecté
     const token = localStorage.getItem('token')
     const user = JSON.parse(localStorage.getItem('user') || 'null')
@@ -180,7 +179,8 @@ router.beforeEach((to, from, next) => {
   } else {
     // Route publique, autoriser l'accès
     next()
-  }
+  } */
+  next()
 })
 
 // 🏷️ Mettre à jour le titre de la page

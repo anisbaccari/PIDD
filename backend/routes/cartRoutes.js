@@ -19,41 +19,41 @@ export default async function cartRoutes(fastify, options) {
   console.log('🛒 Enregistrement des routes panier...')
 
   // GET /api/cart - Récupérer le panier
-  fastify.get('/', {
+  fastify.get('/',/*  {
     preHandler: [authenticate]
-  }, getCart)
-   fastify.get('/current', {
+  }, */ getCart)
+   fastify.get('/current',/*  {
     preHandler: [authenticate]
-  }, getCurrentOrder)
+  },  */getCurrentOrder)
 
   // POST /api/cart/item - Ajouter un produit au panier
-  fastify.post('/item', {
+  fastify.post('/item',/*  {
     preHandler: [authenticate]
-  }, addItemToCart)
+  }, */ addItemToCart)
 
   // PUT /api/cart/item/:id - Modifier la quantité
-  fastify.put('/item/:id', {
+  fastify.put('/item/:id',/*  {
     preHandler: [authenticate]
-  }, updateCartItem)
+  }, */ updateCartItem)
 
   // DELETE /api/cart/item/:id - Supprimer un article
-  fastify.delete('/item/:id', {
+  fastify.delete('/item/:id',/*  {
     preHandler: [authenticate]
-  }, removeCartItem)
+  }, */ removeCartItem)
 
   // DELETE /api/cart - Vider le panier
-  fastify.delete('/', {
+  fastify.delete('/',/*  {
     preHandler: [authenticate]
-  }, clearCart)
-fastify.post('/checkout', {
+  }, */ clearCart)
+fastify.post('/checkout',/*  {
   preHandler: [authenticate]
-}, prepareCheckout)
+}, */ prepareCheckout)
 // POST /api/orders/confirm - Confirmer le panier (NOUVELLE ROUTE)
-  fastify.post('/confirm', {
+  fastify.post('/confirm',/*  {
     preHandler: [authenticate]
-  }, confirmCartOrder)
+  }, */ confirmCartOrder)
 fastify.get('/orders/mine', 
-  { preHandler: [authenticate] }, 
+ /*  { preHandler: [authenticate] }, */ 
   getMyPaidOrders
 )
 
@@ -61,9 +61,9 @@ fastify.get('/orders/mine',
   preHandler: [authenticate]
 }, confirmPayment) */
 /* 
-  fastify.post('/from-cart', {
+  fastify.post('/from-cart',  {
     preHandler: [authenticate]
-  }, createOrderFromCart)
+  },  createOrderFromCart)
 
  */
 

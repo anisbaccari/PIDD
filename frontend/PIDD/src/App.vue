@@ -1,5 +1,6 @@
 <script>
 import axios from 'axios'
+import api from './api.js'
 import AppFooter from './components/AppFooter.vue'
 import UserMenu from './components/UserMenu.vue'
 
@@ -34,6 +35,7 @@ export default {
 
   data() {
     return {
+      tmpUser: { panier:[]},
       user: null,
       cartItemsCount: 0, // 🔥 Nombre d'articles dans le panier BD
       isLoadingUser: false
@@ -72,8 +74,10 @@ export default {
       try {
         console.log('🔄 Chargement du compteur panier...')
         
-        const res = await axios.get('/cart')
-        
+       // const resz = await axios.get('/cart')
+        const res = await api.get(`http://localhost:3000/cart`/* , {
+        headers: { Authorization: `Bearer ${token}` }
+      } */);
         const totalItems = res.data?.totalItems || 0
         this.cartItemsCount = totalItems
         
@@ -96,11 +100,10 @@ export default {
       const storedUser = localStorage.getItem('user')
       const token = localStorage.getItem('token')
       
-      if (!token) {
+      if (token) {
         console.log('❌ Pas de token')
-        this.user = null
-        this.cartItemsCount = 0
-        localStorage.removeItem('user')
+     
+         await this.fetchCartCount()
         return
       }
 
@@ -249,6 +252,7 @@ export default {
 
     <!-- Contenu principal -->
     <router-view
+      :tmpUser="tmpUser"
       :user="user"
       :setUser="setUser"
       :getUser="getUser"

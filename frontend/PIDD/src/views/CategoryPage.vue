@@ -73,7 +73,7 @@
 
 
 import axios from 'axios'
-
+import api from '../api.js'
 // Import des images
 import noir from '../assets/noir.png'
 import blanc from '../assets/blanc.png'
@@ -90,7 +90,7 @@ export default {
   components: {
     ShareButtons
   },
-  props: ['user', 'setUser', 'addToCartGlobal'],
+  props: ['user', 'setUser', 'addToCartGlobal','tmpUser'],
   
   setup() {
     useHead({
@@ -133,8 +133,10 @@ export default {
 
       try {
         // ✅ Axios utilise baseURL de main.js
-        const response = await axios.get(`/product/category/${categoryId}`)
-
+       // const response = await axios.get(`/product/category/${categoryId}`)
+         const response = await api.get(`http://localhost:3000/product/category/${categoryId}`/* , {
+        headers: { Authorization: `Bearer ${token}` }
+      } */);
         console.log('📊 Réponse API:', response.data)
 
         if (response.data?.success) {
