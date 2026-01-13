@@ -6,7 +6,7 @@ import CategoryPage from '../views/CategoryPage.vue'
 import ProductPage from '../views/ProductPage.vue'
 import Profilview from '../views/Profilview.vue'
 import Detailsproduit from '../views/Detailsproduit.vue'
-import Adminview from '../views/AdminView.vue'
+import AdminView from '../views/AdminView.vue'
 
 
 import AdminProducts from '../views/AdminProducts.vue'
@@ -56,8 +56,8 @@ const routes = [
   },
    { 
     path: '/admin', 
-    name: 'Adminview', 
-    component: Adminview,
+    name: 'AdminView', 
+    component: AdminView,
     props: true
   },
   { 

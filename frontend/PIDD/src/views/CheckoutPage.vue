@@ -420,7 +420,7 @@
 
 <script>
 import { useHead } from '@unhead/vue'
-import axios from 'axios';
+import axios from 'axios'
 import PaymentMethod from '@/components/PaymentMethod.vue'
 
 export default {
@@ -428,6 +428,7 @@ export default {
   components: {
     PaymentMethod
   },
+  
   setup() {
     useHead({
       title: 'Paiement et Livraison | MonShop',
@@ -451,7 +452,7 @@ export default {
         street: '',
         postalCode: '',
         city: '',
-        country: 'FR'
+        country: 'BE'
       },
       selectedDelivery: 'standard',
       deliveryOptions: [
@@ -500,41 +501,42 @@ export default {
       cartItems: [],
       loading: true,
       orderNumber: null,
-      user: null // Ajout de la propriété user
+      user: null,
+      // 🔥 AJOUT CRUCIAL : Définir subtotal dans data()
+      subtotal: 0
     }
   },
+
   computed: {
     selectedDeliveryOption() {
       return this.deliveryOptions.find(opt => opt.id === this.selectedDelivery) || this.deliveryOptions[0]
     },
     
-    /* subtotal() {
-      // Calcul précis du sous-total
-      if (!this.cartItems || this.cartItems.length === 0) return 0
-      
-      return this.cartItems.reduce((total, item) => {
-        const price = parseFloat(item.price) || parseFloat(item.unitPrice) || 0
-        const quantity = parseInt(item.quantity) || 1
-        return total + (price * quantity)
-      }, 0)
-    }, */
-    
+    // 🔥 CALCUL CORRECT DU TOTAL
     orderTotal() {
-    // Utiliser this.subtotal qui vient de l'API
-    const sub = parseFloat(this.subtotal) || 0
-    const delivery = parseFloat(this.selectedDeliveryOption?.price) || 0
-    return sub + delivery
-  },
+      const sub = parseFloat(this.subtotal) || 0
+      const delivery = parseFloat(this.selectedDeliveryOption?.price) || 0
+      const total = sub + delivery
+      
+      console.log('💰 Calcul total:', {
+        subtotal: sub,
+        delivery: delivery,
+        total: total
+      })
+      
+      return total
+    },
+    
     isDeliveryStepValid() {
-    return (
-      this.deliveryAddress.fullName.trim() &&
-      this.deliveryAddress.phone.trim() &&
-      this.deliveryAddress.street.trim() &&
-      this.deliveryAddress.postalCode.trim() &&
-      this.deliveryAddress.city.trim() &&
-      this.deliveryAddress.country &&
-      this.selectedDelivery
-    )
+      return (
+        this.deliveryAddress.fullName.trim() &&
+        this.deliveryAddress.phone.trim() &&
+        this.deliveryAddress.street.trim() &&
+        this.deliveryAddress.postalCode.trim() &&
+        this.deliveryAddress.city.trim() &&
+        this.deliveryAddress.country &&
+        this.selectedDelivery
+      )
     },
     
     progressWidth() {
@@ -545,354 +547,267 @@ export default {
   async mounted() {
     console.log('🛒 CheckoutPage monté')
 
-    // 1️⃣ Récupérer les infos utilisateur si connecté
     await this.fetchUserInfo()
-    
-    // 2️⃣ Récupérer la commande / panier AVANT tout calcul
     await this.fetchCurrentOrder()
 
     console.log('📦 Items dans panier:', this.cartItems)
-    console.log('💰 Sous-total calculé:', this.subtotal)
+    console.log('💰 Sous-total:', this.subtotal)
+    console.log('💰 Total commande:', this.orderTotal)
 
-    // 3️⃣ Pré-remplir les infos utilisateur si connecté
     if (this.user) {
-      this.deliveryAddress.fullName =
-        `${this.user.lastName || ''} ${this.user.name || ''}`.trim()
+      this.deliveryAddress.fullName = `${this.user.lastName || ''} ${this.user.name || ''}`.trim()
       this.deliveryAddress.phone = this.user.telephone || ''
     }
 
-    // 4️⃣ Calculer la meilleure option de livraison (dépend du subtotal)
     this.calculateBestDeliveryOption()
-
-    // 5️⃣ Générer le numéro de commande UNE SEULE FOIS
     this.orderNumber = this.generateOrderId()
-    console.log('📝 Numéro de commande généré:', this.orderNumber)
+    
+    console.log('📝 Numéro de commande:', this.orderNumber)
     
     this.loading = false
   },
 
   methods: {
     async fetchUserInfo() {
-  try {
-    // Récupérer l'utilisateur depuis localStorage
-    const userStr = localStorage.getItem('user')
-    
-    if (userStr) {
-      this.user = JSON.parse(userStr)
-      console.log('👤 Utilisateur récupéré:', this.user)
-    } else {
-      console.warn('⚠️ Aucun utilisateur dans localStorage')
-      
-      // Optionnel: essayer de récupérer depuis l'API
       try {
-        const response = await axios.get('/auth/me')
-        if (response.data?.user) {
-          this.user = response.data.user
-          localStorage.setItem('user', JSON.stringify(this.user))
+        const userStr = localStorage.getItem('user')
+        
+        if (userStr) {
+          this.user = JSON.parse(userStr)
+          console.log('👤 Utilisateur récupéré:', this.user)
+        } else {
+          console.warn('⚠️ Aucun utilisateur dans localStorage')
+          
+          try {
+            const response = await axios.get('/auth/me')
+            if (response.data?.user) {
+              this.user = response.data.user
+              localStorage.setItem('user', JSON.stringify(this.user))
+            }
+          } catch (err) {
+            console.warn('⚠️ Impossible de récupérer l\'utilisateur depuis l\'API')
+          }
         }
-      } catch (err) {
-        console.warn('⚠️ Impossible de récupérer l\'utilisateur depuis l\'API')
+      } catch (error) {
+        console.warn('⚠️ Erreur fetchUserInfo:', error)
+        this.user = null
       }
-    }
-  } catch (error) {
-    console.warn('⚠️ Erreur fetchUserInfo:', error)
-    this.user = null
-  }
-},
-async fetchCurrentOrder() {
-  try {
-    console.log('🔄 Récupération du panier pour checkout...')
-    
-    // ✅ Utiliser axios directement (pas this.$axios)
-    const res = await axios.get('/cart')
+    },
 
-    console.log('📦 Réponse API /cart:', res.data)
+    async fetchCurrentOrder() {
+      try {
+        console.log('🔄 Récupération du panier...')
+        
+        const res = await axios.get('/cart')
 
-    // Vérifier si le panier est vide
-    if (!res.data || !res.data.items || res.data.items.length === 0) {
-      console.warn('⚠️ Panier vide → redirection vers /cart')
-      alert('Votre panier est vide')
-      this.$router.push('/cart')
-      return
-    }
+        console.log('📦 Réponse API /cart:', res.data)
 
-    // ✅ Adapter la structure des données
-    this.cartItems = res.data.items.map(item => {
-      console.log('📦 Item:', item)
-      
-      return {
-        id: item.id,
-        quantity: item.quantity || 1,
-        unitPrice: parseFloat(item.unitPrice) || 0,
-        price: parseFloat(item.unitPrice) || 0, // Pour compatibilité
-        product: {
-          id: item.product?.id,
-          name: item.product?.name || 'Produit',
-          brand: item.product?.brand || '',
-          img: item.product?.img || 'placeholder.png',
-          price: parseFloat(item.product?.price) || parseFloat(item.unitPrice) || 0
+        if (!res.data || !res.data.items || res.data.items.length === 0) {
+          console.warn('⚠️ Panier vide')
+          alert('Votre panier est vide')
+          this.$router.push('/cart')
+          return
+        }
+
+        // 🔥 MAPPER LES ITEMS
+        this.cartItems = res.data.items.map(item => ({
+          id: item.id,
+          quantity: item.quantity || 1,
+          unitPrice: parseFloat(item.unitPrice) || 0,
+          price: parseFloat(item.unitPrice) || 0,
+          product: {
+            id: item.product?.id,
+            name: item.product?.name || 'Produit',
+            brand: item.product?.brand || '',
+            img: item.product?.img || 'placeholder.png',
+            price: parseFloat(item.product?.price) || parseFloat(item.unitPrice) || 0
+          }
+        }))
+
+        // 🔥 IMPORTANT : Assigner le subtotal
+        this.subtotal = parseFloat(res.data.subtotal) || 0
+        
+        console.log('✅ Panier chargé:', {
+          itemsCount: this.cartItems.length,
+          subtotal: this.subtotal,
+          items: this.cartItems
+        })
+
+      } catch (error) {
+        console.error('❌ Erreur récupération panier:', error)
+        
+        if (error.response?.status === 401) {
+          alert('Vous devez être connecté')
+          this.$router.push('/login')
+        } else if (error.response?.status === 404) {
+          alert('Votre panier est vide')
+          this.$router.push('/cart')
+        } else {
+          alert('Erreur chargement panier')
+          this.$router.push('/cart')
         }
       }
-    })
+    },
 
-    // Utiliser le subtotal renvoyé par l'API (plus fiable)
-    this.subtotal = parseFloat(res.data.subtotal) || 0
-    
-    console.log('✅ Panier chargé pour checkout:', {
-      itemsCount: this.cartItems.length,
-      subtotal: this.subtotal,
-      items: this.cartItems
-    })
-
-  } catch (error) {
-    console.error('❌ Erreur récupération panier:', {
-      message: error.message,
-      status: error.response?.status,
-      data: error.response?.data
-    })
-    
-    // Gérer les différents cas d'erreur
-    if (error.response?.status === 401) {
-      alert('Vous devez être connecté pour accéder au paiement')
-      this.$router.push('/login')
-    } else if (error.response?.status === 404) {
-      alert('Votre panier est vide')
-      this.$router.push('/cart')
-    } else {
-      alert('Erreur lors du chargement de votre panier')
-      this.$router.push('/cart')
-    }
-  }
-},
     getProductImage(item) {
       if (item.product?.img) {
         return `/images/${item.product.img}`
       }
       return '/images/placeholder.png'
     },
-    
-    findProductById(productId) {
-      try {
-        const allProducts = JSON.parse(localStorage.getItem('allProducts') || '[]')
-        return allProducts.find(p => p.id === productId)
-      } catch (e) {
-        return null
-      }
-    },
-    
+
     handleImageError(event) {
       event.target.src = '/images/placeholder.png'
       event.target.classList.add('error-image')
     },
-    
+
     selectDeliveryOption(option) {
       this.selectedDelivery = option.id
-      console.log('🚚 Option livraison sélectionnée:', option)
+      console.log('🚚 Option livraison:', option.name, '- Prix:', option.price, '€')
+      console.log('💰 Nouveau total:', this.orderTotal)
     },
-    
+
     calculateBestDeliveryOption() {
       if (this.subtotal >= 50) {
         this.selectedDelivery = 'gratuite'
+        console.log('🎁 Livraison gratuite activée (>= 50€)')
       } else {
         this.selectedDelivery = 'standard'
+        console.log('📦 Livraison standard par défaut')
       }
-      console.log('📦 Option livraison choisie:', this.selectedDelivery)
     },
-    
+
     goToPaymentStep() {
       if (this.isDeliveryStepValid) {
+        console.log('➡️ Passage à l\'étape paiement')
+        console.log('💰 Montant à payer:', this.orderTotal, '€')
         this.currentStep = 2
-        console.log('📦 Passage à l\'étape paiement')
       } else {
         alert('Veuillez remplir toutes les informations de livraison')
       }
     },
-    
+
     highlightField(event) {
       event.target.parentElement.classList.add('focused')
       setTimeout(() => {
         event.target.parentElement.classList.remove('focused')
       }, 1000)
     },
-    
- async handlePaymentCompleted(paymentData) {
-  try {
-    this.isProcessing = true;
-    console.log('💳 Paiement reçu, finalisation de la commande...');
 
-    // 1. On prépare les données complètes pour le serveur
-    const orderData = {
-      paymentMethod: paymentData.method || 'carte',
-      shippingAddress: this.deliveryAddress,
-      shippingMethod: this.selectedDeliveryOption.name,
-      estimatedDelivery: this.calculateEstimatedDelivery(),
-      orderNumber: this.orderNumber // Utilise le numéro généré au mounted
-    };
-
-    // 2. Un SEUL appel au backend pour valider le statut 'paid'
-    const response = await axios.post('/cart/confirm', orderData);
-
-    if (response.data.success) {
-      console.log('✅ Commande confirmée en base de données');
-
-      // 3. On prépare l'objet pour l'écran de confirmation (Step 3)
-      this.orderDetails = {
-        id: response.data.order?.id || this.orderNumber,
-        date: new Date().toISOString(),
-        items: [...this.cartItems],
-        delivery: {
-          address: { ...this.deliveryAddress },
-          option: { ...this.selectedDeliveryOption }
-        },
-        total: this.orderTotal,
-        status: 'paid'
-      };
-
-      // 4. Nettoyage local uniquement (On ne fait PAS d'appel DELETE /cart)
-      this.clearLocalStorage();
-
-      // 5. Passage à l'étape finale
-      this.hasCompletedPayment = true;
-      this.currentStep = 3;
-      
-    } else {
-      throw new Error(response.data.error || 'Erreur serveur');
-    }
-
-  } catch (error) {
-    console.error('❌ Erreur finalisation commande:', error);
-    // C'est ce message que tu voyais :
-    alert('Le paiement a réussi, mais nous avons eu un problème pour enregistrer votre commande en base de données. Ne repayez pas, contactez le support.');
-  } finally {
-    this.isProcessing = false;
-  }
-},
-    
-     async completeOrder() {
-    if (this.isProcessing) return
-    this.isProcessing = true
-    console.log('🚀 Début de la finalisation de commande...')
-    
-    try {
-      // Préparer les données de la commande
-      const orderData = {
-        orderId: this.orderNumber,
-        orderNumber: this.orderNumber,
-        amount: this.orderTotal,
-        total: this.orderTotal,
-        subtotal: this.subtotal,
-        deliveryPrice: this.selectedDeliveryOption.price,
-        paymentMethod: this.orderDetails?.payment?.method || 'carte',
-        deliveryMethod: this.selectedDeliveryOption.name,
-        trackingNumber: this.generateTrackingNumber(),
-        estimatedDelivery: this.calculateEstimatedDelivery(),
-        date: new Date().toISOString(),
-        items: this.cartSnapshot || [],
-        status: 'paid',
-        shippingAddress: this.deliveryAddress,
-        customer: this.user ? {
-          id: this.user.id,
-          name: this.user.name,
-          lastName: this.user.lastName,
-          email: this.user.email,
-          telephone: this.user.telephone
-        } : null
-      }
-      
-      console.log('📊 Données de commande à sauvegarder:', orderData)
-      
-      // Sauvegarder AVANT de vider le panier
-      localStorage.setItem('lastOrder', JSON.stringify(orderData))
-      localStorage.setItem('currentOrder', JSON.stringify(orderData))
-      localStorage.setItem(`order_${orderData.orderId}`, JSON.stringify(orderData))
-      
-      console.log('💾 Données sauvegardées dans localStorage')
-      
-      // Attendre un peu pour être sûr
-      await new Promise(resolve => setTimeout(resolve, 300))
-      
-      // Vider le localStorage du panier
-      this.clearLocalStorage()
-      
-      // Rediriger
-      console.log('🔄 Redirection vers la page de confirmation...')
-      await this.redirectToOrderConfirmation(orderData)
-      
-    } catch (error) {
-      console.error('🚨 Erreur lors de la finalisation:', error)
-      this.isProcessing = false
-      alert('Une erreur est survenue lors de la confirmation de votre commande. Veuillez réessayer.')
-    }
-  },
-  
-    
-    async redirectToOrderConfirmation(orderData) {
-      console.log('📍 Méthode redirectToOrderConfirmation appelée')
-      console.log('📦 Données de commande:', orderData)
-      
+    async handlePaymentCompleted(paymentData) {
       try {
-        // Vérifier que les données sont bien sauvegardées
-        const savedOrder = localStorage.getItem('lastOrder')
-        console.log('💾 Vérification données sauvegardées:', savedOrder ? 'OK' : 'MANQUANTES')
-        
-        // Essayer plusieurs méthodes de redirection
-        console.log('🔄 Tentative de redirection...')
-        
-        // Méthode 1: Utiliser le nom de route si disponible
-        try {
-          await this.$router.push({
-            name: 'OrderSuccess', // ou 'OrderConfirmation' selon votre router
-            query: {
-              orderId: orderData.orderId,
-              orderNumber: orderData.orderNumber,
-              amount: orderData.amount,
-              tracking: orderData.trackingNumber,
-              success: 'true'
-            }
-          })
-          console.log('✅ Redirection via router.push réussie')
-          return
-        } catch (routerError) {
-          console.warn('⚠️ Redirection par nom échouée:', routerError)
+        this.isProcessing = true
+        console.log('💳 Paiement confirmé:', paymentData)
+
+        const orderData = {
+          paymentMethod: paymentData.method || 'carte',
+          shippingAddress: this.deliveryAddress,
+          shippingMethod: this.selectedDeliveryOption.name,
+          estimatedDelivery: this.calculateEstimatedDelivery(),
+          orderNumber: this.orderNumber
         }
-        
-        // Méthode 2: Utiliser le chemin
-        try {
-          await this.$router.push({
-            path: '/order/confirmation',
-            query: {
-              orderId: orderData.orderId,
-              orderNumber: orderData.orderNumber,
-              amount: orderData.amount,
-              tracking: orderData.trackingNumber
-            }
-          })
-          console.log('✅ Redirection via chemin réussie')
-          return
-        } catch (pathError) {
-          console.warn('⚠️ Redirection par chemin échouée:', pathError)
+
+        const response = await axios.post('/cart/confirm', orderData)
+
+        if (response.data.success) {
+          console.log('✅ Commande confirmée')
+
+          this.orderDetails = {
+            id: response.data.order?.id || this.orderNumber,
+            date: new Date().toISOString(),
+            items: [...this.cartItems],
+            delivery: {
+              address: { ...this.deliveryAddress },
+              option: { ...this.selectedDeliveryOption }
+            },
+            total: this.orderTotal,
+            status: 'paid'
+          }
+
+          this.clearLocalStorage()
+          this.hasCompletedPayment = true
+          this.currentStep = 3
+        } else {
+          throw new Error(response.data.error || 'Erreur serveur')
         }
-        
-        // Méthode 3: Fallback avec window.location
-        console.log('🔄 Fallback avec window.location...')
-        const queryString = new URLSearchParams({
-          orderId: orderData.orderId,
-          orderNumber: orderData.orderNumber,
-          amount: orderData.amount,
-          tracking: orderData.trackingNumber
-        }).toString()
-        
-        window.location.href = `/order/success?${queryString}`
-        
+
       } catch (error) {
-        console.error('❌ Toutes les méthodes de redirection ont échoué:', error)
-        
-        // Dernier recours: message et redirection vers l'accueil
-        alert(`Commande confirmée ! Votre numéro de commande est: ${orderData.orderId}`)
-        this.$router.push('/')
+        console.error('❌ Erreur finalisation:', error)
+        alert('Erreur lors de l\'enregistrement de votre commande')
+      } finally {
+        this.isProcessing = false
       }
     },
-    
+
+    handlePaymentError(error) {
+      console.error('❌ Erreur paiement:', error)
+      alert('Une erreur est survenue lors du paiement. Veuillez réessayer.')
+    },
+
+    async completeOrder() {
+      if (this.isProcessing) return
+      this.isProcessing = true
+      
+      try {
+        const orderData = {
+          orderId: this.orderNumber,
+          orderNumber: this.orderNumber,
+          amount: this.orderTotal,
+          total: this.orderTotal,
+          subtotal: this.subtotal,
+          deliveryPrice: this.selectedDeliveryOption.price,
+          paymentMethod: this.orderDetails?.payment?.method || 'carte',
+          deliveryMethod: this.selectedDeliveryOption.name,
+          trackingNumber: this.generateTrackingNumber(),
+          estimatedDelivery: this.calculateEstimatedDelivery(),
+          date: new Date().toISOString(),
+          items: this.cartSnapshot || [],
+          status: 'paid',
+          shippingAddress: this.deliveryAddress,
+          customer: this.user ? {
+            id: this.user.id,
+            name: this.user.name,
+            lastName: this.user.lastName,
+            email: this.user.email,
+            telephone: this.user.telephone
+          } : null
+        }
+
+        localStorage.setItem('lastOrder', JSON.stringify(orderData))
+        localStorage.setItem('currentOrder', JSON.stringify(orderData))
+        localStorage.setItem(`order_${orderData.orderId}`, JSON.stringify(orderData))
+
+        await new Promise(resolve => setTimeout(resolve, 300))
+
+        this.clearLocalStorage()
+
+        await this.redirectToOrderConfirmation(orderData)
+
+      } catch (error) {
+        console.error('❌ Erreur finalisation:', error)
+        this.isProcessing = false
+        alert('Erreur lors de la confirmation')
+      }
+    },
+
+    async redirectToOrderConfirmation(orderData) {
+      try {
+        await this.$router.push({
+          name: 'OrderConfirmation',
+          query: {
+            orderId: orderData.orderId,
+            orderNumber: orderData.orderNumber,
+            amount: orderData.amount,
+            tracking: orderData.trackingNumber,
+            success: 'true'
+          }
+        })
+      } catch (error) {
+        console.error('❌ Erreur redirection:', error)
+        window.location.href = `/order/confirmation?orderId=${orderData.orderId}`
+      }
+    },
+
     generateTrackingNumber() {
       const date = new Date()
       const year = date.getFullYear().toString().substring(2)
@@ -901,76 +816,31 @@ async fetchCurrentOrder() {
       const random = Math.random().toString(36).substring(2, 8).toUpperCase()
       return `TRK-${year}${month}${day}-${random}`
     },
-    // ✅ NOUVELLE MÉTHODE: Vider le panier dans la BD
-  async clearCartInDatabase() {
-    try {
-      console.log('🗑️ Vidage du panier dans la BD...')
+
+    clearLocalStorage() {
+      console.log('🗑️ Nettoyage localStorage...')
       
-      await axios.delete('/cart')
+      const keysToRemove = [
+        'cart',
+        'monShop_cart',
+        'shoppingCart',
+        'panier',
+        'cart_anonymous',
+        'currentOrderDetails'
+      ]
       
-      console.log('✅ Panier vidé dans la BD')
+      keysToRemove.forEach(key => localStorage.removeItem(key))
       
-      // Émettre l'événement de mise à jour
-      if (window.EventBus) {
-        window.EventBus.$emit('cart-updated')
-      }
-      
-    } catch (error) {
-      console.error('❌ Erreur vidage panier:', error)
-      // Ne pas bloquer même en cas d'erreur
-    }
-  },
-  // ✅ NOUVELLE MÉTHODE: Vider le localStorage
-  clearLocalStorage() {
-    console.log('🗑️ Nettoyage du localStorage...')
-    
-    const keysToRemove = [
-      'cart',
-      'monShop_cart',
-      'shoppingCart',
-      'panier',
-      'cart_anonymous',
-      'currentOrderDetails'
-    ]
-    
-    keysToRemove.forEach(key => {
-      localStorage.removeItem(key)
-    })
-    
-    console.log('✅ localStorage nettoyé')
-  },
-  
-    clearCartLocal() {
-      try {
-        console.log('🗑️ Nettoyage du panier...')
-        
-        // Supprimer toutes les versions possibles du panier
-        localStorage.removeItem('cart')
-        localStorage.removeItem('monShop_cart')
-        localStorage.removeItem('shoppingCart')
-        localStorage.removeItem('panier')
-        
-        // Émettre l'événement
-        this.$emit('cart-cleared')
-        
-        // Appeler la fonction de nettoyage si fournie
-        if (this.clearCart && typeof this.clearCart === 'function') {
-          this.clearCart()
-        }
-        
-        console.log('✅ Panier nettoyé avec succès')
-      } catch (error) {
-        console.warn('⚠️ Erreur lors du nettoyage du panier:', error)
-      }
+      console.log('✅ localStorage nettoyé')
     },
-    
+
     generateOrderId() {
       const prefix = 'CMD'
       const timestamp = Date.now().toString(36).toUpperCase()
       const random = Math.random().toString(36).substring(2, 8).toUpperCase()
       return `${prefix}-${timestamp}-${random}`
     },
-    
+
     calculateEstimatedDelivery() {
       const today = new Date()
       let deliveryDays = 0
@@ -1007,7 +877,7 @@ async fetchCurrentOrder() {
         month: 'long'
       })
     },
-    
+
     formatPrice(price) {
       const num = parseFloat(price)
       if (isNaN(num)) return '0,00 €'

@@ -16,19 +16,19 @@
       <form @submit.prevent="handleLogin" class="login-form" novalidate>
         <div class="form-group">
           <label for="username" class="form-label">
-            Nom d'utilisateur
+            Email
             <span class="required-asterisk">*</span>
           </label>
           <input
-            id="username"
-            v-model="loginForm.username"
+            id="email"
+            v-model="loginForm.email"
             type="text"
-            placeholder="Entrez votre nom d'utilisateur"
+            placeholder="Entrez votre email"
             required
-            :class="{ 'input-error': formErrors.username }"
-            @input="clearError('username')"
+            :class="{ 'input-error': formErrors.email }"
+            @input="clearError('email')"
           />
-          <span v-if="formErrors.username" class="error-text">{{ formErrors.username }}</span>
+          <span v-if="formErrors.email" class="error-text">{{ formErrors.email }}</span>
         </div>
 
         <div class="form-group">
@@ -118,7 +118,7 @@
 </template>
 
 <script>
-import api from '../api';
+import axios from 'axios';
 
 export default {
   name: 'LoginForm',  // ✅ CORRIGÉ : Nom du composant
@@ -135,11 +135,11 @@ export default {
   data() {
     return {
       loginForm: {
-        username: '',
+        email: '',
         password: ''
       },
       formErrors: {
-        username: '',
+        email: '',
         password: ''
       },
       errorMessage: '',
@@ -153,8 +153,8 @@ export default {
     console.log('🔑 LoginForm monté, user:', this.user);
     
     // ✅ CORRIGÉ : Utiliser le prop directement
-    if (this.user && this.user.username) {
-      this.loginForm.username = this.user.username;
+    if (this.user && this.user.email) {
+      this.loginForm.email = this.user.email;
     }
     
     // ✅ AJOUTÉ : Vérifier si on vient d'une redirection checkout
@@ -168,8 +168,8 @@ export default {
       this.formErrors = {};
       let isValid = true;
 
-      if (!this.loginForm.username.trim()) {
-        this.formErrors.username = 'Le nom d\'utilisateur est requis';
+      if (!this.loginForm.email.trim()) {
+        this.formErrors.email = 'L\'email est requis';
         isValid = false;
       }
 
@@ -194,9 +194,9 @@ export default {
     },
 
     // ✅ CORRIGÉ : Méthode simplifiée pour vérifier les admins
-    isUserAdmin(username) {
-      const adminUsernames = ['Anis', 'Hermann', 'Franklin', 'admin', 'administrateur'];
-      return adminUsernames.includes(username);
+    isUserAdmin(email) {
+      const adminEmails = ['Anis@example.com', 'Hermann@example.com', 'Franklin@example.com', 'admin@example.com', 'administrateur@example.com'];
+      return adminEmails.includes(email);
     },
 
     goToAdminPanel() {
@@ -231,8 +231,8 @@ export default {
       this.errorMessage = '';
 
       try {
-        const response = await api.post('/auth/login', {
-          username: this.loginForm.username.trim(),
+        const response = await axios.post('/auth/login', {
+          email: this.loginForm.email.trim(),
           password: this.loginForm.password
         });
 
@@ -284,7 +284,7 @@ export default {
     logout() {
       localStorage.removeItem('token');
       this.setUser(null);
-      this.loginForm = { username: '', password: '' };
+      this.loginForm = { email: '', password: '' };
       this.showAdminChoice = false;
       this.tempUser = null;
       this.$router.push('/login');

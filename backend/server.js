@@ -6,11 +6,11 @@ import authRoutes from './routes/authRoutes.js';
 import profileRoutes from './routes/profileRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import categorieRoutes from './routes/categorieRoutes.js';
-import adminRoutes from './routes/adminRoutes.js';
+//import adminRoutes from './routes/adminRoutes.js';
 //import panierRoutes from './routes/panierRoutes.js';
 import adminOrderRoutes from './routes/adminOrderRoutes.js';  // Importez le nouveau fichier ES6
-import homeRoute from './routes/homeRoute.js';
-import adminDashboardRoutes from './routes/adminDashboardController.js';
+//import homeRoute from './routes/homeRoute.js';
+//import adminDashboardRoutes from './routes/adminDashboardController.js';
 import userRoutes from './routes/userRoutes.js';
 import cartRoutes from './routes/cartRoutes.js';
 import adminStatsRoutes from './routes/adminStatsRoutes.js';
@@ -50,19 +50,19 @@ await fastify.register(cors, {
 });
 
 // ========== ENREGISTREMENT DES ROUTES ==========
-await fastify.register(homeRoute);
+//await fastify.register(homeRoute);
 await fastify.register(authRoutes, { prefix: '/auth' });
 await fastify.register(userRoutes);
 await fastify.register(profileRoutes, { prefix: '/profil' });
 await fastify.register(categorieRoutes, { prefix: '/categories' });
 await fastify.register(productRoutes, { prefix: '/product' });
-await fastify.register(adminRoutes, { prefix: '/admin' });
+//await fastify.register(adminRoutes, { prefix: '/admin' });
 await fastify.register(cartRoutes, { prefix: '/cart' });
 //await fastify.register(panierRoutes, { prefix: '/panier' });
-await fastify.register(adminDashboardRoutes, { prefix: '/admin/dashboard' });
+//await fastify.register(adminDashboardRoutes, { prefix: '/admin/dashboard' });
 await fastify.register(adminStatsRoutes, { prefix: '/admin/stats' });
 await fastify.register(adminOrderRoutes, { prefix: '/admin/orders' });// Enregistrez les routes d'orders
-await fastify.register(homeRoute, { prefix: '/hello' })
+//await fastify.register(homeRoute, { prefix: '/hello' })
 
 // Enregistrer les routes SEO
 fastify.register(seoRoutes)

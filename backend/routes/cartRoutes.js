@@ -7,8 +7,7 @@ import {
   updateCartItem,
    prepareCheckout,
   confirmCartOrder,
-  //confirmPayment,
-  //createOrderFromCart,
+
   getCurrentOrder,
   getMyPaidOrders,
   removeCartItem,
@@ -56,16 +55,6 @@ fastify.get('/orders/mine',
   { preHandler: [authenticate] }, 
   getMyPaidOrders
 )
-
-/*   fastify.post('/orders/confirm', {
-  preHandler: [authenticate]
-}, confirmPayment) */
-/* 
-  fastify.post('/from-cart', {
-    preHandler: [authenticate]
-  }, createOrderFromCart)
-
- */
 
 
   console.log('✅ Routes panier enregistrées')

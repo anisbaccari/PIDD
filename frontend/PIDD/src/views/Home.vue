@@ -29,8 +29,8 @@
       </div>
     </section>
 
-    <h1>T-shirts premium pour homme</h1>
-    <p>Découvrez notre collection de t-shirts confortables et stylés pour homme.</p>
+    <h1>T-shirts premium </h1>
+    <p>Découvrez notre collection de t-shirts confortables et stylés .</p>
 
     <!-- 🔥 NOUVEAU : Section partage social de la page -->
     <section class="home-share-section">
