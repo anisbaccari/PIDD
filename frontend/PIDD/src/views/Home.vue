@@ -93,6 +93,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useHead } from '@unhead/vue'
 import { productService } from '../services/productServices'
 import axios from 'axios'
+import api from '../api.js'
 
 export default {
   name: 'HomePage',
@@ -105,7 +106,9 @@ export default {
   props: {
     user: Object,
     tmpUser: Object,
-    addToCartGlobal: Function
+    addToCartGlobal: Function,
+    resetUser: Function,
+    getTmpPanier: Function
   },
 
   setup() {
@@ -277,11 +280,28 @@ export default {
         ]
       })
     },
+
+    /* ====== */
+    homeCheckUser(){
+        const token = localStorage.getItem('token')
+        if(token)
+         {
+           console.log("[homeCheckUser] token :",token)
+            return;
+         } 
+         this.resetUser();
+
+    },
     addToTmp(product){
-        const newItem = {productid: product.id,quantity:1}
+        console.log("[CategoryPage] addTocart Product :",product)
+        
+        const newItem = {id:1,productid: product.id,
+                      unitPrice:product.price,quantity:1}
+        if(!this.tmpUser || !this.tmpUser.panier)
+          this.tmpUser =  { panier:[]}
         this.tmpUser.panier.push(newItem)
-        console.log(newItem)
-        console.log(this.tmpUser)
+        console.log("[addToTmp] addTocart newItem :",newItem)
+        console.log("[addToTmp] addTocart TmpUSER :",this.tmpUser)
 
     },
     async addToCart(product) {
@@ -292,13 +312,14 @@ export default {
           //this.$router.push('/login')
           return
         }
-
+        console.log(`[addToCart] user`,this.user)
         console.log(`🛒 Ajout au panier: ${product.name} (ID: ${product.id})`)
-
-        await axios.post('/cart/item', {
-          productId: product.id,
-          quantity: 1
-        })
+        const response = await api.post('http://localhost:3000/cart/item', {
+              productId: product.id,
+              quantity: 1,
+              userId: this.user.id
+        });
+ 
 
         console.log(`✅ Produit ajouté au panier: ${product.name}`)
         alert(`${product.name} ajouté au panier !`)

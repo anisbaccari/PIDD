@@ -374,7 +374,7 @@
 
 <script>
 import axios from 'axios';
-
+import api from '../api.js';
 export default {
   name: 'AdminOrders',
   data() {
@@ -432,11 +432,11 @@ export default {
 
         console.log('🔍 Requête API vers /admin/orders avec params:', params);
 
-        const response = await axios.get('/admin/orders', {
+      /*   const response = await axios.get('/admin/orders', {
           params,
           headers: this.getAuthHeaders()
-        });
-
+        }); */
+        const response = await api.get('http://localhost:3000/admin/orders');
         console.log('✅ Réponse API reçue:', response.data);
 
         if (response.data && response.data.success) {
@@ -586,7 +586,7 @@ export default {
       if (!this.orderToUpdate || !this.newStatus) return;
 
       try {
-        const response = await axios.put(
+        const response = await api.put(
           `/admin/orders/${this.orderToUpdate.id}/status`,
           {
             status: this.newStatus,

@@ -338,7 +338,7 @@
             v-if="currentStep === 1"
             class="btn btn-primary btn-next"
             @click="goToPaymentStep"
-            :disabled="!isDeliveryStepValid"
+           
           >
             Continuer vers le paiement
             <span class="btn-icon">→</span>
@@ -355,7 +355,7 @@
             <div v-for="(item, index) in cartItems" :key="index" class="cart-item">
               <div class="item-image">
                 <img
-                  :src="`/images/${item.product.img}`"
+                  :src="`/images/${item.product.img}` || null "
                   :alt="item.product.name || 'Produit'"
                   class="product-img"
                   @error="handleImageError"
@@ -422,9 +422,10 @@
 import { useHead } from '@unhead/vue'
 import axios from 'axios';
 import PaymentMethod from '@/components/PaymentMethod.vue'
-
+import api from '../api.js';
 export default {
   name: 'CheckoutPage',
+  props:['tmpUser','user','getTmpPanier'],
   components: {
     PaymentMethod
   },
@@ -601,11 +602,16 @@ export default {
 },
 async fetchCurrentOrder() {
   try {
-    console.log('🔄 Récupération du panier pour checkout...')
-    
-    // ✅ Utiliser axios directement (pas this.$axios)
-    const res = await axios.get('/cart')
 
+    if(this.user)
+    {
+
+  
+    console.log('🔄 Récupération du panier pour checkout...')
+     console.log('[fetchCurrentOrder] this.user',this.user)
+    // ✅ Utiliser axios directement (pas this.$axios)
+    //const res = await axios.get('/cart')
+    const res = await api.get(`http://localhost:3000/cart/${this.user.id}`);
     console.log('📦 Réponse API /cart:', res.data)
 
     // Vérifier si le panier est vide
@@ -643,7 +649,11 @@ async fetchCurrentOrder() {
       subtotal: this.subtotal,
       items: this.cartItems
     })
-
+    }
+    else {
+      console.log("[CheckoutPage] TMPUSER ",this.tmpUser)
+      this.cartItems = this.getTmpPanier();
+    }
   } catch (error) {
     console.error('❌ Erreur récupération panier:', {
       message: error.message,
@@ -717,6 +727,11 @@ async fetchCurrentOrder() {
     
  async handlePaymentCompleted(paymentData) {
   try {
+
+    if(this.user)
+  {
+
+
     this.isProcessing = true;
     console.log('💳 Paiement reçu, finalisation de la commande...');
 
@@ -730,8 +745,12 @@ async fetchCurrentOrder() {
     };
 
     // 2. Un SEUL appel au backend pour valider le statut 'paid'
-    const response = await axios.post('/cart/confirm', orderData);
-
+  //  const response = await axios.post('/cart/confirm', orderData);
+   // const userId = request.user.id;
+        const response = await api.post('http://localhost:3000/cart/confirm', {
+              orderData:orderData,
+              userId: this.user.id
+        });
     if (response.data.success) {
       console.log('✅ Commande confirmée en base de données');
 
@@ -758,7 +777,15 @@ async fetchCurrentOrder() {
     } else {
       throw new Error(response.data.error || 'Erreur serveur');
     }
+  } else 
+  { 
+          // 4. Nettoyage local uniquement (On ne fait PAS d'appel DELETE /cart)
+      this.clearLocalStorage();
 
+      // 5. Passage à l'étape finale
+      this.hasCompletedPayment = true;
+      this.currentStep = 3;
+  }
   } catch (error) {
     console.error('❌ Erreur finalisation commande:', error);
     // C'est ce message que tu voyais :

@@ -94,6 +94,7 @@
 
 <script>
   import axios from 'axios';
+  import api from '../api.js';
 export default {
   name: 'Adminview',
   props: ['user', 'setUser', 'getUser'],
@@ -116,8 +117,8 @@ export default {
     this.loading = true
     try {
       // 1. Appel vers ton contrôleur (vérifie l'URL dans ton fichier routes)
-      const response = await axios.get('/admin/stats/general');
-      
+     // const response = await axios.get('/admin/stats/general');
+         const response = await api.get('http://localhost:3000/admin/stats/general');
       if (response.data.success) {
         // 2. On mappe les données du contrôleur vers tes variables de stats
         const s = response.data.stats;

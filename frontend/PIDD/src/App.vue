@@ -35,6 +35,7 @@ export default {
 
   data() {
     return {
+      orderId: null,
       tmpUser: { panier:[]},
       user: null,
       cartItemsCount: 0, // 🔥 Nombre d'articles dans le panier BD
@@ -64,6 +65,61 @@ export default {
       return this.user
     },
 
+    totalPanierPrice() {
+        console.log("[totalPanierPrice] TmpUSER :",this.tmpUser)
+      if(this.tmpUser.panier){
+
+     
+      return this.tmpUser.panier.reduce((total, item) => {
+        return total + (item.unitPrice * item.quantity);
+      }, 0); 
+    } else {
+      return 0
+    }
+    },
+    addToTmp(product){
+        console.log("[CategoryPage] addTocart Product :",product)
+        
+        const newItem = {id:1,productid: product.id,
+                      unitPrice:product.price,quantity:1}
+        if(!this.tmpUser || !this.tmpUser.panier)
+          this.tmpUser =  { panier:[]}
+        this.tmpUser.panier.push(newItem)
+        console.log("[addToTmp] addTocart newItem :",newItem)
+        console.log("[addToTmp] addTocart TmpUSER :",this.tmpUser)
+
+    },
+    setOrderId(id){
+      console.log("[setOrderId] id ",id)
+
+      this.orderId = id
+    },
+    getOrderId(){
+      console.log("[getOrderId] this.orderId ",this.orderId)
+      return this.orderId
+    },
+    getTmpPanier(){
+      console.log("[getTmpPanier] TMPUSER ",this.tmpUser)
+
+      return this.tmpUser.panier;
+    }, 
+    setTmpPanier(panier){ 
+      console.log("[setTmpPanier] TMPUSER ",this.tmpUser)
+      this.tmpUser.panier = panier
+      console.log("[setTmpPanier] panier ",this.tmpUser.panier)
+
+    },
+    resetUser(){
+        const lastUser = localStorage.getItem('user')
+        console.log('[resetUser] last user',lastUser)
+        localStorage.removeItem('user')
+      const token = localStorage.getItem('token')
+
+        console.log('[resetUser] token removed',token)
+
+        localStorage.removeItem('token')
+
+    },
     /* === PANIER BD === */
     async fetchCartCount() {
       if (!this.user) {
@@ -100,11 +156,13 @@ export default {
       const storedUser = localStorage.getItem('user')
       const token = localStorage.getItem('token')
       
-      if (token) {
+      if (!token) {
         console.log('❌ Pas de token')
-     
+       const lastUser = localStorage.getItem('user')
+        console.log('[checkUserAuthentication] last user',lastUser)
+
          await this.fetchCartCount()
-        return
+        
       }
 
       // Charger l'utilisateur depuis localStorage
@@ -241,7 +299,7 @@ export default {
         <router-link to="/category/2" class="nav-link">Femme</router-link>
         <router-link to="/category/3" class="nav-link">Enfants</router-link>
         <router-link to="/cart" class="nav-link">
-          Panier ({{ getTotalItems() }})
+          Panier 
         </router-link>
       </div>
 
@@ -252,6 +310,14 @@ export default {
 
     <!-- Contenu principal -->
     <router-view
+      :getOrderId="getOrderId"
+      :setOrderId="setOrderId"
+      :orderId="orderId"
+    :resetUser="resetUser"
+    :setTmpPanier="setTmpPanier"
+      :getTmpPanier="getTmpPanier"
+      :addToTmp="addToTmp"
+      :totalPanierPrice="totalPanierPrice"
       :tmpUser="tmpUser"
       :user="user"
       :setUser="setUser"

@@ -217,7 +217,7 @@
           <!-- Add to Cart & Actions -->
           <div class="actions-section">
             <button 
-              @click="addToCart" 
+              @click="addToCart()" 
               :disabled="!product.quantity || addingToCart"
               :class="['add-to-cart-btn', { disabled: !product.quantity }]"
             >
@@ -344,6 +344,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { useHead } from '@unhead/vue'
 import axios from 'axios'
 import { productService } from '../services/productServices'
+import api from '../api.js'
+
 
 components: {
   ShareButtons  // ← Doit être présent
@@ -355,7 +357,7 @@ export default {
   components: {
     ShareButtons
   },
-  props: ['addToCartGlobal', 'user'],
+  props: ['addToCartGlobal', 'user','tmpUser','totalPanierPrice','addToTmp'],
 
   setup(props) {
     const route = useRoute()
@@ -644,20 +646,30 @@ export default {
     // ============================================
     const addToCart = async () => {
       if (!product.value || quantity.value <= 0 || addingToCart.value) return
+      try {
 
+      console.log("[productPage] product",product)
       if (!props.user) {
-        showToastMessage('Veuillez vous connecter', 'error')
-        router.push('/login')
-        return
+       console.log(product)
+       console.log(props.tmpUser)
+       props.addToTmp(product)
+       return
       }
 
       addingToCart.value = true
 
-      try {
-        await axios.post('/cart/item', {
+       /*  await axios.post('/cart/item', {
           productId: product.value.id,
           quantity: quantity.value
-        })
+        }) */
+
+           console.log(`🛒 Ajout au panier: ${product.value.name} (ID: ${product.value.id})`)
+        const response = await api.post('http://localhost:3000/product/add', {
+              productId: product.value.id,
+              quantity: 1,
+              userId:props.user.id
+        });
+ 
 
         showToastMessage(
           `✅ ${quantity.value} "${product.value.name}" ajouté${quantity.value > 1 ? 's' : ''} au panier`,

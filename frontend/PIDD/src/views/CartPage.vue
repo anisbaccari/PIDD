@@ -142,6 +142,7 @@
 <script>
 import { useHead } from '@unhead/vue'
 import axios from 'axios'
+import api from '../api.js';
 
 export default {
   name: 'CartPage',
@@ -154,6 +155,16 @@ export default {
     })
   },
 
+  props: {
+    setTmpPanier:Function,
+    getTmpPanier:Function,
+    getOrderId:Function,
+    setOrderId:Function,
+    orderId: Object,
+    user:Object,
+    tmpUser: Object,
+    totalPanierPrice: Function,
+  },
   data() {
     return {
       cartItems: [],
@@ -164,6 +175,7 @@ export default {
   },
 
   async mounted() {
+    console.log(this.tmpUser)
     await this.fetchCart()
     await this.fetchMyOrders()
   },
@@ -171,25 +183,37 @@ export default {
   methods: {
     // 🔹 Charger le panier
     async fetchCart() {
+        console.log('[PAnier] user: ',this.user)
       this.loading = true
       try {
-        console.log('🔄 Chargement du panier...')
-        
-        const res = await axios.get('/cart')
 
+        if(this.user){
+
+       
+        console.log('🔄 Chargement du panier...')
+        console.log('[PAnier] user: ',this.user.id)
+
+        
+        //const res = await axios.get('/cart')
+         const res = await api.get(`http://localhost:3000/cart/${this.user.id}`);
         console.log('✅ Réponse API:', res.data)
 
         // ✅ Utiliser la bonne structure de données
         this.cartItems = res.data?.items || []
         this.subtotal = res.data?.subtotal || 0
-
+        const newOrderId = res.data?.orderId || 0
+        this.setOrderId(newOrderId) 
         console.log(`📦 ${this.cartItems.length} articles chargés`)
         
         // Debug
         if (this.cartItems.length > 0) {
-          console.log('Premier article:', this.cartItems[0])
+          console.log('Premier article:', this.cartItems)
         }
-
+      } else 
+      { 
+          this.cartItems = this.tmpUser?.panier || []
+          this.subtotal = this.totalPanierPrice()
+      }
       } catch (err) {
         console.error('❌ Erreur chargement panier:', {
           message: err.message,
@@ -210,6 +234,10 @@ export default {
     },
     async fetchMyOrders() {
     try {
+
+      if(this.user)
+    {
+
       const token = localStorage.getItem('token')
 
       const res = await fetch('http://localhost:3000/orders/mine', {
@@ -219,6 +247,7 @@ export default {
       })
 
       this.myOrders = await res.json()
+    }
 
     } catch (e) {
       console.error('Erreur récupération commandes', e)
@@ -226,17 +255,29 @@ export default {
   },
     async updateQuantity(orderItemId, quantity) {
       if (quantity < 1) return
-      
+      console.log("[updateQuantity] this.user",this.user)
+     
+
       try {
+         if(this.user){
         console.log(`🔄 Mise à jour: item ${orderItemId} → ${quantity}`)
+        console.log(`[order] orderId` , this.orderId)
         
-        await axios.put(`/cart/item/${orderItemId}`, { quantity })
-        
+        //await axios.put(`/cart/item/${orderItemId}`, { quantity })
+        const response = await api.put(`http://localhost:3000/cart/item/${this.user.id}`, {
+              orderId:this.orderId,
+              id: orderItemId,
+              quantity: quantity,
+              userId: this.user.id
+        });
         await this.fetchCart()
         
         // 🔥 Mettre à jour le compteur dans le header
         window.EventBus.$emit('cart-updated')
-        
+      }
+      else { 
+        return 
+      }
       } catch (err) {
         console.error('❌ Erreur mise à jour:', err)
         alert('Erreur lors de la mise à jour')
@@ -245,14 +286,21 @@ export default {
 
     async removeItem(orderItemId) {
       try {
+        if(this.user){
+
         console.log(`🗑️ Suppression item ${orderItemId}`)
         
-        await axios.delete(`/cart/item/${orderItemId}`)
-        
+      //  await axios.delete(`/cart/item/${orderItemId}`)
+       const response = await api.post('http://localhost:3000/cart/deleteItem', {
+              orderItemId: orderItemId,
+              userId: this.user.id
+        });
+
         await this.fetchCart()
         
         // 🔥 Mettre à jour le compteur dans le header
         window.EventBus.$emit('cart-updated')
+        }
         
       } catch (err) {
         console.error('❌ Erreur suppression:', err)
@@ -264,14 +312,19 @@ export default {
       if (!confirm('Vider le panier ?')) return
       
       try {
+        if(this.user){
+
         console.log('🗑️ Vidage du panier')
         
-        await axios.delete('/cart')
-        
+      //  await axios.delete('/cart')
+         const response = await api.delete(`http://localhost:3000/cart/${this.user.id}`);
         await this.fetchCart()
         
         // 🔥 Mettre à jour le compteur dans le header
         window.EventBus.$emit('cart-updated')
+        } else { 
+            this.setTmpPanier(null)
+        }
         
       } catch (err) {
         console.error('❌ Erreur vidage:', err)

@@ -35,8 +35,7 @@ export default {
                     return;
                 console.log("[Profil] : token found : ",this.token);
                 console.log("[Profil] : Data id : ",this.DataUser.id);
-
-                const res =   await api.get(`/profil/:${this.DataUser.id}`);
+                const res =   await api.get(`http://localhost:3000/profil/:${this.DataUser.id}`);
                 console.log("[Profil] response  : ", res);
                // this.DataUser.username = res.data.user.username;
 

@@ -251,6 +251,7 @@
 <script>
 import axios from 'axios';
 import { Chart, registerables } from 'chart.js';
+import api from '../api.js';
 Chart.register(...registerables);
 
 export default {
@@ -353,33 +354,39 @@ export default {
         
         // Charger toutes les stats en parallèle
         const [general, revenue, topProds, cats] = await Promise.all([
-          axios.get('/admin/stats/general', { 
+          api.get('http://localhost:3000/admin/stats/general', { 
             params, 
-            headers: this.getAuthHeaders() 
+          //  headers: this.getAuthHeaders() 
           }).catch(err => {
             console.error('Erreur stats générales:', err);
             return { data: { success: false } };
-          }),
+          })
           
-          axios.get('/admin/stats/revenue-evolution', { 
+ 
+          
+          ,
+
+
+          
+        api.get('http://localhost:3000/admin/stats/revenue-evolution', { 
             params: { ...params, groupBy: 'day' }, 
-            headers: this.getAuthHeaders() 
+          //  headers: this.getAuthHeaders() 
           }).catch(err => {
             console.error('Erreur évolution revenu:', err);
             return { data: { success: false, data: [] } };
           }),
-          
-          axios.get('/admin/stats/top-products', { 
+         
+          api.get('http://localhost:3000/admin/stats/top-products', { 
             params: { ...params, limit: 5 }, 
-            headers: this.getAuthHeaders() 
+           // headers: this.getAuthHeaders() 
           }).catch(err => {
             console.error('Erreur top produits:', err);
             return { data: { success: false, products: [] } };
           }),
-          
-          axios.get('/admin/stats/categories', { 
+             
+          api.get('http://localhost:3000/admin/stats/categories', { 
             params, 
-            headers: this.getAuthHeaders() 
+            //headers: this.getAuthHeaders() 
           }).catch(err => {
             console.error('Erreur catégories:', err);
             return { data: { success: false, categories: [] } };

@@ -182,6 +182,7 @@ export async function getGeneralStats(request, reply) {
 export async function getRevenueEvolution(request, reply) {
   try {
     const { startDate, endDate, groupBy = 'day' } = request.query;
+    console.log('============STATS=============', groupBy);
     
     console.log('📈 [getRevenueEvolution] GroupBy:', groupBy);
     

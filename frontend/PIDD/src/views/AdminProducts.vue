@@ -436,6 +436,7 @@ import noirfemme from '../assets/noirfemme.png';
 import enfantbleu from '../assets/enfantbleu.png';
 import enfantrouge from '../assets/enfantrouge.png';
 import gris from '../assets/gris.png';
+import api from '../api.js';
 
 export default {
   name: 'AdminProducts',
@@ -539,9 +540,11 @@ export default {
     this.loading = true;
     console.log('🔄 Chargement des produits depuis /product/allproduct...');
     
-    const response = await axios.get('http://localhost:3000/product/allproduct', {
+   /*  const response = await axios.get('http://localhost:3000/product/allproduct', {
       headers: this.getAuthHeaders()
-    });
+    }); */
+
+    const response = await api.get('http://localhost:3000/product/allproduct');
     
     console.log('✅ Réponse API:', response.data);
     
@@ -572,9 +575,11 @@ export default {
 },
     async loadOrders() {
       try {
-        const response = await axios.get(`${API_URL}/orders`, {
+     /*    const response = await axios.get(`${API_URL}/orders`, {
           headers: this.getAuthHeaders()
-        });
+        }); */
+    const response = await api.get('http://localhost:3000/orders');
+
         this.orders = response.data || [];
       } catch (error) {
         console.error('Erreur chargement commandes:', error);
@@ -587,9 +592,10 @@ async loadUsers() {
     console.log('Chargement des utilisateurs...');
     
     // Assurez-vous que la route /users existe dans votre backend
-    const response = await axios.get(`${API_URL}/users`, {
+    /* const response = await axios.get(`${API_URL}/users`, {
       headers: this.getAuthHeaders()
-    });
+    }); */
+    const response = await api.get('http://localhost:3000/users');
     
     console.log('Réponse utilisateurs:', response.data);
     
@@ -691,11 +697,11 @@ async loadUsers() {
       
       console.log('📤 Données envoyées pour update:', updateData);
       
-      const response = await axios.put(
+      const response = await api.put(
         `http://localhost:3000/product/update/${this.editingProduct.id}`,
-        updateData,
         { 
-          headers: this.getAuthHeaders(),
+          productData:updateData,
+         // headers: this.getAuthHeaders(),
           timeout: 10000 // 10 secondes timeout
         }
       );
@@ -729,10 +735,10 @@ async loadUsers() {
       
       console.log('📤 Données envoyées pour création:', createData);
       
-      const response = await axios.post(
+      const response = await api.post(
         'http://localhost:3000/product/addAdmin',
-        createData,
         { 
+          createData,
           headers: this.getAuthHeaders(),
           timeout: 10000
         }
@@ -779,11 +785,11 @@ async deleteProduct(id) {
   try {
     console.log(`📤 Envoi DELETE pour produit ${id}`);
     
-    const response = await axios.delete(
+    const response = await api.delete(
       'http://localhost:3000/product/deleteProduct',
       { 
         data: { productId: id },
-        headers: this.getAuthHeaders()
+       // headers: this.getAuthHeaders()
       }
     );
     
@@ -811,12 +817,17 @@ async deleteProduct(id) {
           description: product.description
         };
         
-        const response = await axios.post(
-          `${API_URL}/product/addAdmin`,
-          duplicatedProduct,
-          { headers: this.getAuthHeaders() }
-        );
-        
+  /*       const response = await api.post('http://localhost:3000/product/addAdmin`,
+        {
+             duplicatedProduct,
+             headers: this.getAuthHeaders()
+            }
+        ); */
+         const response = await api.post('http://localhost:3000/product/addAdmin', {
+             duplicatedProduct,
+             headers: this.getAuthHeaders()
+        });
+
         if (response.data && response.data.success) {
           this.products = [response.data.data, ...this.products];
           this.showNotification('Produit dupliqué avec succès', 'success');

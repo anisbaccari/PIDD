@@ -11,7 +11,7 @@ export async function getCart(request, reply) {
   try {
     console.log('======================== [getCart] ========================')
     
-    const userId = request.user?.id
+    const  userId = request.params.userId
     
     if (!userId) {
       console.error('[getCart] userId manquant')
@@ -20,6 +20,7 @@ export async function getCart(request, reply) {
         error: 'Non autorisé' 
       })
     }
+    console.log('\x1b[33m%s\x1b[0m',` =============================================================`)
 
     console.log(`[getCart] Recherche du panier pour userId: ${userId}`)
 
@@ -89,6 +90,8 @@ export async function getCart(request, reply) {
     })
 
     console.log(`✅ [getCart] Panier: ${totalItems} articles, subtotal: ${subtotal}€`)
+    console.log('\x1b[33m%s\x1b[0m',`✅ [getCart] =============================================================`)
+
 
     reply.send({
       success: true,
@@ -121,8 +124,8 @@ export async function addItemToCart(request, reply) {
   try {
     console.log('======================== [addItemToCart] ========================')
     
-    const userId = request.user?.id
-    const { productId, quantity } = request.body
+   // const userId = request.userid
+    const { productId, quantity,userId } = request.body
 
     console.log(`[addItemToCart] userId: ${userId}, productId: ${productId}, quantity: ${quantity}`)
 
@@ -248,9 +251,8 @@ export async function updateCartItem(request, reply) {
   try {
     console.log('======================== [updateCartItem] ========================')
     
-    const { id } = request.params
-    const { quantity } = request.body
-    const userId = request.user?.id
+    const { quantity, id, orderId } = request.body
+    const userId = request.params.userId
 
     console.log(`[updateCartItem] itemId: ${id}, quantity: ${quantity}, userId: ${userId}`)
 
@@ -261,17 +263,8 @@ export async function updateCartItem(request, reply) {
       })
     }
 
-    // Récupérer l'item avec sa commande
-    const item = await OrderItem.findByPk(id, {
-      include: [{
-        model: Order,
-        as: 'order',
-        where: { 
-          userId,
-          status: 'pending'
-        }
-      }]
-    })
+    // ✅ FIXED: Split the query - find item first, then verify order
+    const item = await OrderItem.findByPk(id)
 
     if (!item) {
       console.error(`[updateCartItem] Item ${id} introuvable`)
@@ -281,19 +274,36 @@ export async function updateCartItem(request, reply) {
       })
     }
 
+    console.log('==============   item.orderId  ',item.orderId)
+
+
+    // ✅ NOW verify the order belongs to this user
+    const order = await Order.findOne({
+      where: {
+        userId,
+        status: 'pending'
+      }
+    })
+    console.log('========================CHECK========================')
+
+    if (!order) {
+      return reply.code(403).send({
+        success: false,
+        error: 'Non autorisé - cette commande ne vous appartient pas'
+      })
+    }
+
+    // ✅ Update the item
     if (quantity < 1) {
-      // Supprimer l'article
       console.log(`[updateCartItem] Suppression de l'item ${id}`)
       await item.destroy()
     } else {
-      // Mettre à jour la quantité
       console.log(`[updateCartItem] Mise à jour: ${item.quantity} → ${quantity}`)
       item.quantity = quantity
       await item.save()
     }
 
-    // Recalculer le total
-    const order = item.order
+    // ✅ Recalculate total
     const items = await OrderItem.findAll({ 
       where: { orderId: order.id } 
     })
@@ -310,7 +320,9 @@ export async function updateCartItem(request, reply) {
 
     reply.send({ 
       success: true,
-      message: 'Panier mis à jour' 
+      message: 'Panier mis à jour',
+      orderId: order.id,
+      total: total
     })
 
   } catch (error) {
@@ -333,10 +345,9 @@ export async function removeCartItem(request, reply) {
   try {
     console.log('======================== [removeCartItem] ========================')
     
-    const { id } = request.params
-    const userId = request.user?.id
+      const { orderItemId,userId } = request.body
 
-    console.log(`[removeCartItem] itemId: ${id}, userId: ${userId}`)
+    console.log(`[removeCartItem] itemId: ${orderItemId}, userId: ${userId}`)
 
     if (!userId) {
       return reply.code(401).send({ 
@@ -345,7 +356,7 @@ export async function removeCartItem(request, reply) {
       })
     }
 
-    const item = await OrderItem.findByPk(id, {
+    const item = await OrderItem.findByPk(orderItemId, {
       include: [{
         model: Order,
         as: 'order',
@@ -357,7 +368,7 @@ export async function removeCartItem(request, reply) {
     })
 
     if (!item) {
-      console.error(`[removeCartItem] Item ${id} introuvable`)
+      console.error(`[removeCartItem] Item ${orderItemId} introuvable`)
       return reply.code(404).send({ 
         success: false,
         error: 'Article introuvable' 
@@ -366,7 +377,7 @@ export async function removeCartItem(request, reply) {
 
     const orderId = item.order.id
     await item.destroy()
-    console.log(`[removeCartItem] Item ${id} supprimé`)
+    console.log(`[removeCartItem] Item ${orderItemId} supprimé`)
 
     // Recalculer le total
     const items = await OrderItem.findAll({ 
@@ -468,8 +479,8 @@ export async function confirmCartOrder(request, reply) {
   const transaction = await sequelize.transaction();
 
   try {
-    const userId = request.user.id;
-    const { paymentMethod, shippingAddress, shippingMethod } = request.body;
+   // const userId = request.user.id;
+    const { paymentMethod, shippingAddress, shippingMethod,userId } = request.body;
 
     // 1. On cherche la commande PENDING
     const order = await Order.findOne({
@@ -586,7 +597,11 @@ export async function getMyPaidOrders(request, reply) {
  */
 export async function clearCart(request, reply) { 
   try {
-    const userId = request.user?.id
+        console.log("[clearCart] =================DELETE PANIER =============")
+   
+    const  userId = request.params.userId
+        console.log("[clearCart] userId",userId)
+
     if (!userId) return reply.code(401).send({ success: false, error: 'Non autorisé' })
 
     const order = await Order.findOne({

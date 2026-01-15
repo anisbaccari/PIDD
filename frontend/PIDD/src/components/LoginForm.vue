@@ -16,16 +16,16 @@
       <form @submit.prevent="handleLogin" class="login-form" novalidate>
         <div class="form-group">
           <label for="username" class="form-label">
-            Nom d'utilisateur
+            email
             <span class="required-asterisk">*</span>
           </label>
           <input
             id="username"
-            v-model="loginForm.username"
+            v-model="loginForm.email"
             type="text"
             placeholder="Entrez votre nom d'utilisateur"
             required
-            :class="{ 'input-error': formErrors.username }"
+            :class="{ 'input-error': formErrors.email }"
             @input="clearError('username')"
           />
           <span v-if="formErrors.username" class="error-text">{{ formErrors.username }}</span>
@@ -155,6 +155,7 @@ export default {
     // ✅ CORRIGÉ : Utiliser le prop directement
     if (this.user && this.user.username) {
       this.loginForm.username = this.user.username;
+      this.loginForm.email = this.user.email;
     }
     
     // ✅ AJOUTÉ : Vérifier si on vient d'une redirection checkout
@@ -168,7 +169,7 @@ export default {
       this.formErrors = {};
       let isValid = true;
 
-      if (!this.loginForm.username.trim()) {
+      if (!this.loginForm.email) {
         this.formErrors.username = 'Le nom d\'utilisateur est requis';
         isValid = false;
       }
@@ -232,7 +233,7 @@ export default {
 
       try {
         const response = await api.post('/auth/login', {
-          username: this.loginForm.username.trim(),
+          email: this.loginForm.email,
           password: this.loginForm.password
         });
 

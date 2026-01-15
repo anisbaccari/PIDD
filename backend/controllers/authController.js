@@ -5,22 +5,22 @@ import { generateToken } from '../security/jwt.js';
 
 export async function login(request, reply) {
   try {
-    const { username, password } = request.body;
+    const { email, password } = request.body;
 
     console.log('================================================');
     console.log('[LOGIN] receive request : ', request.body);
     console.log('================================================');
 
-    if (!username || !password) {
-      return reply.status(400).send({ error: 'Username and password required' });
+    if (!email || !password) {
+      return reply.status(400).send({ error: 'email and password required' });
     }
 
-    console.log('\x1b[32m%s\x1b[0m','[LOGIN] user ', username);
+    console.log('\x1b[32m%s\x1b[0m','[LOGIN] user ', email);
 
     const rows = await sequelize.query(
-      'SELECT * FROM users WHERE username = :username',
+      'SELECT * FROM users WHERE email = :email',
       {
-        replacements: { username },
+        replacements: { email },
         type: sequelize.QueryTypes.SELECT,
       }
     );

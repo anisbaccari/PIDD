@@ -90,7 +90,7 @@ export default {
   components: {
     ShareButtons
   },
-  props: ['user', 'setUser', 'addToCartGlobal','tmpUser'],
+  props: ['user', 'setUser', 'addToCartGlobal','tmpUser','addToTmp'],
   
   setup() {
     useHead({
@@ -200,8 +200,8 @@ export default {
       }
 
       if (!this.user) {
-        this.showNotification('Veuillez vous connecter', 'error')
-        this.$router.push('/login')
+        console.log("[CategoryPage] addTocart TmpUSER :",product)
+       this.addToTmp(product)
         return
       }
 
@@ -209,10 +209,11 @@ export default {
         console.log(`🛒 Ajout au panier: ${product.name} (ID: ${product.id})`)
         
         // ✅ Axios utilise baseURL de main.js + token automatique via interceptor
-        await axios.post('/cart/item', {
-          productId: product.id,
-          quantity: 1
-        })
+       const response = await api.post('http://localhost:3000/cart/item', {
+              productId: product.id,
+              quantity: 1,
+              userId: this.user.id
+        });
 
         console.log('✅ Produit ajouté au panier')
         

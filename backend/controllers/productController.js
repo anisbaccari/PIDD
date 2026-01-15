@@ -122,12 +122,15 @@ export async function addProductByAdmin(request, reply) {
     console.log("========== [addProductByAdmin] ==========");
     console.log("[addProductByAdmin] request.body:", request.body);
     
-    // CORRECTION: Le produit est direct dans request.body, pas dans un objet product
-    const productData = request.body;
+    // ✅ FIX: Extract from the nested duplicatedProduct object
+    const productData = request.body.duplicatedProduct || request.body.productData || request.body.createData ;
     console.log("[addProductByAdmin] productData:", productData);
+    
+    const productPrice = parseInt(productData.price) || 0;
+    console.log("[addProductByAdmin] productPrice:", productPrice);
 
     // Validation
-    if (!productData.name || !productData.category || productData.price < 0 || productData.quantity < 0) {
+    if (!productData.name || !productData.category || productPrice < 0 || productData.quantity < 0) {
       console.log("[addProductByAdmin] Validation failed:", productData);
       return reply.status(400).send({ 
         success: false,
@@ -139,7 +142,7 @@ export async function addProductByAdmin(request, reply) {
     const createdProduct = await Product.create({
       name: productData.name, 
       category: productData.category,
-      price: productData.price,
+      price: productPrice,
       quantity: productData.quantity,
       description: productData.description || '',
       img: productData.img || 'default.png'
@@ -147,7 +150,6 @@ export async function addProductByAdmin(request, reply) {
     
     console.log("[addProductByAdmin] Produit créé:", createdProduct.id);
 
-    // CORRECTION: Répondre avec le produit créé
     reply.status(201).send({ 
       success: true, 
       data: createdProduct,
@@ -155,7 +157,6 @@ export async function addProductByAdmin(request, reply) {
     });
     
   } catch (error) {
-    // CORRECTION: Utilisez 'error' au lieu de 'err'
     console.error("[addProductByAdmin] error:", error);
     reply.status(500).send({ 
       success: false,
@@ -163,7 +164,6 @@ export async function addProductByAdmin(request, reply) {
     });
   }
 }
-
 export async function addProductToOrder(request, reply) {
   try {
      
@@ -171,10 +171,10 @@ export async function addProductToOrder(request, reply) {
 
   const { userId, productId, quantity = 1 } = request.body;
 
+  console.log(" [addProductToOrder]  userId, productId, quantity :", userId, productId, quantity);
   if (!userId || !productId) {
     return reply.status(400).send({ error: 'userId and productId are required' });
   }
-  console.log(" [addProductToOrder]  userId, productId, quantity :", userId, productId, quantity);
 
   const qty = Number(quantity);
   if (!Number.isInteger(qty) || qty <= 0) {

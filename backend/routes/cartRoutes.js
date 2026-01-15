@@ -19,7 +19,7 @@ export default async function cartRoutes(fastify, options) {
   console.log('🛒 Enregistrement des routes panier...')
 
   // GET /api/cart - Récupérer le panier
-  fastify.get('/',/*  {
+  fastify.get('/:userId',/*  {
     preHandler: [authenticate]
   }, */ getCart)
    fastify.get('/current',/*  {
@@ -32,22 +32,24 @@ export default async function cartRoutes(fastify, options) {
   }, */ addItemToCart)
 
   // PUT /api/cart/item/:id - Modifier la quantité
-  fastify.put('/item/:id',/*  {
+  fastify.put('/item/:userId',/*  {
     preHandler: [authenticate]
   }, */ updateCartItem)
 
   // DELETE /api/cart/item/:id - Supprimer un article
-  fastify.delete('/item/:id',/*  {
+  fastify.post('/deleteItem',/*  {
     preHandler: [authenticate]
   }, */ removeCartItem)
 
   // DELETE /api/cart - Vider le panier
-  fastify.delete('/',/*  {
+  fastify.delete('/:userId',/*  {
     preHandler: [authenticate]
   }, */ clearCart)
+
 fastify.post('/checkout',/*  {
   preHandler: [authenticate]
 }, */ prepareCheckout)
+
 // POST /api/orders/confirm - Confirmer le panier (NOUVELLE ROUTE)
   fastify.post('/confirm',/*  {
     preHandler: [authenticate]
